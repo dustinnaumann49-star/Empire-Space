@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beast Lord Kampf-Simulator - Komplettversion</title>
+    <title>Beast Lord Kampf-Simulator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -16,19 +16,19 @@
             margin: 0;
         }
         .container {
-            max-width: 1600px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         h1 {
             text-align: center;
             color: #ffd700;
-            text-shadow: 2px 2px 4px #000;
             margin-bottom: 10px;
         }
         .subtitle {
             text-align: center;
             color: #aaa;
             margin-bottom: 30px;
+            font-size: 14px;
         }
         .armies-container {
             display: flex;
@@ -41,15 +41,12 @@
             border-radius: 15px;
             padding: 15px;
             flex: 1;
-            min-width: 450px;
-            backdrop-filter: blur(5px);
+            min-width: 400px;
             border: 1px solid rgba(255,215,0,0.3);
         }
         .army h2 {
             text-align: center;
             margin-top: 0;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ffd700;
         }
         .attacker h2 { color: #ff6b6b; }
         .defender h2 { color: #4ecdc4; }
@@ -57,27 +54,27 @@
         .row {
             background: rgba(30,30,50,0.8);
             border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 15px;
-            border-left: 4px solid #ffd700;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 3px solid #ffd700;
         }
         .row-title {
             font-weight: bold;
             color: #ffd700;
-            margin-bottom: 10px;
-            font-size: 1.1em;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
         .row-controls {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
         }
         select, input, button {
-            padding: 8px 12px;
-            border-radius: 8px;
+            padding: 6px 10px;
+            border-radius: 6px;
             border: none;
-            font-size: 14px;
+            font-size: 13px;
         }
         select {
             background: #2c3e50;
@@ -87,46 +84,37 @@
         input {
             background: #2c3e50;
             color: white;
-            width: 100px;
-        }
-        .stat-badge {
-            display: inline-block;
-            background: #1a1a2e;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            margin-left: 8px;
+            width: 90px;
         }
         .fight-section {
             text-align: center;
-            margin: 30px 0;
+            margin: 25px 0;
         }
         .fight-btn {
             background: linear-gradient(135deg, #ff6b6b, #c0392b);
             color: white;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
-            padding: 15px 40px;
+            padding: 12px 35px;
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            transition: transform 0.2s;
             margin: 0 10px;
         }
         .fight-btn:hover {
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
         .reset-btn {
             background: #2c3e50;
             color: white;
-            padding: 8px 20px;
+            padding: 6px 18px;
             cursor: pointer;
         }
         .report {
             background: #0a0a1a;
             border-radius: 15px;
-            padding: 20px;
-            margin-top: 30px;
+            padding: 15px;
+            margin-top: 25px;
             border: 1px solid #ffd700;
         }
         .report h3 {
@@ -135,28 +123,23 @@
         }
         .report-content {
             background: #050510;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 12px;
+            border-radius: 8px;
             font-family: monospace;
-            font-size: 12px;
-            max-height: 600px;
+            font-size: 11px;
+            max-height: 500px;
             overflow-y: auto;
             white-space: pre-wrap;
         }
         .type-carni { color: #ff6b6b; }
         .type-herbi { color: #7bed9f; }
         .type-omni { color: #ffd700; }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🐺 Beast Lord Kampf-Simulator ⚔️</h1>
-    <div class="subtitle">Fleischfresser 🥩 | Pflanzenfresser 🌿 | Allesfresser 🍂 | 12 Alphas mit vollständigen Skills</div>
+    <div class="subtitle">Fleischfresser 🥩 | Pflanzenfresser 🌿 | Allesfresser 🍂</div>
 
     <div class="armies-container">
         <div class="army attacker">
@@ -171,681 +154,336 @@
 
     <div class="fight-section">
         <button class="fight-btn" id="fightBtn">🔥 KAMPF STARTEN 🔥</button>
-        <button class="reset-btn" id="resetBtn">↺ Standard-Aufstellung</button>
+        <button class="reset-btn" id="resetBtn">↺ Standard</button>
     </div>
 
     <div class="report">
         <h3>📜 KAMPFBERICHT</h3>
         <div class="report-content" id="report-content">
-            Klicke auf "KAMPF STARTEN" um eine Simulation zu beginnen...
+            Klicke auf "KAMPF STARTEN"
         </div>
     </div>
 </div>
 
 <script>
-    // ==================== BESTIEN-DATEN ====================
-    const BEASTS = {
-        hoelhenhyaene: { name: "Höhlenhyäne", type: "carni", attack: 151, defense: 63, hp: 20 },
-        langhornbison: { name: "Langhornbison", type: "herbi", attack: 99, defense: 102, hp: 28 },
-        gigantopithecus: { name: "Gigantopithecus", type: "omni", attack: 121, defense: 78, hp: 24 }
-    };
+    (function() {
+        // ========== BESTIEN ==========
+        const BEASTS = {
+            hoelhenhyaene: { name: "Höhlenhyäne", type: "carni", attack: 151, defense: 63, hp: 20 },
+            langhornbison: { name: "Langhornbison", type: "herbi", attack: 99, defense: 102, hp: 28 },
+            gigantopithecus: { name: "Gigantopithecus", type: "omni", attack: 121, defense: 78, hp: 24 }
+        };
 
-    // ==================== ALPHA-DATEN mit vollständigen Skills ====================
-    const ALPHAS = {
-        // === FLEISCHFRESSER ===
-        hyaenodon: {
-            name: "Hyaenodon", type: "carni",
-            skills: [
-                { name: "Erstschlag-Vorteil", trigger: "battle_start", 
-                  execute: (ctx, caster) => {
-                      if (ctx.attackerFirst) {
-                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.2;
-                          ctx.log(`[${caster.name}] Erstschlag: +20% Schaden`);
-                      } else {
-                          caster.damageReduction = (caster.damageReduction || 1) * 0.8;
-                          ctx.log(`[${caster.name}] Zweitschlag: -20% erlittener Schaden`);
-                      }
-                  }},
-                { name: "Überlebensinstinkt", trigger: "battle_start",
-                  execute: (ctx, caster) => {
-                      caster.maxHpBonus = 1.2;
-                      caster.hp = caster.maxHp * caster.maxHpBonus;
-                      if (Math.random() < 0.5) {
-                          caster.defenseBonus = 1.3;
-                          ctx.log(`[${caster.name}] Überlebensinstinkt: +30% Def, HP erhöht`);
-                      }
-                  }}
-            ]},
-        smilodon: {
-            name: "Smilodon", type: "carni",
-            skills: [
-                { name: "Tödlicher Comboschlag", trigger: "attack", chance: 0.8,
-                  execute: (ctx, caster, target) => {
-                      if (!target) return false;
-                      let totalDmg = 0;
-                      for (let i = 0; i < 2; i++) {
-                          let dmg = ctx.calcDamage(caster, target, 2.0);
-                          target.hp -= dmg;
-                          totalDmg += dmg;
-                          target.vulnStacks = (target.vulnStacks || 0) + 1;
-                      }
-                      ctx.log(`[${caster.name}] Comboschlag: ${Math.floor(totalDmg)} Schaden, Verwundbarkeit +2`, "damage");
-                      return true;
-                  }},
-                { name: "Wilde Zähne", trigger: "attack", chance: 0.7,
-                  execute: (ctx, caster, target, allTargets) => {
-                      let totalDmg = 0;
-                      allTargets.forEach(t => {
-                          if (t.hp > 0) {
-                              let dmg = ctx.calcDamage(caster, t, 1.3);
-                              t.hp -= dmg;
-                              totalDmg += dmg;
-                          }
-                      });
-                      ctx.log(`[${caster.name}] Wilde Zähne: ${Math.floor(totalDmg)} Schaden (AoE)`, "damage");
-                      return true;
-                  }}
-            ]},
-        beutelloewe: {
-            name: "Beutellöwe", type: "carni",
-            skills: [
-                { name: "Frontkämpfer", trigger: "battle_start",
-                  execute: (ctx, caster) => {
-                      if (caster.rowIndex === 0) {
-                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.4;
-                          caster.evasion = 0.15;
-                          ctx.log(`[${caster.name}] Frontkämpfer: +40% Schaden, +15% Ausweichen`);
-                      } else {
-                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.2;
-                          ctx.log(`[${caster.name}] Frontkämpfer: +20% Schaden`);
-                      }
-                  }},
-                { name: "Nachstoß", trigger: "after_attack", chance: 0.6,
-                  execute: (ctx, caster, target) => {
-                      if (target && target.hp > 0) {
-                          let dmg = ctx.calcDamage(caster, target, 2.15);
-                          target.hp -= dmg;
-                          let heal = dmg * 0.4;
-                          caster.hp = Math.min(caster.maxHp * (caster.maxHpBonus || 1), caster.hp + heal);
-                          ctx.log(`[${caster.name}] Nachstoß: ${Math.floor(dmg)} Schaden, ${Math.floor(heal)} Heilung`, "damage");
-                          return true;
-                      }
-                      return false;
-                  }}
-            ]},
-        amerikanischerGepard: {
-            name: "Amerikanischer Gepard", type: "carni",
-            skills: [
-                { name: "Blitzangriff", trigger: "per_round", chance: 0.5,
-                  execute: (ctx, caster, allies, targets) => {
-                      if (caster.rowIndex === 0) {
-                          caster.extraAttacks = (caster.extraAttacks || 0) + 1;
-                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.17;
-                          ctx.log(`[${caster.name}] Blitzangriff: +1 Angriff, +17% Schaden`);
-                      } else {
-                          let randomTargets = targets.filter(t => t.hp > 0).slice(0, 2);
-                          randomTargets.forEach(t => {
-                              let dmg = ctx.calcDamage(caster, t, 1.7);
-                              t.hp -= dmg;
-                              ctx.log(`[${caster.name}] Blitzangriff: ${Math.floor(dmg)} Schaden`, "damage");
-                          });
-                      }
-                  }}
-            ]},
-        // === ALLESFRESSER ===
-        metridiochoerus: {
-            name: "Metridiochoerus", type: "omni",
-            skills: [
-                { name: "Frühe Verteidigung", trigger: "battle_start",
-                  execute: (ctx, caster) => {
-                      caster.earlyEvasion = 0.1;
-                      caster.earlyResist = 0.2;
-                      ctx.log(`[${caster.name}] Frühe Verteidigung: +10% Ausweichen, +20% Resistenz (R1-4)`);
-                  }},
-                { name: "Schwingen der Zeit", trigger: "round_specific", rounds: [2,4,6,8],
-                  execute: (ctx, caster, targets) => {
-                      let bonus = 1 + (caster.evasionCount || 0) * 0.1;
-                      targets.forEach(t => {
-                          if (t.hp > 0) {
-                              let dmg = ctx.calcDamage(caster, t, 2.7 * bonus);
-                              t.hp -= dmg;
-                              ctx.log(`[${caster.name}] Schwingen der Zeit: ${Math.floor(dmg)} Schaden`, "damage");
-                          }
-                      });
-                  }}
-            ]},
-        dinopithecus: {
-            name: "Dinopithecus", type: "omni",
-            skills: [
-                { name: "Echter Schaden", trigger: "attack", chance: 0.7,
-                  execute: (ctx, caster, target) => {
-                      let dmg = ctx.calcDamage(caster, target, 2.8);
-                      let trueDmg = dmg * 0.1;
-                      target.hp -= (dmg + trueDmg);
-                      ctx.log(`[${caster.name}] Echter Schaden: ${Math.floor(dmg)} + ${Math.floor(trueDmg)} Echtschaden`, "damage");
-                      return true;
-                  }},
-                { name: "Ausweichtanz", trigger: "battle_start",
-                  execute: (ctx, caster) => {
-                      caster.evasion = (caster.evasion || 0) + 0.1;
-                      caster.skillDamageBonus = (caster.evasion || 0) * 2;
-                      ctx.log(`[${caster.name}] Ausweichtanz: +10% Ausweichen, +${Math.floor(caster.skillDamageBonus * 100)}% Skill-Schaden`);
-                  }}
-            ]},
-        elefantenvogel: {
-            name: "Elefantenvogel", type: "omni",
-            skills: [
-                { name: "Reaktives Ausweichen", trigger: "battle_start",
-                  execute: (ctx, caster) => {
-                      caster.evasion = (caster.evasion || 0) + 0.2;
-                      ctx.log(`[${caster.name}] Reaktives Ausweichen: +20% Ausweichen`);
-                  }},
-                { name: "Überlebenskünstler", trigger: "on_damage_taken",
-                  execute: (ctx, caster) => {
-                      caster.survivalStacks = (caster.survivalStacks || 0) + 1;
-                      if (caster.survivalStacks <= 10) {
-                          caster.maxHpBonus = (caster.maxHpBonus || 1) + 0.05;
-                          caster.defenseBonus = (caster.defenseBonus || 1) * 1.05;
-                          ctx.log(`[${caster.name}] Überlebenskünstler Stack ${caster.survivalStacks}`);
-                      }
-                  }}
-            ]},
-        kurznasenbaer: {
-            name: "Kurznasenbär", type: "omni",
-            skills: [
-                { name: "Giftmischer", trigger: "attack", chance: 0.5,
-                  execute: (ctx, caster, target) => {
-                      const debuffs = ["Gift", "Blutung", "Korrosion", "Verwundbarkeit", "Erschöpft"];
-                      const debuff = debuffs[Math.floor(Math.random() * debuffs.length)];
-                      target.debuff = debuff;
-                      ctx.log(`[${caster.name}] Giftmischer: ${debuff} auf ${target.name}`, "skill");
-                      return true;
-                  }},
-                { name: "Ausnutzen", trigger: "attack", chance: 0.7,
-                  execute: (ctx, caster, target) => {
-                      let mult = 3.9;
-                      if (target.debuff) mult *= 1.3;
-                      let dmg = ctx.calcDamage(caster, target, mult);
-                      target.hp -= dmg;
-                      ctx.log(`[${caster.name}] Ausnutzen: ${Math.floor(dmg)} Schaden`, "damage");
-                      return true;
-                  }}
-            ]},
-        // === PFLANZENFRESSER ===
-        riesenSivatherium: {
-            name: "Riesen Sivatherium", type: "herbi",
-            skills: [
-                { name: "Schadensreduktion", trigger: "round_specific", rounds: [2,4,6,8],
-                  execute: (ctx, caster) => {
-                      caster.damageReduction = (caster.damageReduction || 1) * 0.8;
-                      if (Math.random() < 0.7) {
-                          let heal = caster.maxHp * 1.7;
-                          caster.hp = Math.min(caster.maxHp * (caster.maxHpBonus || 1), caster.hp + heal);
-                          ctx.log(`[${caster.name}] Schadensreduktion: ${Math.floor(heal)} HP geheilt`, "heal");
-                      }
-                  }},
-                { name: "Feste Haut", trigger: "per_round",
-                  execute: (ctx, caster) => {
-                      caster.defenseBonus = (caster.defenseBonus || 1) * 1.2;
-                      caster.healBonus = (caster.healBonus || 1) + 0.075;
-                      ctx.log(`[${caster.name}] Feste Haut: +20% Def`);
-                  }}
-            ]},
-        meiolanja: {
-            name: "Meiolanja", type: "herbi",
-            skills: [
-                { name: "Gegenschlag", trigger: "attack",
-                  execute: (ctx, caster, target, allTargets) => {
-                      allTargets.forEach(t => {
-                          if (t.hp > 0) {
-                              let dmg = ctx.calcDamage(caster, t, 0.7);
-                              t.hp -= dmg;
-                          }
-                      });
-                      let selfDmg = caster.maxHp * 0.2;
-                      caster.hp -= selfDmg;
-                      ctx.log(`[${caster.name}] Gegenschlag: AoE, erleidet ${Math.floor(selfDmg)} Selbstschaden`, "damage");
-                  }},
-                { name: "Heilende Hülle", trigger: "per_round", chance: 0.8,
-                  execute: (ctx, caster, allies) => {
-                      let targets = allies.filter(a => a.hp > 0).slice(0, 2);
-                      targets.forEach(t => {
-                          let heal = t.maxHp * 1.5;
-                          t.hp = Math.min(t.maxHp * (t.maxHpBonus || 1), t.hp + heal);
-                          ctx.log(`[${caster.name}] Heilende Hülle: ${Math.floor(heal)} HP auf ${t.name}`, "heal");
-                      });
-                  }}
-            ]},
-        mammut: {
-            name: "Mammut", type: "herbi",
-            skills: [
-                { name: "Gegenangriff", trigger: "on_damage_taken", chance: 0.3,
-                  execute: (ctx, caster, attacker, allTargets) => {
-                      let targets = allTargets.filter(t => t.hp > 0).slice(0, 2);
-                      targets.forEach(t => {
-                          let dmg = ctx.calcDamage(caster, t, 1.2);
-                          t.hp -= dmg;
-                          ctx.log(`[${caster.name}] Gegenangriff: ${Math.floor(dmg)} Schaden`, "damage");
-                      });
-                  }},
-                { name: "Eisenhaut", trigger: "battle_start", chance: 0.5,
-                  execute: (ctx, caster) => {
-                      caster.damageReduction = (caster.damageReduction || 1) * 0.65;
-                      ctx.log(`[${caster.name}] Eisenhaut: -35% erlittener Schaden`);
-                  }}
-            ]},
-        megatherium: {
-            name: "Megatherium", type: "herbi",
-            skills: [
-                { name: "Fokussierter Schlag", trigger: "attack", chance: 0.75,
-                  execute: (ctx, caster, allTargets) => {
-                      let strongest = allTargets.reduce((a, b) => (a.hp > b.hp) ? a : b);
-                      let dmg = ctx.calcDamage(caster, strongest, 3.6);
-                      strongest.hp -= dmg;
-                      caster.bonusDamage = (caster.bonusDamage || 1) * 1.3;
-                      ctx.log(`[${caster.name}] Fokussierter Schlag: ${Math.floor(dmg)} Schaden, +30% Angriff`, "damage");
-                      return true;
-                  }},
-                { name: "Wütender Schlag", trigger: "attack", chance: 0.6,
-                  execute: (ctx, caster, allTargets) => {
-                      let carnivoreCount = allTargets.filter(t => t.type === "carni").length;
-                      let mult = 1.9 + (carnivoreCount * 0.15);
-                      allTargets.forEach(t => {
-                          if (t.hp > 0) {
-                              let dmg = ctx.calcDamage(caster, t, mult);
-                              t.hp -= dmg;
-                          }
-                      });
-                      ctx.log(`[${caster.name}] Wütender Schlag: ${mult}x Schaden (${carnivoreCount} Fleischfresser)`, "damage");
-                      return true;
-                  }}
-            ]}
-    };
+        // ========== ALPHAS (vereinfacht aber funktional) ==========
+        const ALPHAS = {
+            smilodon: { name: "Smilodon", type: "carni", skillChance: 0.7, skillMulti: 2.0 },
+            beutelloewe: { name: "Beutellöwe", type: "carni", skillChance: 0.6, skillMulti: 2.15 },
+            hyaenodon: { name: "Hyaenodon", type: "carni", skillChance: 0.5, skillMulti: 1.8 },
+            amerikanischerGepard: { name: "Gepard", type: "carni", skillChance: 0.5, skillMulti: 1.7 },
+            metridiochoerus: { name: "Metridiochoerus", type: "omni", skillChance: 0.6, skillMulti: 2.0 },
+            dinopithecus: { name: "Dinopithecus", type: "omni", skillChance: 0.7, skillMulti: 2.2 },
+            elefantenvogel: { name: "Elefantenvogel", type: "omni", skillChance: 0.5, skillMulti: 1.8 },
+            kurznasenbaer: { name: "Kurznasenbär", type: "omni", skillChance: 0.7, skillMulti: 2.5 },
+            riesenSivatherium: { name: "Sivatherium", type: "herbi", skillChance: 0.5, skillMulti: 1.6 },
+            meiolanja: { name: "Meiolanja", type: "herbi", skillChance: 0.6, skillMulti: 1.5 },
+            mammut: { name: "Mammut", type: "herbi", skillChance: 0.5, skillMulti: 1.7 },
+            megatherium: { name: "Megatherium", type: "herbi", skillChance: 0.6, skillMulti: 2.0 }
+        };
 
-    // Standard-Aufstellung (werden bei jedem Reset neu erstellt)
-    let defaultAttackerRows = [
-        { alpha: "smilodon", beast: "hoelhenhyaene", beastCount: 100000 },
-        { alpha: "beutelloewe", beast: "hoelhenhyaene", beastCount: 80000 },
-        { alpha: "hyaenodon", beast: "hoelhenhyaene", beastCount: 90000 }
-    ];
-    let defaultDefenderRows = [
-        { alpha: "riesenSivatherium", beast: "langhornbison", beastCount: 120000 },
-        { alpha: "mammut", beast: "langhornbison", beastCount: 110000 },
-        { alpha: "megatherium", beast: "langhornbison", beastCount: 100000 }
-    ];
-    
-    let attackerRows = JSON.parse(JSON.stringify(defaultAttackerRows));
-    let defenderRows = JSON.parse(JSON.stringify(defaultDefenderRows));
-    
-    let fightLog = [];
-    let isFighting = false;
-
-    function log(msg, type = "info") {
-        fightLog.push({ msg, type });
-    }
-
-    function calculateDamage(attacker, defender, multiplier = 1.0) {
-        let attackVal = attacker.baseAttack * (attacker.beastCount / 50);
-        let damage = attackVal * multiplier;
+        // ========== STANDARD AUFSTELLUNG ==========
+        let defaultAttacker = [
+            { alpha: "smilodon", beast: "hoelhenhyaene", count: 100000 },
+            { alpha: "beutelloewe", beast: "hoelhenhyaene", count: 80000 },
+            { alpha: "hyaenodon", beast: "hoelhenhyaene", count: 90000 }
+        ];
         
-        // Verteidigung
-        let defenseVal = defender.baseDefense / 200;
-        damage = damage * (1 - Math.min(0.7, defenseVal));
-        
-        // Buffs
-        if (attacker.bonusDamage) damage *= attacker.bonusDamage;
-        if (defender.damageReduction) damage *= defender.damageReduction;
-        
-        // Zufall
-        damage = damage * (0.85 + Math.random() * 0.3);
-        
-        return Math.max(1, Math.floor(damage));
-    }
+        let defaultDefender = [
+            { alpha: "riesenSivatherium", beast: "langhornbison", count: 120000 },
+            { alpha: "mammut", beast: "langhornbison", count: 110000 },
+            { alpha: "megatherium", beast: "langhornbison", count: 100000 }
+        ];
 
-    class CombatUnit {
-        constructor(row, index, isAttacker) {
-            this.alphaKey = row.alpha;
-            this.alphaData = ALPHAS[row.alpha];
-            this.name = this.alphaData.name;
-            this.type = this.alphaData.type;
-            this.beastKey = row.beast;
-            this.beastData = {...BEASTS[row.beast]};
-            this.beastCount = row.beastCount;
-            this.rowIndex = index;
-            this.isAttacker = isAttacker;
+        // ========== AKTUELLE AUFSTELLUNG ==========
+        let attackerRows = JSON.parse(JSON.stringify(defaultAttacker));
+        let defenderRows = JSON.parse(JSON.stringify(defaultDefender));
+        
+        let logEntries = [];
+
+        function addLog(msg, type) {
+            logEntries.push({ msg, type: type || 'info' });
+            console.log(msg);
+        }
+
+        function clearLog() {
+            logEntries = [];
+        }
+
+        function updateUI() {
+            const container = document.getElementById('report-content');
+            if (!container) return;
             
-            this.baseAttack = this.beastData.attack;
-            this.baseDefense = this.beastData.defense;
-            this.maxHp = this.beastCount * this.beastData.hp;
-            this.hp = this.maxHp;
-            
-            this.bonusDamage = 1;
-            this.damageReduction = 1;
-            this.maxHpBonus = 1;
-            this.defenseBonus = 1;
-            this.evasion = 0;
-            this.vulnStacks = 0;
-            this.extraAttacks = 0;
-            this.skillDamageBonus = 0;
-            this.evasionCount = 0;
-            this.survivalStacks = 0;
-            this.healBonus = 1;
-            this.earlyEvasion = 0;
-            this.earlyResist = 0;
-            this.debuff = null;
-            this.round = 1;
-        }
-        
-        isAlive() {
-            return this.hp > 0;
-        }
-        
-        getEvasion() {
-            let ev = this.evasion;
-            if (this.earlyEvasion && this.round <= 4) ev += this.earlyEvasion;
-            return ev;
-        }
-    }
-
-    function renderSetup() {
-        renderArmy("attacker", attackerRows);
-        renderArmy("defender", defenderRows);
-    }
-
-    function renderArmy(armyId, rows) {
-        const container = document.getElementById(`${armyId}-rows`);
-        if (!container) return;
-        container.innerHTML = '';
-        rows.forEach((row, idx) => {
-            const alphaData = ALPHAS[row.alpha];
-            const beastData = BEASTS[row.beast];
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'row';
-            rowDiv.innerHTML = `
-                <div class="row-title">📌 Reihe ${idx + 1} - ${alphaData?.name || "???"} 
-                    <span class="stat-badge ${beastData?.type === 'carni' ? 'type-carni' : beastData?.type === 'herbi' ? 'type-herbi' : 'type-omni'}">
-                        ${beastData?.type === 'carni' ? '🥩' : beastData?.type === 'herbi' ? '🌿' : '🍂'} ${beastData?.name || "???"}
-                    </span>
-                </div>
-                <div class="row-controls">
-                    <select data-army="${armyId}" data-row="${idx}" data-type="alpha" class="alpha-select">
-                        ${Object.keys(ALPHAS).map(key => `<option value="${key}" ${row.alpha === key ? 'selected' : ''}>${ALPHAS[key].name}</option>`).join('')}
-                    </select>
-                    <select data-army="${armyId}" data-row="${idx}" data-type="beast" class="beast-select">
-                        ${Object.keys(BEASTS).map(key => `<option value="${key}" ${row.beast === key ? 'selected' : ''}>${BEASTS[key].name}</option>`).join('')}
-                    </select>
-                    <input type="number" class="beast-count" data-army="${armyId}" data-row="${idx}" value="${row.beastCount}" min="0" step="1000">
-                </div>
-            `;
-            container.appendChild(rowDiv);
-        });
-
-        // Event-Listener neu binden (ohne doppelte Listener)
-        document.querySelectorAll('.alpha-select').forEach(select => {
-            select.removeEventListener('change', handleAlphaChange);
-            select.addEventListener('change', handleAlphaChange);
-        });
-        document.querySelectorAll('.beast-select').forEach(select => {
-            select.removeEventListener('change', handleBeastChange);
-            select.addEventListener('change', handleBeastChange);
-        });
-        document.querySelectorAll('.beast-count').forEach(input => {
-            input.removeEventListener('change', handleCountChange);
-            input.addEventListener('change', handleCountChange);
-        });
-    }
-    
-    function handleAlphaChange(e) {
-        const army = e.target.dataset.army;
-        const row = parseInt(e.target.dataset.row);
-        if (army === 'attacker') attackerRows[row].alpha = e.target.value;
-        else defenderRows[row].alpha = e.target.value;
-    }
-    
-    function handleBeastChange(e) {
-        const army = e.target.dataset.army;
-        const row = parseInt(e.target.dataset.row);
-        if (army === 'attacker') attackerRows[row].beast = e.target.value;
-        else defenderRows[row].beast = e.target.value;
-    }
-    
-    function handleCountChange(e) {
-        const army = e.target.dataset.army;
-        const row = parseInt(e.target.dataset.row);
-        const val = parseInt(e.target.value) || 0;
-        if (army === 'attacker') attackerRows[row].beastCount = val;
-        else defenderRows[row].beastCount = val;
-    }
-
-    function startFight() {
-        if (isFighting) {
-            log("⚠️ Ein Kampf läuft bereits!");
-            updateReport();
-            return;
-        }
-        
-        isFighting = true;
-        const fightBtn = document.getElementById('fightBtn');
-        fightBtn.disabled = true;
-        fightBtn.textContent = "⚔️ KAMPF LÄUFT... ⚔️";
-        
-        // Verwende setTimeout, damit der UI-Update sichtbar wird
-        setTimeout(() => {
-            try {
-                executeFight();
-            } catch (error) {
-                console.error("Fehler im Kampf:", error);
-                log(`❌ FEHLER: ${error.message}`, "damage");
-                updateReport();
-            } finally {
-                isFighting = false;
-                fightBtn.disabled = false;
-                fightBtn.textContent = "🔥 KAMPF STARTEN 🔥";
+            let html = '';
+            for (let entry of logEntries) {
+                let color = '#ccc';
+                if (entry.type === 'damage') color = '#ff8888';
+                if (entry.type === 'skill') color = '#88ff88';
+                if (entry.type === 'heal') color = '#8888ff';
+                if (entry.type === 'round') color = '#ffcc66';
+                if (entry.type === 'victory') color = '#ffaa44';
+                html += `<div style="color: ${color}; margin: 2px 0;">${entry.msg}</div>`;
             }
-        }, 50);
-    }
-    
-    function executeFight() {
-        fightLog = [];
-        log("⚔️ KAMPF BEGINNT ⚔️");
-        
-        // Frische Kopie der Einheiten erstellen (basierend auf aktuellen Einstellungen)
-        let attackerUnits = attackerRows.map((row, idx) => new CombatUnit(row, idx, true));
-        let defenderUnits = defenderRows.map((row, idx) => new CombatUnit(row, idx, false));
-        
-        log(`Angreifer: ${attackerUnits.reduce((s,u) => s + u.beastCount, 0).toLocaleString()} Bestien`);
-        log(`Verteidiger: ${defenderUnits.reduce((s,u) => s + u.beastCount, 0).toLocaleString()} Bestien`);
-        
-        // Battle-Start Skills
-        for (let u of [...attackerUnits, ...defenderUnits]) {
-            for (let skill of u.alphaData.skills) {
-                if (skill.trigger === "battle_start") {
-                    let ctx = { log, calcDamage: calculateDamage, attackerFirst: true };
-                    skill.execute(ctx, u);
-                }
-            }
+            container.innerHTML = html;
+            container.scrollTop = container.scrollHeight;
         }
-        
-        let round = 1;
-        let maxRounds = 25;
-        
-        while (round <= maxRounds) {
-            log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-            log(`🔄 RUNDE ${round} 🔄`, "round");
-            log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+        // Schadensberechnung
+        function calcDamage(attacker, defender, multi) {
+            let dmg = (attacker.attack * (attacker.count / 100)) * multi;
+            let defReduction = defender.defense / 300;
+            if (defReduction > 0.6) defReduction = 0.6;
+            dmg = dmg * (1 - defReduction);
+            dmg = dmg * (0.8 + Math.random() * 0.4);
+            return Math.max(1, Math.floor(dmg));
+        }
+
+        // Kampf-Funktion
+        function startFight() {
+            // Log zurücksetzen
+            clearLog();
+            addLog("⚔️ KAMPF BEGINNT ⚔️", "victory");
             
-            // Runde für alle Einheiten setzen
-            for (let u of [...attackerUnits, ...defenderUnits]) {
-                u.round = round;
-            }
+            // Einheiten erstellen (Kopie)
+            let attacker = attackerRows.map((r, idx) => ({
+                id: idx,
+                alphaKey: r.alpha,
+                alphaName: ALPHAS[r.alpha].name,
+                alphaType: ALPHAS[r.alpha].type,
+                beastKey: r.beast,
+                beastName: BEASTS[r.beast].name,
+                attack: BEASTS[r.beast].attack,
+                defense: BEASTS[r.beast].defense,
+                maxHp: r.count * BEASTS[r.beast].hp,
+                hp: r.count * BEASTS[r.beast].hp,
+                count: r.count,
+                skillChance: ALPHAS[r.alpha].skillChance,
+                skillMulti: ALPHAS[r.alpha].skillMulti,
+                isAlive: true
+            }));
             
-            // Per-Round Skills
-            for (let u of [...attackerUnits, ...defenderUnits]) {
-                for (let skill of u.alphaData.skills) {
-                    if (skill.trigger === "per_round") {
-                        let ctx = { log, calcDamage: calculateDamage, round };
-                        let targets = u.isAttacker ? defenderUnits : attackerUnits;
-                        let allies = u.isAttacker ? attackerUnits : defenderUnits;
-                        if (!skill.chance || Math.random() < skill.chance) {
-                            skill.execute(ctx, u, allies, targets);
-                        }
-                    }
-                    if (skill.trigger === "round_specific" && skill.rounds.includes(round)) {
-                        let ctx = { log, calcDamage: calculateDamage, round };
-                        let targets = u.isAttacker ? defenderUnits : attackerUnits;
-                        skill.execute(ctx, u, targets);
-                    }
-                }
-            }
+            let defender = defenderRows.map((r, idx) => ({
+                id: idx,
+                alphaKey: r.alpha,
+                alphaName: ALPHAS[r.alpha].name,
+                alphaType: ALPHAS[r.alpha].type,
+                beastKey: r.beast,
+                beastName: BEASTS[r.beast].name,
+                attack: BEASTS[r.beast].attack,
+                defense: BEASTS[r.beast].defense,
+                maxHp: r.count * BEASTS[r.beast].hp,
+                hp: r.count * BEASTS[r.beast].hp,
+                count: r.count,
+                skillChance: ALPHAS[r.alpha].skillChance,
+                skillMulti: ALPHAS[r.alpha].skillMulti,
+                isAlive: true
+            }));
             
-            // Angreifer Angriffe
-            for (let attacker of attackerUnits) {
-                if (!attacker.isAlive()) continue;
+            addLog(`Angreifer: ${attacker.reduce((s,u) => s + u.count, 0).toLocaleString()} Bestien`);
+            addLog(`Verteidiger: ${defender.reduce((s,u) => s + u.count, 0).toLocaleString()} Bestien`);
+            
+            let round = 1;
+            let maxRounds = 20;
+            let winner = null;
+            
+            while (round <= maxRounds && winner === null) {
+                addLog(`\n━━━━━━ RUNDE ${round} ━━━━━━`, "round");
                 
-                let attacks = 1 + (attacker.extraAttacks || 0);
-                for (let a = 0; a < attacks; a++) {
-                    let target = defenderUnits.find(u => u.isAlive());
+                // Typ-Vorteil berechnen
+                function getTypeBonus(att, def) {
+                    if (att === 'carni' && def === 'herbi') return 1.25;
+                    if (att === 'herbi' && def === 'omni') return 1.25;
+                    if (att === 'omni' && def === 'carni') return 1.25;
+                    return 1.0;
+                }
+                
+                // Angreifer greifen an
+                for (let a of attacker) {
+                    if (!a.isAlive) continue;
+                    
+                    let target = defender.find(d => d.isAlive);
                     if (!target) break;
                     
-                    let skillUsed = false;
-                    for (let skill of attacker.alphaData.skills) {
-                        if (skill.trigger === "attack" && (!skill.chance || Math.random() < skill.chance)) {
-                            let ctx = { log, calcDamage: calculateDamage };
-                            let result = skill.execute(ctx, attacker, target, defenderUnits);
-                            if (result) skillUsed = true;
-                        }
-                    }
+                    let typeBonus = getTypeBonus(a.alphaType, target.alphaType);
+                    let isSkill = Math.random() < a.skillChance;
+                    let multi = isSkill ? a.skillMulti * typeBonus : 1.0 * typeBonus;
+                    let damage = calcDamage(a, target, multi);
                     
-                    if (!skillUsed) {
-                        let damage = calculateDamage(attacker, target, 1.0);
-                        target.hp -= damage;
-                        log(`[${attacker.name}] Normaler Angriff: ${Math.floor(damage)} Schaden`, "damage");
-                    }
-                    
-                    // After-Attack Skills
-                    for (let skill of attacker.alphaData.skills) {
-                        if (skill.trigger === "after_attack" && (!skill.chance || Math.random() < skill.chance)) {
-                            let ctx = { log, calcDamage: calculateDamage };
-                            skill.execute(ctx, attacker, target);
-                        }
-                    }
-                    
-                    target.hp = Math.max(0, target.hp);
-                }
-                attacker.extraAttacks = 0;
-            }
-            
-            // Verteidiger Angriffe
-            for (let defender of defenderUnits) {
-                if (!defender.isAlive()) continue;
-                
-                let target = attackerUnits.find(u => u.isAlive());
-                if (!target) break;
-                
-                let skillUsed = false;
-                for (let skill of defender.alphaData.skills) {
-                    if (skill.trigger === "attack" && (!skill.chance || Math.random() < skill.chance)) {
-                        let ctx = { log, calcDamage: calculateDamage };
-                        let result = skill.execute(ctx, defender, target, attackerUnits);
-                        if (result) skillUsed = true;
-                    }
-                }
-                
-                if (!skillUsed) {
-                    let damage = calculateDamage(defender, target, 1.0);
                     target.hp -= damage;
-                    log(`[${defender.name}] Normaler Angriff: ${Math.floor(damage)} Schaden`, "damage");
-                }
-                
-                for (let skill of defender.alphaData.skills) {
-                    if (skill.trigger === "after_attack" && (!skill.chance || Math.random() < skill.chance)) {
-                        let ctx = { log, calcDamage: calculateDamage };
-                        skill.execute(ctx, defender, target);
+                    if (target.hp <= 0) {
+                        target.isAlive = false;
+                        target.hp = 0;
+                        addLog(`💀 ${a.alphaName} (${a.beastName}) besiegt ${target.alphaName} (${target.beastName}) mit ${damage.toLocaleString()} Schaden!`, "damage");
+                    } else {
+                        if (isSkill) {
+                            addLog(`✨ ${a.alphaName} nutzt Spezialfähigkeit: ${damage.toLocaleString()} Schaden auf ${target.alphaName}`, "skill");
+                        } else {
+                            addLog(`⚔️ ${a.alphaName} (${a.beastName}) trifft für ${damage.toLocaleString()} Schaden`, "damage");
+                        }
                     }
                 }
                 
-                target.hp = Math.max(0, target.hp);
-            }
-            
-            // On-Damage-Taken Skills
-            for (let u of [...attackerUnits, ...defenderUnits]) {
-                if (!u.isAlive()) continue;
-                for (let skill of u.alphaData.skills) {
-                    if (skill.trigger === "on_damage_taken" && (!skill.chance || Math.random() < skill.chance)) {
-                        let ctx = { log, calcDamage: calculateDamage, round };
-                        let targets = u.isAttacker ? defenderUnits : attackerUnits;
-                        skill.execute(ctx, u, null, targets);
+                // Tote Verteidiger entfernen (für die Anzeige)
+                let deadDef = defender.filter(d => !d.isAlive).length;
+                if (deadDef > 0) {
+                    addLog(`💀 ${deadDef} Verteidiger-Reihe(n) besiegt!`, "damage");
+                }
+                
+                // Sieg prüfen
+                if (!defender.some(d => d.isAlive)) {
+                    winner = "ANGREIFER";
+                    break;
+                }
+                
+                // Verteidiger greifen an
+                for (let d of defender) {
+                    if (!d.isAlive) continue;
+                    
+                    let target = attacker.find(a => a.isAlive);
+                    if (!target) break;
+                    
+                    let typeBonus = getTypeBonus(d.alphaType, target.alphaType);
+                    let isSkill = Math.random() < d.skillChance;
+                    let multi = isSkill ? d.skillMulti * typeBonus : 1.0 * typeBonus;
+                    let damage = calcDamage(d, target, multi);
+                    
+                    target.hp -= damage;
+                    if (target.hp <= 0) {
+                        target.isAlive = false;
+                        target.hp = 0;
+                        addLog(`💀 ${d.alphaName} (${d.beastName}) besiegt ${target.alphaName} (${target.beastName}) mit ${damage.toLocaleString()} Schaden!`, "damage");
+                    } else {
+                        if (isSkill) {
+                            addLog(`✨ ${d.alphaName} nutzt Spezialfähigkeit: ${damage.toLocaleString()} Schaden auf ${target.alphaName}`, "skill");
+                        } else {
+                            addLog(`⚔️ ${d.alphaName} (${d.beastName}) trifft für ${damage.toLocaleString()} Schaden`, "damage");
+                        }
                     }
                 }
+                
+                // Tote Angreifer entfernen
+                let deadAtt = attacker.filter(a => !a.isAlive).length;
+                if (deadAtt > 0) {
+                    addLog(`💀 ${deadAtt} Angreifer-Reihe(n) besiegt!`, "damage");
+                }
+                
+                // Sieg prüfen
+                if (!attacker.some(a => a.isAlive)) {
+                    winner = "VERTEIDIGER";
+                    break;
+                }
+                
+                round++;
             }
             
-            // Tote entfernen
-            let oldAttacker = attackerUnits.length;
-            let oldDefender = defenderUnits.length;
-            attackerUnits = attackerUnits.filter(u => u.isAlive());
-            defenderUnits = defenderUnits.filter(u => u.isAlive());
-            
-            if (oldAttacker !== attackerUnits.length) {
-                log(`💀 ${oldAttacker - attackerUnits.length} Angreifer-Reihe(n) besiegt!`, "damage");
-            }
-            if (oldDefender !== defenderUnits.length) {
-                log(`💀 ${oldDefender - defenderUnits.length} Verteidiger-Reihe(n) besiegt!`, "damage");
+            if (winner === null) {
+                addLog(`⏰ UNENTSCHIEDEN nach ${maxRounds} Runden!`, "victory");
+            } else {
+                addLog(`\n🏆 SIEG: ${winner} hat gewonnen in Runde ${round}! 🏆`, "victory");
             }
             
-            if (defenderUnits.length === 0) {
-                log(`\n🏆 SIEG: ANGREIFER hat gewonnen in Runde ${round}! 🏆`, "victory");
-                break;
-            }
-            if (attackerUnits.length === 0) {
-                log(`\n🏆 SIEG: VERTEIDIGER hat gewonnen in Runde ${round}! 🏆`, "victory");
-                break;
-            }
-            
-            round++;
+            updateUI();
         }
         
-        if (round > maxRounds) {
-            log(`\n⏰ UNENTSCHIEDEN nach ${maxRounds} Runden`, "victory");
-        }
-        
-        updateReport();
-    }
-
-    function updateReport() {
-        const reportDiv = document.getElementById('report-content');
-        if (!reportDiv) return;
-        
-        let html = '';
-        for (const entry of fightLog) {
-            let color = '#eee';
-            if (entry.type === 'skill') color = '#7bed9f';
-            else if (entry.type === 'damage') color = '#ff6b6b';
-            else if (entry.type === 'heal') color = '#70a1ff';
-            else if (entry.type === 'round') color = '#ffd700';
-            else if (entry.type === 'victory') color = '#feca57';
+        // ========== UI RENDER FUNKTION ==========
+        function renderArmy(containerId, rows, isAttacker) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
             
-            html += `<div style="color: ${color}; margin: 3px 0;">${entry.msg}</div>`;
+            rows.forEach((row, idx) => {
+                const alpha = ALPHAS[row.alpha];
+                const beast = BEASTS[row.beast];
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'row';
+                rowDiv.innerHTML = `
+                    <div class="row-title">Reihe ${idx + 1} - ${alpha.name}</div>
+                    <div class="row-controls">
+                        <select class="alpha-select" data-side="${isAttacker ? 'attacker' : 'defender'}" data-row="${idx}">
+                            ${Object.keys(ALPHAS).map(key => `<option value="${key}" ${row.alpha === key ? 'selected' : ''}>${ALPHAS[key].name}</option>`).join('')}
+                        </select>
+                        <select class="beast-select" data-side="${isAttacker ? 'attacker' : 'defender'}" data-row="${idx}">
+                            ${Object.keys(BEASTS).map(key => `<option value="${key}" ${row.beast === key ? 'selected' : ''}>${BEASTS[key].name}</option>`).join('')}
+                        </select>
+                        <input type="number" class="count-input" data-side="${isAttacker ? 'attacker' : 'defender'}" data-row="${idx}" value="${row.count}" step="1000" min="0">
+                    </div>
+                `;
+                container.appendChild(rowDiv);
+            });
         }
-        reportDiv.innerHTML = html;
-        reportDiv.scrollTop = reportDiv.scrollHeight;
-    }
-
-    function resetDefaultSetup() {
-        // Tiefe Kopie der Standardwerte
-        attackerRows = JSON.parse(JSON.stringify(defaultAttackerRows));
-        defenderRows = JSON.parse(JSON.stringify(defaultDefenderRows));
-        renderSetup();
-        fightLog = [];
-        log("🔁 Aufstellung auf Standard zurückgesetzt");
-        updateReport();
-    }
-
-    // Initialisierung
-    renderSetup();
-    
-    // Globale Funktionen für HTML
-    window.startFight = startFight;
-    window.resetDefaultSetup = resetDefaultSetup;
+        
+        function renderAll() {
+            renderArmy('attacker-rows', attackerRows, true);
+            renderArmy('defender-rows', defenderRows, false);
+            attachEvents();
+        }
+        
+        function attachEvents() {
+            // Alpha Select
+            document.querySelectorAll('.alpha-select').forEach(select => {
+                select.onchange = (e) => {
+                    const side = e.target.dataset.side;
+                    const row = parseInt(e.target.dataset.row);
+                    const val = e.target.value;
+                    if (side === 'attacker') attackerRows[row].alpha = val;
+                    else defenderRows[row].alpha = val;
+                };
+            });
+            
+            // Beast Select
+            document.querySelectorAll('.beast-select').forEach(select => {
+                select.onchange = (e) => {
+                    const side = e.target.dataset.side;
+                    const row = parseInt(e.target.dataset.row);
+                    const val = e.target.value;
+                    if (side === 'attacker') attackerRows[row].beast = val;
+                    else defenderRows[row].beast = val;
+                };
+            });
+            
+            // Count Input
+            document.querySelectorAll('.count-input').forEach(input => {
+                input.onchange = (e) => {
+                    const side = e.target.dataset.side;
+                    const row = parseInt(e.target.dataset.row);
+                    const val = parseInt(e.target.value) || 0;
+                    if (side === 'attacker') attackerRows[row].count = val;
+                    else defenderRows[row].count = val;
+                };
+            });
+        }
+        
+        function resetSetup() {
+            attackerRows = JSON.parse(JSON.stringify(defaultAttacker));
+            defenderRows = JSON.parse(JSON.stringify(defaultDefender));
+            renderAll();
+            clearLog();
+            addLog("🔁 Aufstellung zurückgesetzt");
+            updateUI();
+        }
+        
+        // Event Listener für Buttons
+        document.getElementById('fightBtn').onclick = () => {
+            startFight();
+        };
+        
+        document.getElementById('resetBtn').onclick = () => {
+            resetSetup();
+        };
+        
+        // Initial render
+        renderAll();
+        addLog("Bereit! Klicke auf 'KAMPF STARTEN'");
+        updateUI();
+    })();
 </script>
 </body>
 </html>
