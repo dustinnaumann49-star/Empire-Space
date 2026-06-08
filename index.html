@@ -16,7 +16,7 @@
             margin: 0;
         }
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         h1 {
@@ -32,17 +32,17 @@
             font-size: 14px;
         }
         
-        /* Team Layout */
+        /* Battlefield Layout */
         .battlefield {
             display: flex;
-            gap: 30px;
+            gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
         }
         
         .team {
             flex: 1;
-            min-width: 400px;
+            min-width: 380px;
             background: rgba(0,0,0,0.4);
             border-radius: 20px;
             padding: 20px;
@@ -51,7 +51,7 @@
         
         .team-title {
             text-align: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             padding: 10px;
             margin-bottom: 20px;
@@ -72,30 +72,15 @@
             border-right: 4px solid #4ecdc4;
         }
         
-        .team-left {
-            border-left: 4px solid #ff6b6b;
-        }
-        
-        .team-right {
-            border-right: 4px solid #4ecdc4;
-        }
-        
-        /* Reihen */
         .row-card {
             background: rgba(20,20,40,0.9);
             border-radius: 12px;
             padding: 12px;
             margin-bottom: 15px;
-            transition: all 0.2s;
         }
         
-        .team-left .row-card {
-            border-right: 3px solid #ff6b6b;
-        }
-        
-        .team-right .row-card {
-            border-left: 3px solid #4ecdc4;
-        }
+        .team-left .row-card { border-right: 3px solid #ff6b6b; }
+        .team-right .row-card { border-left: 3px solid #4ecdc4; }
         
         .row-header {
             display: flex;
@@ -107,7 +92,7 @@
         }
         
         .row-number {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             background: #ffd700;
             color: #1a1a2e;
@@ -116,7 +101,7 @@
         }
         
         .alpha-name {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
         }
         
@@ -127,21 +112,8 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-        
-        .beast-name {
-            background: rgba(0,0,0,0.5);
-            padding: 4px 10px;
-            border-radius: 15px;
-        }
-        
-        .beast-count {
-            background: rgba(0,0,0,0.5);
-            padding: 4px 10px;
-            border-radius: 15px;
-            color: #ffd700;
+            margin-bottom: 8px;
+            font-size: 13px;
         }
         
         .beast-stats {
@@ -164,10 +136,10 @@
         }
         
         select, input {
-            padding: 6px 10px;
+            padding: 5px 8px;
             border-radius: 6px;
             border: none;
-            font-size: 13px;
+            font-size: 12px;
             background: #2c3e50;
             color: white;
         }
@@ -180,30 +152,30 @@
         .fight-btn {
             background: linear-gradient(135deg, #ff6b6b, #c0392b);
             color: white;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
-            padding: 15px 40px;
+            padding: 12px 35px;
             border: none;
             border-radius: 50px;
             cursor: pointer;
             margin: 0 15px;
-            transition: transform 0.2s;
         }
         
         .fight-btn:hover {
-            transform: scale(1.05);
+            transform: scale(1.03);
         }
         
         .reset-btn {
             background: #2c3e50;
             color: white;
-            padding: 8px 25px;
+            padding: 8px 20px;
             cursor: pointer;
             border: none;
             border-radius: 50px;
-            font-size: 16px;
+            font-size: 14px;
         }
         
+        /* KAMPFBERICHT mit 2 Spalten */
         .report {
             background: #0a0a1a;
             border-radius: 15px;
@@ -215,35 +187,70 @@
         .report h3 {
             color: #ffd700;
             margin-top: 0;
+            text-align: center;
         }
         
-        .report-content {
+        .report-columns {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .report-column {
+            flex: 1;
+            min-width: 300px;
             background: #050510;
+            border-radius: 10px;
             padding: 12px;
-            border-radius: 8px;
+        }
+        
+        .report-column.left {
+            border-left: 3px solid #ff6b6b;
+        }
+        
+        .report-column.right {
+            border-right: 3px solid #4ecdc4;
+        }
+        
+        .report-column-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .report-column.left .report-column-title { color: #ff6b6b; }
+        .report-column.right .report-column-title { color: #4ecdc4; }
+        
+        .report-content {
             font-family: monospace;
             font-size: 11px;
             max-height: 500px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.4;
         }
         
-        button {
-            cursor: pointer;
+        .report-line {
+            margin: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         
         .vs-divider {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 36px;
+            font-size: 32px;
             font-weight: bold;
             color: #ffd700;
-            text-shadow: 2px 2px 4px #000;
             padding: 0 10px;
         }
         
-        @media (max-width: 900px) {
-            .battlefield {
+        @media (max-width: 1000px) {
+            .battlefield, .report-columns {
                 flex-direction: column;
             }
             .vs-divider {
@@ -251,6 +258,8 @@
                 padding: 10px;
             }
         }
+        
+        button { cursor: pointer; }
     </style>
 </head>
 <body>
@@ -259,7 +268,6 @@
     <div class="subtitle">Dein Team | VS | Gegner</div>
 
     <div class="battlefield">
-        <!-- LINKES TEAM (DEIN TEAM) -->
         <div class="team team-left">
             <div class="team-title">⚔️ DEIN TEAM ⚔️</div>
             <div id="player-rows"></div>
@@ -267,7 +275,6 @@
         
         <div class="vs-divider">VS</div>
         
-        <!-- RECHTES TEAM (GEGNER) -->
         <div class="team team-right">
             <div class="team-title">🛡️ GEGNER 🛡️</div>
             <div id="enemy-rows"></div>
@@ -276,13 +283,20 @@
 
     <div class="fight-section">
         <button class="fight-btn" id="fightBtn">🔥 KAMPF STARTEN 🔥</button>
-        <button class="reset-btn" id="resetBtn">↺ Standard Aufstellung</button>
+        <button class="reset-btn" id="resetBtn">↺ Standard</button>
     </div>
 
     <div class="report">
         <h3>📜 KAMPFBERICHT</h3>
-        <div class="report-content" id="report-content">
-            ⚔️ Klicke auf "KAMPF STARTEN" um zu beginnen ⚔️
+        <div class="report-columns" id="report-columns">
+            <div class="report-column left">
+                <div class="report-column-title">⚔️ DEIN TEAM</div>
+                <div class="report-content" id="player-report"></div>
+            </div>
+            <div class="report-column right">
+                <div class="report-column-title">🛡️ GEGNER</div>
+                <div class="report-content" id="enemy-report"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -301,18 +315,18 @@
             smilodon: { name: "Smilodon", type: "carni", skillChance: 0.8, skillMulti: 2.0, skillName: "Tödlicher Comboschlag" },
             beutelloewe: { name: "Beutellöwe", type: "carni", skillChance: 0.6, skillMulti: 2.15, skillName: "Nachstoß" },
             hyaenodon: { name: "Hyaenodon", type: "carni", skillChance: 0.5, skillMulti: 1.8, skillName: "Erstschlag" },
-            amerikanischerGepard: { name: "Amerikanischer Gepard", type: "carni", skillChance: 0.5, skillMulti: 1.7, skillName: "Blitzangriff" },
+            amerikanischerGepard: { name: "Gepard", type: "carni", skillChance: 0.5, skillMulti: 1.7, skillName: "Blitzangriff" },
             metridiochoerus: { name: "Metridiochoerus", type: "omni", skillChance: 0.6, skillMulti: 2.0, skillName: "Schwingenschlag" },
             dinopithecus: { name: "Dinopithecus", type: "omni", skillChance: 0.7, skillMulti: 2.2, skillName: "Echter Schaden" },
             elefantenvogel: { name: "Elefantenvogel", type: "omni", skillChance: 0.5, skillMulti: 1.8, skillName: "Reaktiver Schlag" },
             kurznasenbaer: { name: "Kurznasenbär", type: "omni", skillChance: 0.7, skillMulti: 2.5, skillName: "Ausnutzen" },
-            riesenSivatherium: { name: "Riesen Sivatherium", type: "herbi", skillChance: 0.5, skillMulti: 1.6, skillName: "Verwirrender Tritt" },
+            riesenSivatherium: { name: "Sivatherium", type: "herbi", skillChance: 0.5, skillMulti: 1.6, skillName: "Verwirrender Tritt" },
             meiolanja: { name: "Meiolanja", type: "herbi", skillChance: 0.6, skillMulti: 1.5, skillName: "Gegenschlag" },
             mammut: { name: "Mammut", type: "herbi", skillChance: 0.5, skillMulti: 1.7, skillName: "Gegenangriff" },
             megatherium: { name: "Megatherium", type: "herbi", skillChance: 0.6, skillMulti: 2.0, skillName: "Fokussierter Schlag" }
         };
 
-        // ========== STANDARD AUFSTELLUNG (wie gewünscht) ==========
+        // Standard Aufstellung
         let defaultPlayer = [
             { alpha: "beutelloewe", beast: "hoelhenhyaene", count: 100000 },
             { alpha: "amerikanischerGepard", beast: "hoelhenhyaene", count: 100000 },
@@ -328,43 +342,67 @@
         let playerRows = JSON.parse(JSON.stringify(defaultPlayer));
         let enemyRows = JSON.parse(JSON.stringify(defaultEnemy));
         
-        let logEntries = [];
-        
-        let roundStats = {
-            player: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 },
-            enemy: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 }
-        };
+        // Separate Logs für beide Teams
+        let playerLog = [];
+        let enemyLog = [];
+        let generalLog = [];
 
-        function addLog(msg, type) {
-            logEntries.push({ msg: msg, type: type || 'info' });
+        function addPlayerLog(msg, type) {
+            playerLog.push({ msg: msg, type: type || 'info' });
+        }
+        
+        function addEnemyLog(msg, type) {
+            enemyLog.push({ msg: msg, type: type || 'info' });
+        }
+        
+        function addGeneralLog(msg, type) {
+            generalLog.push({ msg: msg, type: type || 'info' });
         }
 
-        function clearLog() {
-            logEntries = [];
-            roundStats = {
-                player: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 },
-                enemy: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 }
-            };
+        function clearLogs() {
+            playerLog = [];
+            enemyLog = [];
+            generalLog = [];
         }
 
         function updateUI() {
-            const container = document.getElementById('report-content');
-            if (!container) return;
-            
-            let html = '';
-            for (let entry of logEntries) {
-                let color = '#ccc';
-                if (entry.type === 'damage') color = '#ff8888';
-                if (entry.type === 'skill') color = '#88ff88';
-                if (entry.type === 'heal') color = '#8888ff';
-                if (entry.type === 'round') color = '#ffcc66';
-                if (entry.type === 'victory') color = '#ffaa44';
-                if (entry.type === 'stat') color = '#ffaa88';
-                if (entry.type === 'info') color = '#aaa';
-                html += `<div style="color: ${color}; margin: 2px 0;">${escapeHtml(entry.msg)}</div>`;
+            // Spieler Log
+            const playerContainer = document.getElementById('player-report');
+            if (playerContainer) {
+                let html = '';
+                for (let entry of playerLog) {
+                    let color = '#ccc';
+                    if (entry.type === 'damage') color = '#ff8888';
+                    if (entry.type === 'skill') color = '#88ff88';
+                    if (entry.type === 'heal') color = '#8888ff';
+                    if (entry.type === 'round') color = '#ffcc66';
+                    if (entry.type === 'victory') color = '#ffaa44';
+                    if (entry.type === 'stat') color = '#ffaa88';
+                    if (entry.type === 'info') color = '#aaa';
+                    html += `<div class="report-line" style="color: ${color};">${escapeHtml(entry.msg)}</div>`;
+                }
+                playerContainer.innerHTML = html;
+                playerContainer.scrollTop = playerContainer.scrollHeight;
             }
-            container.innerHTML = html;
-            container.scrollTop = container.scrollHeight;
+            
+            // Gegner Log
+            const enemyContainer = document.getElementById('enemy-report');
+            if (enemyContainer) {
+                let html = '';
+                for (let entry of enemyLog) {
+                    let color = '#ccc';
+                    if (entry.type === 'damage') color = '#ff8888';
+                    if (entry.type === 'skill') color = '#88ff88';
+                    if (entry.type === 'heal') color = '#8888ff';
+                    if (entry.type === 'round') color = '#ffcc66';
+                    if (entry.type === 'victory') color = '#ffaa44';
+                    if (entry.type === 'stat') color = '#ffaa88';
+                    if (entry.type === 'info') color = '#aaa';
+                    html += `<div class="report-line" style="color: ${color};">${escapeHtml(entry.msg)}</div>`;
+                }
+                enemyContainer.innerHTML = html;
+                enemyContainer.scrollTop = enemyContainer.scrollHeight;
+            }
         }
         
         function escapeHtml(text) {
@@ -400,10 +438,15 @@
         }
 
         function startFight() {
-            clearLog();
-            addLog("═══════════════════════════════════════════════════════════", "victory");
-            addLog("⚔️ KAMPF BEGINNT - DEIN TEAM vs GEGNER ⚔️", "victory");
-            addLog("═══════════════════════════════════════════════════════════", "victory");
+            clearLogs();
+            
+            addPlayerLog("═══════════════════════════════", "victory");
+            addPlayerLog("⚔️ KAMPF BEGINNT ⚔️", "victory");
+            addPlayerLog("═══════════════════════════════", "victory");
+            
+            addEnemyLog("═══════════════════════════════", "victory");
+            addEnemyLog("⚔️ KAMPF BEGINNT ⚔️", "victory");
+            addEnemyLog("═══════════════════════════════", "victory");
             
             // Spieler Einheiten
             let player = playerRows.map((r, idx) => ({
@@ -458,41 +501,50 @@
             }));
             
             // Aufstellung anzeigen
-            addLog("\n📋 AUFSTELLUNG:", "stat");
-            addLog("┌─────────────────────────────────────────────────────────┐", "stat");
-            addLog("│ DEIN TEAM:                                             │", "stat");
+            addPlayerLog("\n📋 DEINE AUFSTELLUNG:", "stat");
             for (let p of player) {
-                addLog(`│   Reihe ${p.rowNum}: ${p.alphaName} + ${p.count.toLocaleString()} ${p.beastName}`, "stat");
+                addPlayerLog(`   Reihe ${p.rowNum}: ${p.alphaName} + ${p.count.toLocaleString()} ${p.beastName}`, "stat");
             }
-            addLog("├─────────────────────────────────────────────────────────┤", "stat");
-            addLog("│ GEGNER:                                                │", "stat");
+            
+            addEnemyLog("\n📋 GEGNER AUFSTELLUNG:", "stat");
             for (let e of enemy) {
-                addLog(`│   Reihe ${e.rowNum}: ${e.alphaName} + ${e.count.toLocaleString()} ${e.beastName}`, "stat");
+                addEnemyLog(`   Reihe ${e.rowNum}: ${e.alphaName} + ${e.count.toLocaleString()} ${e.beastName}`, "stat");
             }
-            addLog("└─────────────────────────────────────────────────────────┘", "stat");
             
             let round = 1;
             let maxRounds = 30;
             let winner = null;
+            let playerTotalDamage = 0;
+            let enemyTotalDamage = 0;
+            let playerSkillDamage = 0;
+            let enemySkillDamage = 0;
+            let playerSkillUses = 0;
+            let enemySkillUses = 0;
             
             while (round <= maxRounds && winner === null) {
-                addLog(`\n╔═══════════════════════════════════════════════════════════╗`, "round");
-                addLog(`║                      RUNDE ${round}                         ║`, "round");
-                addLog(`╚═══════════════════════════════════════════════════════════╝`, "round");
+                addPlayerLog(`\n╔════════════════════════╗`, "round");
+                addPlayerLog(`║     RUNDE ${round}        ║`, "round");
+                addPlayerLog(`╚════════════════════════╝`, "round");
                 
-                // Aktuelle Stärke anzeigen
-                addLog(`\n📊 AKTUELLE TRUPPENSTÄRKE:`, "info");
+                addEnemyLog(`\n╔════════════════════════╗`, "round");
+                addEnemyLog(`║     RUNDE ${round}        ║`, "round");
+                addEnemyLog(`╚════════════════════════╝`, "round");
+                
+                // Aktuelle Stärke
+                addPlayerLog(`\n📊 AKTUELLE STÄRKE:`, "info");
                 for (let p of player) {
                     let percent = p.count > 0 ? ((p.hp / p.maxHp) * 100).toFixed(0) : 0;
-                    addLog(`   🟢 ${p.alphaName}: ${p.count.toLocaleString()} Bestien (${percent}% HP)`, "info");
+                    addPlayerLog(`   ${p.alphaName}: ${p.count.toLocaleString()} Bestien (${percent}% HP)`, "info");
                 }
+                
+                addEnemyLog(`\n📊 AKTUELLE STÄRKE:`, "info");
                 for (let e of enemy) {
                     let percent = e.count > 0 ? ((e.hp / e.maxHp) * 100).toFixed(0) : 0;
-                    addLog(`   🔴 ${e.alphaName}: ${e.count.toLocaleString()} Bestien (${percent}% HP)`, "info");
+                    addEnemyLog(`   ${e.alphaName}: ${e.count.toLocaleString()} Bestien (${percent}% HP)`, "info");
                 }
                 
                 // DEIN TEAM greift an
-                addLog(`\n⚔️ DEIN TEAM greift an:`, "damage");
+                addPlayerLog(`\n⚔️ DEIN ANGRIFF:`, "damage");
                 for (let p of player) {
                     if (!p.isAlive || p.count <= 0) continue;
                     
@@ -509,25 +561,34 @@
                     target.count = Math.floor(target.hp / target.beastHp);
                     
                     p.totalDamage += damage;
+                    playerTotalDamage += damage;
+                    
                     if (isSkill) {
                         p.skillDamage += damage;
                         p.skillUses++;
-                        roundStats.player.skillDamage += damage;
-                        roundStats.player.skillUses++;
-                        addLog(`   ✨ ${p.alphaName} (Reihe ${p.rowNum}): ${p.alphaSkillName} - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (Reihe ${target.rowNum})`, "skill");
+                        playerSkillDamage += damage;
+                        playerSkillUses++;
+                        addPlayerLog(`   ✨ ${p.alphaName}: ${p.alphaSkillName} - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (R${target.rowNum})`, "skill");
                     } else {
-                        roundStats.player.normalDamage += damage;
-                        addLog(`   ⚔️ ${p.alphaName} (Reihe ${p.rowNum}): Normaler Angriff - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (Reihe ${target.rowNum})`, "damage");
+                        addPlayerLog(`   ⚔️ ${p.alphaName}: Normaler Angriff - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (R${target.rowNum})`, "damage");
                     }
-                    roundStats.player.totalDamage += damage;
+                    
+                    // Gegner Log: Schaden erhalten
+                    if (isSkill) {
+                        addEnemyLog(`   💥 ${target.alphaName} erleidet ${p.alphaSkillName}: ${damage.toLocaleString()} Schaden von ${p.alphaName}`, "damage");
+                    } else {
+                        addEnemyLog(`   💥 ${target.alphaName} erleidet normalen Angriff: ${damage.toLocaleString()} Schaden von ${p.alphaName}`, "damage");
+                    }
                     
                     let lostCount = oldCount - target.count;
                     if (target.hp <= 0) {
                         target.isAlive = false;
                         p.kills++;
-                        addLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde BESIEGT!`, "damage");
+                        addPlayerLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde BESIEGT!`, "damage");
+                        addEnemyLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde BESIEGT!`, "damage");
                     } else if (lostCount > 0) {
-                        addLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName} (${target.count.toLocaleString()} verbleiben)`, "damage");
+                        addPlayerLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName}`, "damage");
+                        addEnemyLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName} (${target.count.toLocaleString()} verbleiben)`, "damage");
                     }
                 }
                 
@@ -538,7 +599,7 @@
                 }
                 
                 // GEGNER greift an
-                addLog(`\n🛡️ GEGNER greift an:`, "damage");
+                addEnemyLog(`\n🛡️ GEGNER ANGRIFF:`, "damage");
                 for (let e of enemy) {
                     if (!e.isAlive || e.count <= 0) continue;
                     
@@ -555,25 +616,34 @@
                     target.count = Math.floor(target.hp / target.beastHp);
                     
                     e.totalDamage += damage;
+                    enemyTotalDamage += damage;
+                    
                     if (isSkill) {
                         e.skillDamage += damage;
                         e.skillUses++;
-                        roundStats.enemy.skillDamage += damage;
-                        roundStats.enemy.skillUses++;
-                        addLog(`   ✨ ${e.alphaName} (Reihe ${e.rowNum}): ${e.alphaSkillName} - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (Reihe ${target.rowNum})`, "skill");
+                        enemySkillDamage += damage;
+                        enemySkillUses++;
+                        addEnemyLog(`   ✨ ${e.alphaName}: ${e.alphaSkillName} - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (R${target.rowNum})`, "skill");
                     } else {
-                        roundStats.enemy.normalDamage += damage;
-                        addLog(`   ⚔️ ${e.alphaName} (Reihe ${e.rowNum}): Normaler Angriff - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (Reihe ${target.rowNum})`, "damage");
+                        addEnemyLog(`   ⚔️ ${e.alphaName}: Normaler Angriff - ${damage.toLocaleString()} Schaden auf ${target.alphaName} (R${target.rowNum})`, "damage");
                     }
-                    roundStats.enemy.totalDamage += damage;
+                    
+                    // Spieler Log: Schaden erhalten
+                    if (isSkill) {
+                        addPlayerLog(`   💥 ${target.alphaName} erleidet ${e.alphaSkillName}: ${damage.toLocaleString()} Schaden von ${e.alphaName}`, "damage");
+                    } else {
+                        addPlayerLog(`   💥 ${target.alphaName} erleidet normalen Angriff: ${damage.toLocaleString()} Schaden von ${e.alphaName}`, "damage");
+                    }
                     
                     let lostCount = oldCount - target.count;
                     if (target.hp <= 0) {
                         target.isAlive = false;
                         e.kills++;
-                        addLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde BESIEGT!`, "damage");
+                        addEnemyLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde BESIEGT!`, "damage");
+                        addPlayerLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde BESIEGT!`, "damage");
                     } else if (lostCount > 0) {
-                        addLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName} (${target.count.toLocaleString()} verbleiben)`, "damage");
+                        addEnemyLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName}`, "damage");
+                        addPlayerLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName} (${target.count.toLocaleString()} verbleiben)`, "damage");
                     }
                 }
                 
@@ -587,55 +657,51 @@
             }
             
             // ========== KAMPFBERICHT ==========
-            addLog(`\n╔═══════════════════════════════════════════════════════════╗`, "victory");
-            addLog(`║                    KAMPFBERICHT                          ║`, "victory");
-            addLog(`╚═══════════════════════════════════════════════════════════╝`, "victory");
+            addPlayerLog(`\n╔═══════════════════════════════╗`, "victory");
+            addPlayerLog(`║       KAMPFBERICHT           ║`, "victory");
+            addPlayerLog(`╚═══════════════════════════════╝`, "victory");
+            
+            addEnemyLog(`\n╔═══════════════════════════════╗`, "victory");
+            addEnemyLog(`║       KAMPFBERICHT           ║`, "victory");
+            addEnemyLog(`╚═══════════════════════════════╝`, "victory");
             
             if (winner === null) {
-                addLog(`\n⏰ UNENTSCHIEDEN nach ${maxRounds} Runden!`, "victory");
+                addPlayerLog(`\n⏰ UNENTSCHIEDEN nach ${maxRounds} Runden!`, "victory");
+                addEnemyLog(`\n⏰ UNENTSCHIEDEN nach ${maxRounds} Runden!`, "victory");
             } else {
-                addLog(`\n🏆 SIEGER: ${winner} nach ${round} Runden! 🏆`, "victory");
+                addPlayerLog(`\n🏆 SIEGER: ${winner} nach ${round} Runden! 🏆`, "victory");
+                addEnemyLog(`\n🏆 SIEGER: ${winner} nach ${round} Runden! 🏆`, "victory");
             }
             
-            // Gesamtstatistiken
-            addLog(`\n📊 GESAMTSTATISTIK:`, "stat");
-            addLog(`┌─────────────────────────────────────────────────────────┐`, "stat");
-            addLog(`│ DEIN TEAM:                                             │`, "stat");
-            addLog(`│   Gesamtschaden: ${roundStats.player.totalDamage.toLocaleString()}`, "stat");
-            addLog(`│   Skills: ${roundStats.player.skillDamage.toLocaleString()} (${roundStats.player.skillUses} mal ausgelöst)`, "stat");
-            addLog(`│   Normal: ${roundStats.player.normalDamage.toLocaleString()}`, "stat");
-            addLog(`├─────────────────────────────────────────────────────────┤`, "stat");
-            addLog(`│ GEGNER:                                                │`, "stat");
-            addLog(`│   Gesamtschaden: ${roundStats.enemy.totalDamage.toLocaleString()}`, "stat");
-            addLog(`│   Skills: ${roundStats.enemy.skillDamage.toLocaleString()} (${roundStats.enemy.skillUses} mal ausgelöst)`, "stat");
-            addLog(`│   Normal: ${roundStats.enemy.normalDamage.toLocaleString()}`, "stat");
-            addLog(`└─────────────────────────────────────────────────────────┘`, "stat");
+            // Statistiken
+            addPlayerLog(`\n📊 STATISTIK:`, "stat");
+            addPlayerLog(`   Gesamtschaden: ${playerTotalDamage.toLocaleString()}`, "stat");
+            addPlayerLog(`   Skills: ${playerSkillDamage.toLocaleString()} (${playerSkillUses}×)`, "stat");
+            addPlayerLog(`   Normal: ${(playerTotalDamage - playerSkillDamage).toLocaleString()}`, "stat");
+            
+            addEnemyLog(`\n📊 STATISTIK:`, "stat");
+            addEnemyLog(`   Gesamtschaden: ${enemyTotalDamage.toLocaleString()}`, "stat");
+            addEnemyLog(`   Skills: ${enemySkillDamage.toLocaleString()} (${enemySkillUses}×)`, "stat");
+            addEnemyLog(`   Normal: ${(enemyTotalDamage - enemySkillDamage).toLocaleString()}`, "stat");
             
             // Details pro Reihe
-            addLog(`\n📋 DETAILS PRO REIHE:`, "stat");
-            addLog(`┌─────────────────────────────────────────────────────────┐`, "stat");
-            addLog(`│ DEIN TEAM:                                             │`, "stat");
+            addPlayerLog(`\n📋 DETAILS PRO REIHE:`, "stat");
             for (let p of player) {
                 let status = p.isAlive && p.count > 0 ? "✅ Überlebt" : "💀 Besiegt";
-                addLog(`│ Reihe ${p.rowNum}: ${p.alphaName} + ${p.beastName}`, "stat");
-                addLog(`│   Schaden: ${p.totalDamage.toLocaleString()} (davon Skills: ${p.skillDamage.toLocaleString()}, ${p.skillUses}×)`, "stat");
-                addLog(`│   Kills: ${p.kills} | Status: ${status}`, "stat");
-                addLog(`│   Verbleibende Bestien: ${p.count.toLocaleString()}`, "stat");
-                if (p !== player[player.length-1]) addLog(`├─────────────────────────────────────────────────────────┤`, "stat");
+                addPlayerLog(`   Reihe ${p.rowNum}: ${p.alphaName}`, "stat");
+                addPlayerLog(`      Schaden: ${p.totalDamage.toLocaleString()} (Skills: ${p.skillDamage.toLocaleString()}, ${p.skillUses}×)`, "stat");
+                addPlayerLog(`      Kills: ${p.kills} | Status: ${status}`, "stat");
+                addPlayerLog(`      Verbleibend: ${p.count.toLocaleString()} ${p.beastName}`, "stat");
             }
-            addLog(`├─────────────────────────────────────────────────────────┤`, "stat");
-            addLog(`│ GEGNER:                                                │`, "stat");
+            
+            addEnemyLog(`\n📋 DETAILS PRO REIHE:`, "stat");
             for (let e of enemy) {
                 let status = e.isAlive && e.count > 0 ? "✅ Überlebt" : "💀 Besiegt";
-                addLog(`│ Reihe ${e.rowNum}: ${e.alphaName} + ${e.beastName}`, "stat");
-                addLog(`│   Schaden: ${e.totalDamage.toLocaleString()} (davon Skills: ${e.skillDamage.toLocaleString()}, ${e.skillUses}×)`, "stat");
-                addLog(`│   Kills: ${e.kills} | Status: ${status}`, "stat");
-                addLog(`│   Verbleibende Bestien: ${e.count.toLocaleString()}`, "stat");
-                if (e !== enemy[enemy.length-1]) addLog(`├─────────────────────────────────────────────────────────┤`, "stat");
+                addEnemyLog(`   Reihe ${e.rowNum}: ${e.alphaName}`, "stat");
+                addEnemyLog(`      Schaden: ${e.totalDamage.toLocaleString()} (Skills: ${e.skillDamage.toLocaleString()}, ${e.skillUses}×)`, "stat");
+                addEnemyLog(`      Kills: ${e.kills} | Status: ${status}`, "stat");
+                addEnemyLog(`      Verbleibend: ${e.count.toLocaleString()} ${e.beastName}`, "stat");
             }
-            addLog(`└─────────────────────────────────────────────────────────┘`, "stat");
-            
-            addLog(`\n═══════════════════════════════════════════════════════════`, "victory");
             
             updateUI();
         }
@@ -663,15 +729,15 @@
                         <span class="alpha-name">${alpha.name}</span>
                     </div>
                     <div class="beast-info">
-                        <span class="beast-name ${beast.type === 'carni' ? 'type-carni' : beast.type === 'herbi' ? 'type-herbi' : 'type-omni'}">
+                        <span class="${beast.type === 'carni' ? 'type-carni' : beast.type === 'herbi' ? 'type-herbi' : 'type-omni'}">
                             ${beast.type === 'carni' ? '🥩' : beast.type === 'herbi' ? '🌿' : '🍂'} ${beast.name}
                         </span>
-                        <span class="beast-count">📊 ${row.count.toLocaleString()} Bestien</span>
+                        <span>📊 ${row.count.toLocaleString()} Bestien</span>
                     </div>
                     <div class="beast-stats">
-                        <span>⚔️ Angriff: ${beast.attack}</span>
-                        <span>🛡️ Verteidigung: ${beast.defense}</span>
-                        <span>❤️ HP: ${beast.hp}</span>
+                        <span>⚔️ ${beast.attack}</span>
+                        <span>🛡️ ${beast.defense}</span>
+                        <span>❤️ ${beast.hp}</span>
                     </div>
                     <div class="controls">
                         <select class="alpha-select" data-team="${team}" data-row="${idx}">
@@ -723,8 +789,9 @@
             playerRows = JSON.parse(JSON.stringify(defaultPlayer));
             enemyRows = JSON.parse(JSON.stringify(defaultEnemy));
             renderTeams();
-            clearLog();
-            addLog("🔁 Aufstellung zurückgesetzt!");
+            clearLogs();
+            addPlayerLog("🔁 Aufstellung zurückgesetzt!");
+            addEnemyLog("🔁 Aufstellung zurückgesetzt!");
             updateUI();
         }
         
@@ -732,7 +799,8 @@
         document.getElementById('resetBtn').onclick = () => resetSetup();
         
         renderTeams();
-        addLog("✅ Bereit! Klicke auf 'KAMPF STARTEN'");
+        addPlayerLog("✅ Bereit! Klicke auf 'KAMPF STARTEN'");
+        addEnemyLog("✅ Bereit! Klicke auf 'KAMPF STARTEN'");
         updateUI();
     })();
 </script>
