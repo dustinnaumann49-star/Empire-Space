@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beast Lord Kampf-Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #eee;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px #000;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        /* Armeen nebeneinander */
+        .armies-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .army {
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            padding: 15px;
+            flex: 1;
+            min-width: 400px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+        .army h2 {
+            text-align: center;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ffd700;
+            display: inline-block;
+            width: 100%;
+        }
+        .attacker h2 { color: #ff6b6b; }
+        .defender h2 { color: #4ecdc4; }
+        
+        /* Reihen */
+        .row {
+            background: rgba(30,30,50,0.8);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffd700;
+        }
+        .row-title {
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .row-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        select, input, button {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+        }
+        select {
+            background: #2c3e50;
+            color: white;
+            cursor: pointer;
+        }
+        input {
+            background: #2c3e50;
+            color: white;
+            width: 100px;
+        }
+        .beast-count {
+            width: 90px;
+        }
+        .stat-badge {
+            display: inline-block;
+            background: #1a1a2e;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        /* Kampfbutton */
+        .fight-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .fight-btn {
+            background: linear-gradient(135deg, #ff6b6b, #c0392b);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 0 20px rgba(255,107,107,0.5);
+        }
+        .fight-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255,107,107,0.8);
+        }
+        /* Kampfbericht */
+        .report {
+            background: #0a0a1a;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid #ffd700;
+        }
+        .report h3 {
+            color: #ffd700;
+            margin-top: 0;
+        }
+        .report-content {
+            background: #050510;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .round-separator {
+            color: #ffd700;
+            border-top: 1px solid #ffd700;
+            margin: 10px 0;
+            padding-top: 10px;
+        }
+        .skill-log {
+            color: #7bed9f;
+            margin-left: 20px;
+        }
+        .damage-log {
+            color: #ff6b6b;
+        }
+        .heal-log {
+            color: #70a1ff;
+        }
+        .victory {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding: 10px;
+        }
+        .reset-btn {
+            background: #2c3e50;
+            color: white;
+            padding: 8px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .type-carni { color: #ff6b6b; }
+        .type-herbi { color: #7bed9f; }
+        .type-omni { color: #ffd700; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🐺 Beast Lord Kampf-Simulator ⚔️</h1>
+    <div class="subtitle">Fleischfresser 🥩 | Pflanzenfresser 🌿 | Allesfresser 🍂</div>
+
+    <div class="armies-container">
+        <!-- Angreifer -->
+        <div class="army attacker">
+            <h2>⚔️ ANGREIFER ⚔️</h2>
+            <div id="attacker-rows"></div>
+        </div>
+
+        <!-- Verteidiger -->
+        <div class="army defender">
+            <h2>🛡️ VERTEIDIGER 🛡️</h2>
+            <div id="defender-rows"></div>
+        </div>
+    </div>
+
+    <div class="fight-section">
+        <button class="fight-btn" onclick="startFight()">🔥 KAMPF STARTEN 🔥</button>
+        <button class="reset-btn" onclick="resetDefaultSetup()">↺ Standard-Aufstellung</button>
+    </div>
+
+    <div class="report" id="report">
+        <h3>📜 KAMPFBERICHT</h3>
+        <div class="report-content" id="report-content">
+            Klicke auf "KAMPF STARTEN" um eine Simulation zu beginnen...
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==================== BESTIEN-DATEN ====================
+    const BEASTS = {
+        hoelhenhyaene: {
+            name: "Höhlenhyäne",
+            type: "carni",
+            attack: 151,
+            defense: 63,
+            hp: 20,
+            powerPerUnit: 10.5
+        },
+        langhornbison: {
+            name: "Langhornbison",
+            type: "herbi",
+            attack: 99,
+            defense: 102,
+            hp: 28,
+            powerPerUnit: 10.5
+        },
+        gigantopithecus: {
+            name: "Gigantopithecus",
+            type: "omni",
+            attack: 121,
+            defense: 78,
+            hp: 24,
+            powerPerUnit: 10.5
+        }
+    };
+
+    // ==================== ALPHA-DATEN ====================
+    const ALPHAS = {
+        // Fleischfresser
+        hyaenodon: {
+            name: "Hyaenodon",
+            type: "carni",
+            skills: [
+                { name: "Erstschlag-Vorteil", desc: "+20% Schaden bei Erstschlag, -20% erlittener Schaden bei Zweitschlag", trigger: "battle_start", effect: "buff" },
+                { name: "Fähigkeitenkopie", desc: "70% Chance, Hintertrupp-Skill zu kopieren (+15% Effekt)", trigger: "on_skill", effect: "copy_skill" },
+                { name: "Überlebensinstinkt", desc: "+20% LP für alle, 50% Chance auf +30% Def + Heilung", trigger: "battle_start", effect: "global_buff" }
+            ]
+        },
+        smilodon: {
+            name: "Smilodon",
+            type: "carni",
+            skills: [
+                { name: "Tödlicher Comboschlag", desc: "80% Chance, 2x 200% Schaden + Verwundbarkeit (+10% pro Stack)", trigger: "attack", effect: "combo", chance: 0.8, multiplier: 2.0, hits: 2 },
+                { name: "Wilde Zähne", desc: "70% Chance, 130% AoE Schaden auf alle 3 Reihen", trigger: "attack", effect: "aoe", chance: 0.7, multiplier: 1.3 },
+                { name: "Taktischer Fernschlag", desc: "50% Chance, +1 Distanz, +8% Schaden pro Distanz", trigger: "per_round", effect: "range", chance: 0.5 }
+            ]
+        },
+        beutelloewe: {
+            name: "Beutellöwe",
+            type: "carni",
+            skills: [
+                { name: "Frontkämpfer", desc: "+20% Schaden (Front +40% +15% Ausweichen)", trigger: "battle_start", effect: "buff" },
+                { name: "Nachstoß", desc: "60% Chance nach Angriff: 215% Schaden, 40% Heilung", trigger: "after_attack", effect: "counter", chance: 0.6, multiplier: 2.15 },
+                { name: "Zeitschlag", desc: "Runden 1,3,5,7: 220% Schaden auf 2 Reihen", trigger: "round_specific", rounds: [1,3,5,7], effect: "multi_target" }
+            ]
+        },
+        amerikanischerGepard: {
+            name: "Amerikanischer Gepard",
+            type: "carni",
+            skills: [
+                { name: "Blitzangriff", desc: "50% Chance: Front +1 Angriff (+17% Schaden), Hintertrupp 170% Schaden", trigger: "per_round", effect: "buff_attack" },
+                { name: "Reinigender Schlag", desc: "50% Chance: 170% Schaden auf 2 Feinde + Debuff-Entfernung", trigger: "attack", effect: "cleanse", chance: 0.5 },
+                { name: "Heilende Wut", desc: "Ab Runde 2: +22% Schaden, danach 80% Heilung", trigger: "round_2plus", effect: "damage_heal" }
+            ]
+        },
+        // Allesfresser
+        metridiochoerus: {
+            name: "Metridiochoerus",
+            type: "omni",
+            skills: [
+                { name: "Frühe Verteidigung", desc: "Runden 1-4: +10% Ausweichen, +20% Resistenz", trigger: "battle_start", effect: "early_defense" },
+                { name: "Vorbereiteter Schlag", desc: "1 Runde Vorbereitung: 350% Schaden + Stumm (50%)", trigger: "charge", effect: "charge_attack" },
+                { name: "Schwingen der Zeit", desc: "Runden 2,4,6,8: 270% AoE +10% pro Ausweichen", trigger: "round_specific", rounds: [2,4,6,8], effect: "aoe" }
+            ]
+        },
+        dinopithecus: {
+            name: "Dinopithecus",
+            type: "omni",
+            skills: [
+                { name: "Echter Schaden", desc: "70% Chance: 280% Schaden, 10% Echtschaden", trigger: "attack", effect: "true_damage", chance: 0.7 },
+                { name: "Verzweifelter Schrei", desc: "1 Runde Vorbereitung: 340% AoE + -40% Heilung", trigger: "charge", effect: "aoe_heal_reduce" },
+                { name: "Ausweichtanz", desc: "+10% Ausweichen, +2% Skill-Schaden pro 1% Ausweichen", trigger: "battle_start", effect: "evasion_buff" }
+            ]
+        },
+        elefantenvogel: {
+            name: "Elefantenvogel",
+            type: "omni",
+            skills: [
+                { name: "Reaktives Ausweichen", desc: "+20% Ausweichen, 50% Chance auf zusätzliches Ausweichen + Heilung", trigger: "battle_start", effect: "reactive_evasion" },
+                { name: "Fähigkeiten-Boost", desc: "70% Chance: 230% Schaden + +5% Skill-Chance für 2 Runden", trigger: "attack", effect: "skill_chance_boost", chance: 0.7 },
+                { name: "Überlebenskünstler", desc: "Bei Schaden: +5% LP/Def (max 10 Stapel)", trigger: "on_damage_taken", effect: "stacking_defense" }
+            ]
+        },
+        kurznasenbaer: {
+            name: "Kurznasenbär",
+            type: "omni",
+            skills: [
+                { name: "Giftmischer", desc: "50% Chance: Negativstatus (Gift/Blutung/Korrosion/etc)", trigger: "attack", effect: "debuff", chance: 0.5 },
+                { name: "Ausnutzen", desc: "70% Chance: 390% Schaden + +30% Schaden gegen Debuffs", trigger: "attack", effect: "exploit", chance: 0.7 },
+                { name: "Massive Heilung", desc: "1 Runde Vorbereitung: 280% AoE + 460% Heilung auf schwächsten", trigger: "charge", effect: "aoe_heal" }
+            ]
+        },
+        // Pflanzenfresser
+        riesenSivatherium: {
+            name: "Riesen Sivatherium",
+            type: "herbi",
+            skills: [
+                { name: "Schadensreduktion", desc: "Runden 2,4,6,8: -20% erlittener Schaden + 70% Chance auf Heilung", trigger: "round_specific", rounds: [2,4,6,8], effect: "damage_reduce" },
+                { name: "Verwirrender Tritt", desc: "50% Chance: 380% Schaden + Verwirrung (zufälliges Ziel)", trigger: "attack", effect: "confuse", chance: 0.5 },
+                { name: "Feste Haut", desc: "Pro Runde: +20% Def, +7.5% Heilung (stapelbar)", trigger: "per_round", effect: "stacking_defense_heal" }
+            ]
+        },
+        meiolanja: {
+            name: "Meiolanja",
+            type: "herbi",
+            skills: [
+                { name: "Gegenschlag", desc: "100% Chance: 70% AoE, aber 20% Selbstschaden", trigger: "attack", effect: "recoil_aoe" },
+                { name: "Schild des Schutzes", desc: "Nach 9 Schadenserleidnissen: Schild + 350% Gegenschaden", trigger: "damage_counter", effect: "shield_counter" },
+                { name: "Heilende Hülle", desc: "80% Chance: Heilt 2 Verbündete (150%) + -20% Skill-Schaden", trigger: "per_round", effect: "heal_reduce", chance: 0.8 }
+            ]
+        },
+        mammut: {
+            name: "Mammut",
+            type: "herbi",
+            skills: [
+                { name: "Gegenangriff", desc: "30% Chance: 120% Schaden auf 2 Feinde bei Schaden", trigger: "on_damage_taken", effect: "counter_attack", chance: 0.3 },
+                { name: "Eisenhaut", desc: "50% Chance: -35% Schaden (früh -55%) + teilt Schaden", trigger: "battle_start", effect: "damage_share" },
+                { name: "Stampede", desc: "Runden 2,4,6: +30% Skill-Schaden + 60% Chance auf Heilung", trigger: "round_specific", rounds: [2,4,6], effect: "damage_heal_boost" }
+            ]
+        },
+        megatherium: {
+            name: "Megatherium",
+            type: "herbi",
+            skills: [
+                { name: "Kampfverbindung", desc: "10% Angriff vom Fronttrupp, nach 8 Angriffen: 250% AoE + Stumm", trigger: "attack_counter", effect: "sync_attack" },
+                { name: "Fokussierter Schlag", desc: "75% Chance: 360% Schaden auf stärksten Feind + +30% Angriff", trigger: "attack", effect: "focus_attack", chance: 0.75 },
+                { name: "Wütender Schlag", desc: "60% Chance: 190% AoE +15% pro Fleischfresser getroffen", trigger: "attack", effect: "anti_carni_aoe", chance: 0.6 }
+            ]
+        }
+    };
+
+    // Standard-Aufstellung
+    let attackerRows = [
+        { alpha: "smilodon", beast: "hoelhenhyaene", beastCount: 100000 },
+        { alpha: "beutelloewe", beast: "hoelhenhyaene", beastCount: 80000 },
+        { alpha: "hyaenodon", beast: "hoelhenhyaene", beastCount: 90000 }
+    ];
+    let defenderRows = [
+        { alpha: "riesenSivatherium", beast: "langhornbison", beastCount: 120000 },
+        { alpha: "mammut", beast: "langhornbison", beastCount: 110000 },
+        { alpha: "megatherium", beast: "langhornbison", beastCount: 100000 }
+    ];
+
+    let fightLog = [];
+
+    function log(msg, type = "info") {
+        fightLog.push({ msg, type });
+    }
+
+    function renderSetup() {
+        renderArmy("attacker", attackerRows, "ANGREIFER");
+        renderArmy("defender", defenderRows, "VERTEIDIGER");
+    }
+
+    function renderArmy(armyId, rows, title) {
+        const container = document.getElementById(`${armyId}-rows`);
+        if (!container) return;
+        container.innerHTML = '';
+        rows.forEach((row, idx) => {
+            const alphaData = ALPHAS[row.alpha];
+            const beastData = BEASTS[row.beast];
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'row';
+            rowDiv.innerHTML = `
+                <div class="row-title">📌 Reihe ${idx + 1} - ${alphaData?.name || "???"} 
+                    <span class="stat-badge ${beastData?.type === 'carni' ? 'type-carni' : beastData?.type === 'herbi' ? 'type-herbi' : 'type-omni'}">
+                        ${beastData?.type === 'carni' ? '🥩' : beastData?.type === 'herbi' ? '🌿' : '🍂'} ${beastData?.name || "???"}
+                    </span>
+                </div>
+                <div class="row-controls">
+                    <select data-army="${armyId}" data-row="${idx}" data-type="alpha" class="alpha-select">
+                        ${Object.keys(ALPHAS).map(key => `<option value="${key}" ${row.alpha === key ? 'selected' : ''}>${ALPHAS[key].name}</option>`).join('')}
+                    </select>
+                    <select data-army="${armyId}" data-row="${idx}" data-type="beast" class="beast-select">
+                        ${Object.keys(BEASTS).map(key => `<option value="${key}" ${row.beast === key ? 'selected' : ''}>${BEASTS[key].name}</option>`).join('')}
+                    </select>
+                    <input type="number" class="beast-count" data-army="${armyId}" data-row="${idx}" value="${row.beastCount}" min="0" step="1000">
+                </div>
+            `;
+            container.appendChild(rowDiv);
+        });
+
+        // Event listener
+        document.querySelectorAll('.alpha-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const army = e.target.dataset.army;
+                const row = parseInt(e.target.dataset.row);
+                const val = e.target.value;
+                if (army === 'attacker') attackerRows[row].alpha = val;
+                else defenderRows[row].alpha = val;
+            });
+        });
+        document.querySelectorAll('.beast-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const army = e.target.dataset.army;
+                const row = parseInt(e.target.dataset.row);
+                const val = e.target.value;
+                if (army === 'attacker') attackerRows[row].beast = val;
+                else defenderRows[row].beast = val;
+            });
+        });
+        document.querySelectorAll('.beast-count').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const army = e.target.dataset.army;
+                const row = parseInt(e.target.dataset.row);
+                const val = parseInt(e.target.value) || 0;
+                if (army === 'attacker') attackerRows[row].beastCount = val;
+                else defenderRows[row].beastCount = val;
+            });
+        });
+    }
+
+    function calculateRowPower(row) {
+        const beast = BEASTS[row.beast];
+        if (!beast) return 0;
+        return row.beastCount * beast.powerPerUnit;
+    }
+
+    function getTotalPower(rows) {
+        return rows.reduce((sum, row) => sum + calculateRowPower(row), 0);
+    }
+
+    function startFight() {
+        fightLog = [];
+        log("⚔️ KAMPF BEGINNT ⚔️");
+        log(`Angreifer Kampfkraft: ${getTotalPower(attackerRows).toLocaleString()}`);
+        log(`Verteidiger Kampfkraft: ${getTotalPower(defenderRows).toLocaleString()}`);
+        
+        // Kopiere Zustand für Simulation
+        let attackerState = attackerRows.map(row => ({
+            alpha: row.alpha,
+            beastKey: row.beast,
+            beastCount: row.beastCount,
+            beastData: {...BEASTS[row.beast]},
+            alphaData: ALPHAS[row.alpha],
+            hp: row.beastCount * BEASTS[row.beast].hp
+        }));
+        let defenderState = defenderRows.map(row => ({
+            alpha: row.alpha,
+            beastKey: row.beast,
+            beastCount: row.beastCount,
+            beastData: {...BEASTS[row.beast]},
+            alphaData: ALPHAS[row.alpha],
+            hp: row.beastCount * BEASTS[row.beast].hp
+        }));
+
+        let round = 1;
+        let maxRounds = 20;
+        
+        while (round <= maxRounds) {
+            log(`\n🔄 RUNDE ${round} 🔄`, "round");
+            
+            // Angreifer greift an
+            const attackerDamageDealt = simulateRoundDamage(attackerState, defenderState, "Angreifer", round);
+            // Verteidiger kontert
+            const defenderDamageDealt = simulateRoundDamage(defenderState, attackerState, "Verteidiger", round);
+            
+            // Überprüfe Sieg
+            const attackerAlive = attackerState.some(row => row.hp > 0);
+            const defenderAlive = defenderState.some(row => row.hp > 0);
+            
+            if (!defenderAlive) {
+                log(`\n🏆 SIEG: Angreifer hat gewonnen in Runde ${round}! 🏆`, "victory");
+                break;
+            }
+            if (!attackerAlive) {
+                log(`\n🏆 SIEG: Verteidiger hat gewonnen in Runde ${round}! 🏆`, "victory");
+                break;
+            }
+            
+            round++;
+        }
+        
+        if (round > maxRounds) {
+            log(`\n⏰ UNENTSCHIEDEN: Maximale Runden (${maxRounds}) erreicht`, "victory");
+        }
+        
+        updateReport();
+    }
+
+    function simulateRoundDamage(attackerRows, defenderRows, attackerName, round) {
+        let totalDamage = 0;
+        // Vereinfachte Schadensberechnung
+        for (let i = 0; i < attackerRows.length; i++) {
+            const attacker = attackerRows[i];
+            if (attacker.hp <= 0) continue;
+            
+            // Finde lebenden Verteidiger
+            let targetIndex = defenderRows.findIndex(d => d.hp > 0);
+            if (targetIndex === -1) break;
+            
+            const defender = defenderRows[targetIndex];
+            const beastAtk = attacker.beastData.attack;
+            const beastDef = defender.beastData.defense;
+            
+            // Basisschaden
+            let damage = Math.max(1, (beastAtk - beastDef) * (attacker.beastCount / 1000)) + Math.random() * 50;
+            damage = Math.floor(damage);
+            
+            // Skill-Effekte (vereinfacht)
+            if (attacker.alphaData?.skills && round % 2 === 0) {
+                damage = Math.floor(damage * 1.5);
+                log(`[${attackerName}] ${attacker.alphaData.name} nutzt Fähigkeit! +50% Schaden`, "skill");
+            }
+            
+            defender.hp -= damage;
+            totalDamage += damage;
+            log(`[${attackerName}] Reihe ${i+1} (${attacker.beastData.name}) trifft Reihe ${targetIndex+1} für ${Math.floor(damage).toLocaleString()} Schaden`, "damage");
+        }
+        
+        // Entferne tote Reihen (setze Bestienanzahl auf 0 basierend auf HP)
+        for (let row of defenderRows) {
+            if (row.hp <= 0) {
+                row.beastCount = 0;
+                log(`[${attackerName}] Eine Reihe des Gegners wurde besiegt!`, "damage");
+            } else {
+                // Aktualisiere Bestienanzahl basierend auf HP
+                row.beastCount = Math.ceil(row.hp / row.beastData.hp);
+            }
+        }
+        
+        return totalDamage;
+    }
+
+    function updateReport() {
+        const reportDiv = document.getElementById('report-content');
+        if (!reportDiv) return;
+        
+        let html = '';
+        for (const entry of fightLog) {
+            let color = '#eee';
+            if (entry.type === 'skill') color = '#7bed9f';
+            else if (entry.type === 'damage') color = '#ff6b6b';
+            else if (entry.type === 'heal') color = '#70a1ff';
+            else if (entry.type === 'round') color = '#ffd700';
+            else if (entry.type === 'victory') color = '#feca57';
+            
+            html += `<div style="color: ${color}; margin: 3px 0;">${entry.msg}</div>`;
+        }
+        reportDiv.innerHTML = html;
+        reportDiv.scrollTop = reportDiv.scrollHeight;
+    }
+
+    function resetDefaultSetup() {
+        attackerRows = [
+            { alpha: "smilodon", beast: "hoelhenhyaene", beastCount: 100000 },
+            { alpha: "beutelloewe", beast: "hoelhenhyaene", beastCount: 80000 },
+            { alpha: "hyaenodon", beast: "hoelhenhyaene", beastCount: 90000 }
+        ];
+        defenderRows = [
+            { alpha: "riesenSivatherium", beast: "langhornbison", beastCount: 120000 },
+            { alpha: "mammut", beast: "langhornbison", beastCount: 110000 },
+            { alpha: "megatherium", beast: "langhornbison", beastCount: 100000 }
+        ];
+        renderSetup();
+        log("🔁 Aufstellung auf Standard zurückgesetzt", "info");
+        updateReport();
+    }
+
+    renderSetup();
+</script>
+</body>
+</html>
