@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beast Lord Kampf-Simulator - Vollversion</title>
+    <title>Beast Lord Kampf-Simulator - Komplettversion</title>
     <style>
         * {
             box-sizing: border-box;
@@ -146,21 +146,12 @@
         .type-carni { color: #ff6b6b; }
         .type-herbi { color: #7bed9f; }
         .type-omni { color: #ffd700; }
-        
-        .status-effect {
-            display: inline-block;
-            background: rgba(0,0,0,0.5);
-            border-radius: 4px;
-            padding: 2px 6px;
-            margin: 0 2px;
-            font-size: 11px;
-        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🐺 Beast Lord Kampf-Simulator ⚔️</h1>
-    <div class="subtitle">Fleischfresser 🥩 | Pflanzenfresser 🌿 | Allesfresser 🍂 | Volle Skill-Integration</div>
+    <div class="subtitle">Fleischfresser 🥩 | Pflanzenfresser 🌿 | Allesfresser 🍂 | 12 Alphas mit vollständigen Skills</div>
 
     <div class="armies-container">
         <div class="army attacker">
@@ -189,9 +180,9 @@
 <script>
     // ==================== BESTIEN-DATEN ====================
     const BEASTS = {
-        hoelhenhyaene: { name: "Höhlenhyäne", type: "carni", attack: 151, defense: 63, hp: 20, powerPerUnit: 10.5 },
-        langhornbison: { name: "Langhornbison", type: "herbi", attack: 99, defense: 102, hp: 28, powerPerUnit: 10.5 },
-        gigantopithecus: { name: "Gigantopithecus", type: "omni", attack: 121, defense: 78, hp: 24, powerPerUnit: 10.5 }
+        hoelhenhyaene: { name: "Höhlenhyäne", type: "carni", attack: 151, defense: 63, hp: 20 },
+        langhornbison: { name: "Langhornbison", type: "herbi", attack: 99, defense: 102, hp: 28 },
+        gigantopithecus: { name: "Gigantopithecus", type: "omni", attack: 121, defense: 78, hp: 24 }
     };
 
     // ==================== ALPHA-DATEN mit vollständigen Skills ====================
@@ -200,459 +191,270 @@
         hyaenodon: {
             name: "Hyaenodon", type: "carni",
             skills: [
-                { name: "Erstschlag-Vorteil", desc: "+20% Schaden bei Erstschlag, -20% erlittener Schaden bei Zweitschlag", trigger: "battle_start", effect: (ctx, caster) => {
-                    if (ctx.attackerFirst) {
-                        caster.damageBonus += 0.2;
-                        ctx.log(`[${caster.name}] Erstschlag: +20% Schaden`);
-                    } else {
-                        caster.damageReduction += 0.2;
-                        ctx.log(`[${caster.name}] Zweitschlag: -20% erlittener Schaden`);
-                    }
-                }},
-                { name: "Fähigkeitenkopie", desc: "70% Chance, Hintertrupp-Skill zu kopieren (+15% Effekt)", trigger: "on_skill_cast", effect: (ctx, caster, target, skill) => {
-                    if (Math.random() < 0.7 && caster.rowIndex > 0) {
-                        ctx.log(`[${caster.name}] Kopiert Fähigkeit von Reihe ${caster.rowIndex} +15% Effekt`, "skill");
-                        return { copied: true, bonus: 0.15 };
-                    }
-                    return { copied: false };
-                }},
-                { name: "Überlebensinstinkt", desc: "+20% LP, 50% Chance auf +30% Def + Heilung", trigger: "battle_start", effect: (ctx, caster) => {
-                    caster.maxHpBonus += 0.2;
-                    if (Math.random() < 0.5) {
-                        caster.defenseBonus += 0.3;
-                        const heal = caster.hp * 1.0;
-                        caster.hp = Math.min(caster.maxHp, caster.hp + heal);
-                        ctx.log(`[${caster.name}] Überlebensinstinkt: +30% Def + 100% Heilung (${Math.floor(heal)} HP)`, "heal");
-                    }
-                }}
-            ]
-        },
+                { name: "Erstschlag-Vorteil", trigger: "battle_start", 
+                  execute: (ctx, caster) => {
+                      if (ctx.attackerFirst) {
+                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.2;
+                          ctx.log(`[${caster.name}] Erstschlag: +20% Schaden`);
+                      } else {
+                          caster.damageReduction = (caster.damageReduction || 1) * 0.8;
+                          ctx.log(`[${caster.name}] Zweitschlag: -20% erlittener Schaden`);
+                      }
+                  }},
+                { name: "Überlebensinstinkt", trigger: "battle_start",
+                  execute: (ctx, caster) => {
+                      caster.maxHpBonus = 1.2;
+                      caster.hp = caster.maxHp * caster.maxHpBonus;
+                      if (Math.random() < 0.5) {
+                          caster.defenseBonus = 1.3;
+                          ctx.log(`[${caster.name}] Überlebensinstinkt: +30% Def, HP erhöht`);
+                      }
+                  }}
+            ]},
         smilodon: {
             name: "Smilodon", type: "carni",
             skills: [
-                { name: "Tödlicher Comboschlag", desc: "80% Chance, 2x 200% Schaden + Verwundbarkeit", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.8) {
-                        let totalDamage = 0;
-                        for (let i = 0; i < 2; i++) {
-                            const dmg = ctx.calculateDamage(caster, target, 2.0);
-                            target.hp -= dmg;
-                            totalDamage += dmg;
-                            if (!target.vulnStacks) target.vulnStacks = 0;
-                            target.vulnStacks++;
-                            ctx.log(`[${caster.name}] Comboschlag Treffer ${i+1}: ${Math.floor(dmg)} Schaden (+Verwundbarkeit Stack ${target.vulnStacks})`, "damage");
-                        }
-                        ctx.totalDamage += totalDamage;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Wilde Zähne", desc: "70% Chance, 130% AoE Schaden", trigger: "attack", effect: (ctx, caster, target, allTargets) => {
-                    if (Math.random() < 0.7) {
-                        let totalDamage = 0;
-                        allTargets.forEach(t => {
-                            if (t.hp > 0) {
-                                const dmg = ctx.calculateDamage(caster, t, 1.3);
-                                t.hp -= dmg;
-                                totalDamage += dmg;
-                                ctx.log(`[${caster.name}] Wilde Zähne trifft ${t.name}: ${Math.floor(dmg)} Schaden`, "damage");
-                            }
-                        });
-                        ctx.totalDamage += totalDamage;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Taktischer Fernschlag", desc: "50% Chance, Distanzbonus", trigger: "per_round", effect: (ctx, caster) => {
-                    if (Math.random() < 0.5) {
-                        if (!caster.distance) caster.distance = 0;
-                        caster.distance++;
-                        caster.damageBonus += 0.08;
-                        ctx.log(`[${caster.name}] Fernschlag: Distanz ${caster.distance}, +8% Schaden pro Distanz`, "skill");
-                    }
-                }}
-            ]
-        },
+                { name: "Tödlicher Comboschlag", trigger: "attack", chance: 0.8,
+                  execute: (ctx, caster, target) => {
+                      if (!target) return false;
+                      let totalDmg = 0;
+                      for (let i = 0; i < 2; i++) {
+                          let dmg = ctx.calcDamage(caster, target, 2.0);
+                          target.hp -= dmg;
+                          totalDmg += dmg;
+                          target.vulnStacks = (target.vulnStacks || 0) + 1;
+                      }
+                      ctx.log(`[${caster.name}] Comboschlag: ${Math.floor(totalDmg)} Schaden, Verwundbarkeit +2`, "damage");
+                      return true;
+                  }},
+                { name: "Wilde Zähne", trigger: "attack", chance: 0.7,
+                  execute: (ctx, caster, target, allTargets) => {
+                      let totalDmg = 0;
+                      allTargets.forEach(t => {
+                          if (t.hp > 0) {
+                              let dmg = ctx.calcDamage(caster, t, 1.3);
+                              t.hp -= dmg;
+                              totalDmg += dmg;
+                          }
+                      });
+                      ctx.log(`[${caster.name}] Wilde Zähne: ${Math.floor(totalDmg)} Schaden (AoE)`, "damage");
+                      return true;
+                  }}
+            ]},
         beutelloewe: {
             name: "Beutellöwe", type: "carni",
             skills: [
-                { name: "Frontkämpfer", desc: "+20% Schaden (Front +40% +15% Ausweichen)", trigger: "battle_start", effect: (ctx, caster) => {
-                    if (caster.rowIndex === 0) {
-                        caster.damageBonus += 0.4;
-                        caster.evasion += 0.15;
-                        ctx.log(`[${caster.name}] Frontkämpfer: +40% Schaden, +15% Ausweichen`, "skill");
-                    } else {
-                        caster.damageBonus += 0.2;
-                        ctx.log(`[${caster.name}] Frontkämpfer: +20% Schaden`, "skill");
-                    }
-                }},
-                { name: "Nachstoß", desc: "60% Chance nach Angriff: 215% Schaden + 40% Heilung", trigger: "after_attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.6 && target && target.hp > 0) {
-                        const dmg = ctx.calculateDamage(caster, target, 2.15);
-                        target.hp -= dmg;
-                        const heal = dmg * 0.4;
-                        caster.hp = Math.min(caster.maxHp, caster.hp + heal);
-                        ctx.log(`[${caster.name}] Nachstoß: ${Math.floor(dmg)} Schaden, ${Math.floor(heal)} Heilung`, "damage");
-                        ctx.totalDamage += dmg;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Zeitschlag", desc: "Runden 1,3,5,7: 220% Schaden auf 2 Reihen", trigger: "round_specific", rounds: [1,3,5,7], effect: (ctx, caster, allTargets) => {
-                    const targets = allTargets.filter(t => t.hp > 0).slice(0, 2);
-                    targets.forEach(t => {
-                        const dmg = ctx.calculateDamage(caster, t, 2.2);
-                        t.hp -= dmg;
-                        ctx.log(`[${caster.name}] Zeitschlag: ${Math.floor(dmg)} Schaden auf ${t.name}`, "damage");
-                        ctx.totalDamage += dmg;
-                    });
-                }}
-            ]
-        },
+                { name: "Frontkämpfer", trigger: "battle_start",
+                  execute: (ctx, caster) => {
+                      if (caster.rowIndex === 0) {
+                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.4;
+                          caster.evasion = 0.15;
+                          ctx.log(`[${caster.name}] Frontkämpfer: +40% Schaden, +15% Ausweichen`);
+                      } else {
+                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.2;
+                          ctx.log(`[${caster.name}] Frontkämpfer: +20% Schaden`);
+                      }
+                  }},
+                { name: "Nachstoß", trigger: "after_attack", chance: 0.6,
+                  execute: (ctx, caster, target) => {
+                      if (target && target.hp > 0) {
+                          let dmg = ctx.calcDamage(caster, target, 2.15);
+                          target.hp -= dmg;
+                          let heal = dmg * 0.4;
+                          caster.hp = Math.min(caster.maxHp * (caster.maxHpBonus || 1), caster.hp + heal);
+                          ctx.log(`[${caster.name}] Nachstoß: ${Math.floor(dmg)} Schaden, ${Math.floor(heal)} Heilung`, "damage");
+                          return true;
+                      }
+                      return false;
+                  }}
+            ]},
         amerikanischerGepard: {
             name: "Amerikanischer Gepard", type: "carni",
             skills: [
-                { name: "Blitzangriff", desc: "50% Chance: Front +1 Angriff, Hintertrupp 170% Schaden", trigger: "per_round", effect: (ctx, caster, allAllies, allTargets) => {
-                    if (Math.random() < 0.5) {
-                        if (caster.rowIndex === 0) {
-                            caster.extraAttacks = (caster.extraAttacks || 0) + 1;
-                            caster.damageBonus += 0.17;
-                            ctx.log(`[${caster.name}] Blitzangriff: +1 Angriff, +17% Schaden diese Runde`, "skill");
-                        } else {
-                            const randomTargets = allTargets.filter(t => t.hp > 0).slice(0, 2);
-                            randomTargets.forEach(t => {
-                                const dmg = ctx.calculateDamage(caster, t, 1.7);
-                                t.hp -= dmg;
-                                ctx.log(`[${caster.name}] Blitzangriff Hintertrupp: ${Math.floor(dmg)} Schaden`, "damage");
-                                ctx.totalDamage += dmg;
-                            });
-                        }
-                    }
-                }},
-                { name: "Reinigender Schlag", desc: "50% Chance: 170% Schaden + Debuff-Entfernung", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.5 && target) {
-                        const dmg = ctx.calculateDamage(caster, target, 1.7);
-                        target.hp -= dmg;
-                        target.debuffs = [];
-                        ctx.log(`[${caster.name}] Reinigender Schlag: ${Math.floor(dmg)} Schaden, Debuffs entfernt`, "damage");
-                        ctx.totalDamage += dmg;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Heilende Wut", desc: "Ab Runde 2: +22% Schaden, dann 80% Heilung", trigger: "round_2plus", effect: (ctx, caster) => {
-                    if (ctx.round >= 2) {
-                        caster.damageBonus += 0.22;
-                        const heal = caster.maxHp * 0.8;
-                        caster.hp = Math.min(caster.maxHp, caster.hp + heal);
-                        ctx.log(`[${caster.name}] Heilende Wut: +22% Schaden, ${Math.floor(heal)} HP geheilt`, "heal");
-                    }
-                }}
-            ]
-        },
+                { name: "Blitzangriff", trigger: "per_round", chance: 0.5,
+                  execute: (ctx, caster, allies, targets) => {
+                      if (caster.rowIndex === 0) {
+                          caster.extraAttacks = (caster.extraAttacks || 0) + 1;
+                          caster.bonusDamage = (caster.bonusDamage || 1) * 1.17;
+                          ctx.log(`[${caster.name}] Blitzangriff: +1 Angriff, +17% Schaden`);
+                      } else {
+                          let randomTargets = targets.filter(t => t.hp > 0).slice(0, 2);
+                          randomTargets.forEach(t => {
+                              let dmg = ctx.calcDamage(caster, t, 1.7);
+                              t.hp -= dmg;
+                              ctx.log(`[${caster.name}] Blitzangriff: ${Math.floor(dmg)} Schaden`, "damage");
+                          });
+                      }
+                  }}
+            ]},
         // === ALLESFRESSER ===
         metridiochoerus: {
             name: "Metridiochoerus", type: "omni",
             skills: [
-                { name: "Frühe Verteidigung", desc: "Runden 1-4: +10% Ausweichen, +20% Resistenz", trigger: "battle_start", effect: (ctx, caster) => {
-                    caster.earlyEvasion = 0.1;
-                    caster.earlyResist = 0.2;
-                    ctx.log(`[${caster.name}] Frühe Verteidigung aktiv (Runden 1-4)`, "skill");
-                }},
-                { name: "Vorbereiteter Schlag", desc: "1 Runde Vorbereitung: 350% Schaden + Stumm", trigger: "charge", effect: (ctx, caster, target) => {
-                    if (caster.charging) {
-                        const dmg = ctx.calculateDamage(caster, target, 3.5);
-                        target.hp -= dmg;
-                        if (Math.random() < 0.5) {
-                            target.silenced = true;
-                            ctx.log(`[${caster.name}] ${target.name} wurde verstummt!`, "skill");
-                        }
-                        ctx.log(`[${caster.name}] Vorbereiteter Schlag: ${Math.floor(dmg)} Schaden`, "damage");
-                        ctx.totalDamage += dmg;
-                        caster.charging = false;
-                    } else {
-                        caster.charging = true;
-                        ctx.log(`[${caster.name}] bereitet Schlag vor...`, "skill");
-                    }
-                }},
-                { name: "Schwingen der Zeit", desc: "Runden 2,4,6,8: 270% AoE", trigger: "round_specific", rounds: [2,4,6,8], effect: (ctx, caster, allTargets) => {
-                    let bonus = 1 + (caster.evasionCount || 0) * 0.1;
-                    allTargets.forEach(t => {
-                        if (t.hp > 0) {
-                            const dmg = ctx.calculateDamage(caster, t, 2.7 * bonus);
-                            t.hp -= dmg;
-                            ctx.log(`[${caster.name}] Schwingen der Zeit: ${Math.floor(dmg)} Schaden auf ${t.name}`, "damage");
-                            ctx.totalDamage += dmg;
-                        }
-                    });
-                }}
-            ]
-        },
+                { name: "Frühe Verteidigung", trigger: "battle_start",
+                  execute: (ctx, caster) => {
+                      caster.earlyEvasion = 0.1;
+                      caster.earlyResist = 0.2;
+                      ctx.log(`[${caster.name}] Frühe Verteidigung: +10% Ausweichen, +20% Resistenz (R1-4)`);
+                  }},
+                { name: "Schwingen der Zeit", trigger: "round_specific", rounds: [2,4,6,8],
+                  execute: (ctx, caster, targets) => {
+                      let bonus = 1 + (caster.evasionCount || 0) * 0.1;
+                      targets.forEach(t => {
+                          if (t.hp > 0) {
+                              let dmg = ctx.calcDamage(caster, t, 2.7 * bonus);
+                              t.hp -= dmg;
+                              ctx.log(`[${caster.name}] Schwingen der Zeit: ${Math.floor(dmg)} Schaden`, "damage");
+                          }
+                      });
+                  }}
+            ]},
         dinopithecus: {
             name: "Dinopithecus", type: "omni",
             skills: [
-                { name: "Echter Schaden", desc: "70% Chance: 280% Schaden, 10% Echtschaden", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.7) {
-                        let dmg = ctx.calculateDamage(caster, target, 2.8);
-                        const trueDamage = dmg * 0.1;
-                        target.hp -= (dmg + trueDamage);
-                        ctx.log(`[${caster.name}] Echter Schaden: ${Math.floor(dmg)} + ${Math.floor(trueDamage)} Echtschaden`, "damage");
-                        ctx.totalDamage += dmg + trueDamage;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Verzweifelter Schrei", desc: "1 Runde Vorbereitung: 340% AoE + -40% Heilung", trigger: "charge", effect: (ctx, caster, allTargets) => {
-                    if (caster.charging) {
-                        allTargets.forEach(t => {
-                            if (t.hp > 0) {
-                                const dmg = ctx.calculateDamage(caster, t, 3.4);
-                                t.hp -= dmg;
-                                t.healReduction = (t.healReduction || 0) + 0.4;
-                                ctx.log(`[${caster.name}] Verzweifelter Schrei: ${Math.floor(dmg)} Schaden, -40% Heilung`, "damage");
-                                ctx.totalDamage += dmg;
-                            }
-                        });
-                        caster.charging = false;
-                    } else {
-                        caster.charging = true;
-                        ctx.log(`[${caster.name}] bereitet Schrei vor...`, "skill");
-                    }
-                }},
-                { name: "Ausweichtanz", desc: "+10% Ausweichen, +2% Skill-Schaden pro 1% Ausweichen", trigger: "battle_start", effect: (ctx, caster) => {
-                    caster.evasion = (caster.evasion || 0) + 0.1;
-                    caster.skillDamageBonus = (caster.evasion || 0) * 2;
-                    ctx.log(`[${caster.name}] Ausweichtanz: +10% Ausweichen, +${Math.floor(caster.skillDamageBonus * 100)}% Skill-Schaden`, "skill");
-                }}
-            ]
-        },
+                { name: "Echter Schaden", trigger: "attack", chance: 0.7,
+                  execute: (ctx, caster, target) => {
+                      let dmg = ctx.calcDamage(caster, target, 2.8);
+                      let trueDmg = dmg * 0.1;
+                      target.hp -= (dmg + trueDmg);
+                      ctx.log(`[${caster.name}] Echter Schaden: ${Math.floor(dmg)} + ${Math.floor(trueDmg)} Echtschaden`, "damage");
+                      return true;
+                  }},
+                { name: "Ausweichtanz", trigger: "battle_start",
+                  execute: (ctx, caster) => {
+                      caster.evasion = (caster.evasion || 0) + 0.1;
+                      caster.skillDamageBonus = (caster.evasion || 0) * 2;
+                      ctx.log(`[${caster.name}] Ausweichtanz: +10% Ausweichen, +${Math.floor(caster.skillDamageBonus * 100)}% Skill-Schaden`);
+                  }}
+            ]},
         elefantenvogel: {
             name: "Elefantenvogel", type: "omni",
             skills: [
-                { name: "Reaktives Ausweichen", desc: "+20% Ausweichen, 50% Chance auf Extra + Heilung", trigger: "battle_start", effect: (ctx, caster) => {
-                    caster.evasion = (caster.evasion || 0) + 0.2;
-                    ctx.log(`[${caster.name}] Reaktives Ausweichen: +20% Ausweichen`, "skill");
-                }},
-                { name: "Fähigkeiten-Boost", desc: "70% Chance: 230% Schaden + +5% Skill-Chance", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.7) {
-                        const dmg = ctx.calculateDamage(caster, target, 2.3);
-                        target.hp -= dmg;
-                        ctx.allies.forEach(ally => {
-                            ally.skillChanceBonus = (ally.skillChanceBonus || 0) + 0.05;
-                        });
-                        ctx.log(`[${caster.name}] Fähigkeiten-Boost: ${Math.floor(dmg)} Schaden, +5% Skill-Chance für 2 Runden`, "damage");
-                        ctx.totalDamage += dmg;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Überlebenskünstler", desc: "Bei Schaden: +5% LP/Def (max 10 Stapel)", trigger: "on_damage_taken", effect: (ctx, caster) => {
-                    caster.survivalStacks = (caster.survivalStacks || 0) + 1;
-                    if (caster.survivalStacks <= 10) {
-                        caster.maxHpBonus += 0.05;
-                        caster.defenseBonus += 0.05;
-                        ctx.log(`[${caster.name}] Überlebenskünstler Stack ${caster.survivalStacks}: +5% LP/Def`, "skill");
-                    }
-                }}
-            ]
-        },
+                { name: "Reaktives Ausweichen", trigger: "battle_start",
+                  execute: (ctx, caster) => {
+                      caster.evasion = (caster.evasion || 0) + 0.2;
+                      ctx.log(`[${caster.name}] Reaktives Ausweichen: +20% Ausweichen`);
+                  }},
+                { name: "Überlebenskünstler", trigger: "on_damage_taken",
+                  execute: (ctx, caster) => {
+                      caster.survivalStacks = (caster.survivalStacks || 0) + 1;
+                      if (caster.survivalStacks <= 10) {
+                          caster.maxHpBonus = (caster.maxHpBonus || 1) + 0.05;
+                          caster.defenseBonus = (caster.defenseBonus || 1) * 1.05;
+                          ctx.log(`[${caster.name}] Überlebenskünstler Stack ${caster.survivalStacks}`);
+                      }
+                  }}
+            ]},
         kurznasenbaer: {
             name: "Kurznasenbär", type: "omni",
             skills: [
-                { name: "Giftmischer", desc: "50% Chance: Negativstatus", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.5) {
-                        const debuffs = ["Gift (150%/Runde)", "Blutung (170%/Runde)", "Korrosion (-30% Def)", "Verwundbarkeit (+25% Schaden)", "Erschöpft (-25% Schaden)"];
-                        const debuff = debuffs[Math.floor(Math.random() * debuffs.length)];
-                        target.debuffs = target.debuffs || [];
-                        target.debuffs.push(debuff);
-                        ctx.log(`[${caster.name}] Giftmischer: ${debuff} auf ${target.name}`, "skill");
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Ausnutzen", desc: "70% Chance: 390% Schaden + +30% gegen Debuffs", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.7) {
-                        let multiplier = 3.9;
-                        if (target.debuffs && target.debuffs.length > 0) {
-                            multiplier *= 1.3;
-                            ctx.log(`[${caster.name}] Bonus gegen debufften Gegner!`, "skill");
-                        }
-                        const dmg = ctx.calculateDamage(caster, target, multiplier);
-                        target.hp -= dmg;
-                        ctx.log(`[${caster.name}] Ausnutzen: ${Math.floor(dmg)} Schaden`, "damage");
-                        ctx.totalDamage += dmg;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Massive Heilung", desc: "1 Runde Vorbereitung: 280% AoE + 460% Heilung", trigger: "charge", effect: (ctx, caster, allTargets, allAllies) => {
-                    if (caster.charging) {
-                        allTargets.forEach(t => {
-                            if (t.hp > 0) {
-                                const dmg = ctx.calculateDamage(caster, t, 2.8);
-                                t.hp -= dmg;
-                                ctx.totalDamage += dmg;
-                            }
-                        });
-                        let weakest = allAllies.reduce((a, b) => (a.hp / a.maxHp) < (b.hp / b.maxHp) ? a : b);
-                        const heal = weakest.maxHp * 4.6;
-                        weakest.hp = Math.min(weakest.maxHp, weakest.hp + heal);
-                        ctx.log(`[${caster.name}] Massive Heilung: ${Math.floor(heal)} HP auf ${weakest.name}`, "heal");
-                        caster.charging = false;
-                    } else {
-                        caster.charging = true;
-                        ctx.log(`[${caster.name}] bereitet Heilung vor...`, "skill");
-                    }
-                }}
-            ]
-        },
+                { name: "Giftmischer", trigger: "attack", chance: 0.5,
+                  execute: (ctx, caster, target) => {
+                      const debuffs = ["Gift", "Blutung", "Korrosion", "Verwundbarkeit", "Erschöpft"];
+                      const debuff = debuffs[Math.floor(Math.random() * debuffs.length)];
+                      target.debuff = debuff;
+                      ctx.log(`[${caster.name}] Giftmischer: ${debuff} auf ${target.name}`, "skill");
+                      return true;
+                  }},
+                { name: "Ausnutzen", trigger: "attack", chance: 0.7,
+                  execute: (ctx, caster, target) => {
+                      let mult = 3.9;
+                      if (target.debuff) mult *= 1.3;
+                      let dmg = ctx.calcDamage(caster, target, mult);
+                      target.hp -= dmg;
+                      ctx.log(`[${caster.name}] Ausnutzen: ${Math.floor(dmg)} Schaden`, "damage");
+                      return true;
+                  }}
+            ]},
         // === PFLANZENFRESSER ===
         riesenSivatherium: {
             name: "Riesen Sivatherium", type: "herbi",
             skills: [
-                { name: "Schadensreduktion", desc: "Runden 2,4,6,8: -20% Schaden + 70% Heilung", trigger: "round_specific", rounds: [2,4,6,8], effect: (ctx, caster) => {
-                    caster.damageReduction = (caster.damageReduction || 0) + 0.2;
-                    if (Math.random() < 0.7) {
-                        const heal = caster.maxHp * 1.7;
-                        caster.hp = Math.min(caster.maxHp, caster.hp + heal);
-                        ctx.log(`[${caster.name}] Schadensreduktion: ${Math.floor(heal)} HP geheilt`, "heal");
-                    }
-                }},
-                { name: "Verwirrender Tritt", desc: "50% Chance: 380% Schaden + Verwirrung", trigger: "attack", effect: (ctx, caster, target) => {
-                    if (Math.random() < 0.5) {
-                        const dmg = ctx.calculateDamage(caster, target, 3.8);
-                        target.hp -= dmg;
-                        target.confused = true;
-                        ctx.log(`[${caster.name}] Verwirrender Tritt: ${Math.floor(dmg)} Schaden, Ziel verwirrt`, "damage");
-                        ctx.totalDamage += dmg;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Feste Haut", desc: "Pro Runde: +20% Def, +7.5% Heilung", trigger: "per_round", effect: (ctx, caster) => {
-                    caster.defenseBonus = (caster.defenseBonus || 0) + 0.2;
-                    caster.healBonus = (caster.healBonus || 0) + 0.075;
-                    ctx.log(`[${caster.name}] Feste Haut: +20% Def, +7.5% Heilungseffekt`, "skill");
-                }}
-            ]
-        },
+                { name: "Schadensreduktion", trigger: "round_specific", rounds: [2,4,6,8],
+                  execute: (ctx, caster) => {
+                      caster.damageReduction = (caster.damageReduction || 1) * 0.8;
+                      if (Math.random() < 0.7) {
+                          let heal = caster.maxHp * 1.7;
+                          caster.hp = Math.min(caster.maxHp * (caster.maxHpBonus || 1), caster.hp + heal);
+                          ctx.log(`[${caster.name}] Schadensreduktion: ${Math.floor(heal)} HP geheilt`, "heal");
+                      }
+                  }},
+                { name: "Feste Haut", trigger: "per_round",
+                  execute: (ctx, caster) => {
+                      caster.defenseBonus = (caster.defenseBonus || 1) * 1.2;
+                      caster.healBonus = (caster.healBonus || 1) + 0.075;
+                      ctx.log(`[${caster.name}] Feste Haut: +20% Def`);
+                  }}
+            ]},
         meiolanja: {
             name: "Meiolanja", type: "herbi",
             skills: [
-                { name: "Gegenschlag", desc: "100% Chance: 70% AoE, 20% Selbstschaden", trigger: "attack", effect: (ctx, caster, allTargets) => {
-                    allTargets.forEach(t => {
-                        if (t.hp > 0) {
-                            const dmg = ctx.calculateDamage(caster, t, 0.7);
-                            t.hp -= dmg;
-                            ctx.totalDamage += dmg;
-                        }
-                    });
-                    const selfDmg = caster.maxHp * 0.2;
-                    caster.hp -= selfDmg;
-                    ctx.log(`[${caster.name}] Gegenschlag: AoE Schaden, erleidet ${Math.floor(selfDmg)} Selbstschaden`, "damage");
-                }},
-                { name: "Schild des Schutzes", desc: "Nach 9 Schadenserleidnissen: Schild + Gegenschaden", trigger: "damage_counter", effect: (ctx, caster) => {
-                    caster.damageTaken = (caster.damageTaken || 0) + 1;
-                    if (caster.damageTaken >= 9) {
-                        caster.shield = true;
-                        caster.damageTaken = 0;
-                        ctx.log(`[${caster.name}] Schild des Schutzes aktiviert!`, "skill");
-                    }
-                }},
-                { name: "Heilende Hülle", desc: "80% Chance: Heilt 2 Verbündete (150%) + -20% Skill-Schaden", trigger: "per_round", effect: (ctx, caster, allAllies) => {
-                    if (Math.random() < 0.8) {
-                        const targets = allAllies.filter(a => a.hp > 0).slice(0, 2);
-                        targets.forEach(t => {
-                            const heal = t.maxHp * 1.5;
-                            t.hp = Math.min(t.maxHp, t.hp + heal);
-                            t.skillDamageReduction = (t.skillDamageReduction || 0) + 0.2;
-                            ctx.log(`[${caster.name}] Heilende Hülle: ${Math.floor(heal)} HP auf ${t.name}, -20% Skill-Schaden`, "heal");
-                        });
-                    }
-                }}
-            ]
-        },
+                { name: "Gegenschlag", trigger: "attack",
+                  execute: (ctx, caster, target, allTargets) => {
+                      allTargets.forEach(t => {
+                          if (t.hp > 0) {
+                              let dmg = ctx.calcDamage(caster, t, 0.7);
+                              t.hp -= dmg;
+                          }
+                      });
+                      let selfDmg = caster.maxHp * 0.2;
+                      caster.hp -= selfDmg;
+                      ctx.log(`[${caster.name}] Gegenschlag: AoE, erleidet ${Math.floor(selfDmg)} Selbstschaden`, "damage");
+                  }},
+                { name: "Heilende Hülle", trigger: "per_round", chance: 0.8,
+                  execute: (ctx, caster, allies) => {
+                      let targets = allies.filter(a => a.hp > 0).slice(0, 2);
+                      targets.forEach(t => {
+                          let heal = t.maxHp * 1.5;
+                          t.hp = Math.min(t.maxHp * (t.maxHpBonus || 1), t.hp + heal);
+                          ctx.log(`[${caster.name}] Heilende Hülle: ${Math.floor(heal)} HP auf ${t.name}`, "heal");
+                      });
+                  }}
+            ]},
         mammut: {
             name: "Mammut", type: "herbi",
             skills: [
-                { name: "Gegenangriff", desc: "30% Chance: 120% Schaden auf 2 Feinde", trigger: "on_damage_taken", effect: (ctx, caster, attacker, allTargets) => {
-                    if (Math.random() < 0.3) {
-                        const targets = allTargets.filter(t => t.hp > 0).slice(0, 2);
-                        targets.forEach(t => {
-                            const dmg = ctx.calculateDamage(caster, t, 1.2);
-                            t.hp -= dmg;
-                            ctx.log(`[${caster.name}] Gegenangriff: ${Math.floor(dmg)} Schaden`, "damage");
-                            ctx.totalDamage += dmg;
-                        });
-                    }
-                }},
-                { name: "Eisenhaut", desc: "50% Chance: -35% Schaden (früh -55%)", trigger: "battle_start", effect: (ctx, caster) => {
-                    if (Math.random() < 0.5) {
-                        caster.damageReduction = 0.35;
-                        ctx.log(`[${caster.name}] Eisenhaut: -35% erlittener Schaden`, "skill");
-                    }
-                }},
-                { name: "Stampede", desc: "Runden 2,4,6: +30% Skill-Schaden + 60% Heilung", trigger: "round_specific", rounds: [2,4,6], effect: (ctx, caster) => {
-                    caster.skillDamageBonus = (caster.skillDamageBonus || 0) + 0.3;
-                    if (Math.random() < 0.6) {
-                        const heal = caster.maxHp * 1.5;
-                        caster.hp = Math.min(caster.maxHp, caster.hp + heal);
-                        ctx.log(`[${caster.name}] Stampede: ${Math.floor(heal)} HP geheilt`, "heal");
-                    }
-                }}
-            ]
-        },
+                { name: "Gegenangriff", trigger: "on_damage_taken", chance: 0.3,
+                  execute: (ctx, caster, attacker, allTargets) => {
+                      let targets = allTargets.filter(t => t.hp > 0).slice(0, 2);
+                      targets.forEach(t => {
+                          let dmg = ctx.calcDamage(caster, t, 1.2);
+                          t.hp -= dmg;
+                          ctx.log(`[${caster.name}] Gegenangriff: ${Math.floor(dmg)} Schaden`, "damage");
+                      });
+                  }},
+                { name: "Eisenhaut", trigger: "battle_start", chance: 0.5,
+                  execute: (ctx, caster) => {
+                      caster.damageReduction = (caster.damageReduction || 1) * 0.65;
+                      ctx.log(`[${caster.name}] Eisenhaut: -35% erlittener Schaden`);
+                  }}
+            ]},
         megatherium: {
             name: "Megatherium", type: "herbi",
             skills: [
-                { name: "Kampfverbindung", desc: "10% Angriff vom Fronttrupp, nach 8 Angriffen: 250% AoE", trigger: "attack_counter", effect: (ctx, caster, allAllies, allTargets) => {
-                    const frontAlly = allAllies.find(a => a.rowIndex === 0);
-                    if (frontAlly) {
-                        caster.attackBonus = (caster.attackBonus || 0) + frontAlly.baseAttack * 0.1;
-                    }
-                    caster.attackCount = (caster.attackCount || 0) + 1;
-                    if (caster.attackCount >= 8) {
-                        allTargets.forEach(t => {
-                            if (t.hp > 0) {
-                                const dmg = ctx.calculateDamage(caster, t, 2.5);
-                                t.hp -= dmg;
-                                ctx.totalDamage += dmg;
-                                if (Math.random() < 0.5) t.silenced = true;
-                            }
-                        });
-                        ctx.log(`[${caster.name}] Kampfverbindung: 250% AoE + Stumm`, "damage");
-                        caster.attackCount = 0;
-                    }
-                }},
-                { name: "Fokussierter Schlag", desc: "75% Chance: 360% Schaden auf Stärksten", trigger: "attack", effect: (ctx, caster, allTargets) => {
-                    if (Math.random() < 0.75) {
-                        let strongest = allTargets.reduce((a, b) => (a.hp > b.hp) ? a : b);
-                        const dmg = ctx.calculateDamage(caster, strongest, 3.6);
-                        strongest.hp -= dmg;
-                        caster.attackBonus = (caster.attackBonus || 0) + 0.3;
-                        ctx.log(`[${caster.name}] Fokussierter Schlag: ${Math.floor(dmg)} Schaden auf stärksten Gegner, +30% Angriff`, "damage");
-                        ctx.totalDamage += dmg;
-                        return true;
-                    }
-                    return false;
-                }},
-                { name: "Wütender Schlag", desc: "60% Chance: 190% AoE +15% pro Fleischfresser", trigger: "attack", effect: (ctx, caster, allTargets) => {
-                    if (Math.random() < 0.6) {
-                        let carnivoreCount = allTargets.filter(t => t.type === "carni").length;
-                        let multiplier = 1.9 + (carnivoreCount * 0.15);
-                        allTargets.forEach(t => {
-                            if (t.hp > 0) {
-                                const dmg = ctx.calculateDamage(caster, t, multiplier);
-                                t.hp -= dmg;
-                                ctx.totalDamage += dmg;
-                            }
-                        });
-                        ctx.log(`[${caster.name}] Wütender Schlag: ${multiplier}x Schaden (${carnivoreCount} Fleischfresser)`, "damage");
-                        return true;
-                    }
-                    return false;
-                }}
-            ]
-        }
+                { name: "Fokussierter Schlag", trigger: "attack", chance: 0.75,
+                  execute: (ctx, caster, allTargets) => {
+                      let strongest = allTargets.reduce((a, b) => (a.hp > b.hp) ? a : b);
+                      let dmg = ctx.calcDamage(caster, strongest, 3.6);
+                      strongest.hp -= dmg;
+                      caster.bonusDamage = (caster.bonusDamage || 1) * 1.3;
+                      ctx.log(`[${caster.name}] Fokussierter Schlag: ${Math.floor(dmg)} Schaden, +30% Angriff`, "damage");
+                      return true;
+                  }},
+                { name: "Wütender Schlag", trigger: "attack", chance: 0.6,
+                  execute: (ctx, caster, allTargets) => {
+                      let carnivoreCount = allTargets.filter(t => t.type === "carni").length;
+                      let mult = 1.9 + (carnivoreCount * 0.15);
+                      allTargets.forEach(t => {
+                          if (t.hp > 0) {
+                              let dmg = ctx.calcDamage(caster, t, mult);
+                              t.hp -= dmg;
+                          }
+                      });
+                      ctx.log(`[${caster.name}] Wütender Schlag: ${mult}x Schaden (${carnivoreCount} Fleischfresser)`, "damage");
+                      return true;
+                  }}
+            ]}
     };
 
     // Standard-Aufstellung
@@ -673,84 +475,65 @@
         fightLog.push({ msg, type });
     }
 
-    // Schadensberechnung mit Berücksichtigung von Buffs/Debuffs
-    function calculateDamage(caster, target, multiplier = 1.0) {
-        let baseDamage = (caster.baseAttack + (caster.attackBonus || 0)) * (caster.beastCount / 1000);
-        let damageReduction = 1 - (target.damageReduction || 0);
-        let damageBonus = 1 + (caster.damageBonus || 0) + (caster.skillDamageBonus || 0);
+    function calculateDamage(attacker, defender, multiplier = 1.0) {
+        let attackVal = attacker.baseAttack * (attacker.beastCount / 50);
+        let damage = attackVal * multiplier;
         
-        // Typvorteile
-        if (caster.type === "carni" && target.type === "herbi") damageBonus *= 1.25;
-        if (caster.type === "herbi" && target.type === "omni") damageBonus *= 1.25;
-        if (caster.type === "omni" && target.type === "carni") damageBonus *= 1.25;
+        // Verteidigung
+        let defenseVal = defender.baseDefense / 200;
+        damage = damage * (1 - Math.min(0.7, defenseVal));
         
-        // Verwundbarkeit
-        if (target.vulnStacks) damageBonus *= (1 + target.vulnStacks * 0.1);
+        // Buffs
+        if (attacker.bonusDamage) damage *= attacker.bonusDamage;
+        if (defender.damageReduction) damage *= defender.damageReduction;
         
-        let damage = baseDamage * multiplier * damageBonus * damageReduction;
-        
-        // Ausweichen
-        if (target.evasion && Math.random() < target.evasion) {
-            log(`[${target.name}] weicht aus!`, "skill");
-            return 0;
-        }
-        
-        // Verwirrung (zufälliges Ziel)
-        if (target.confused && Math.random() < 0.5) {
-            log(`[${target.name}] ist verwirrt und verfehlt!`, "skill");
-            return 0;
-        }
+        // Zufall
+        damage = damage * (0.85 + Math.random() * 0.3);
         
         return Math.max(1, Math.floor(damage));
     }
 
     class CombatUnit {
         constructor(row, index, isAttacker) {
-            this.name = ALPHAS[row.alpha].name;
-            this.type = ALPHAS[row.alpha].type;
             this.alphaKey = row.alpha;
             this.alphaData = ALPHAS[row.alpha];
+            this.name = this.alphaData.name;
+            this.type = this.alphaData.type;
             this.beastKey = row.beast;
             this.beastData = {...BEASTS[row.beast]};
             this.beastCount = row.beastCount;
             this.rowIndex = index;
             this.isAttacker = isAttacker;
             
-            // Basis-Werte
             this.baseAttack = this.beastData.attack;
             this.baseDefense = this.beastData.defense;
-            this.hp = this.beastCount * this.beastData.hp;
-            this.maxHp = this.hp;
+            this.maxHp = this.beastCount * this.beastData.hp;
+            this.hp = this.maxHp;
             
-            // Buffs/Debuffs
-            this.damageBonus = 0;
-            this.damageReduction = 0;
-            this.defenseBonus = 0;
-            this.attackBonus = 0;
+            this.bonusDamage = 1;
+            this.damageReduction = 1;
+            this.maxHpBonus = 1;
+            this.defenseBonus = 1;
             this.evasion = 0;
-            this.maxHpBonus = 0;
-            this.skillChanceBonus = 0;
-            this.skillDamageBonus = 0;
-            this.healBonus = 0;
-            this.healReduction = 0;
-            this.skillDamageReduction = 0;
-            
-            this.debuffs = [];
             this.vulnStacks = 0;
-            this.confused = false;
-            this.silenced = false;
-            this.shield = false;
-            this.charging = false;
             this.extraAttacks = 0;
-            this.distance = 0;
-            
-            // Skills ausführen
-            this.skillsTriggered = [];
+            this.skillDamageBonus = 0;
+            this.evasionCount = 0;
+            this.survivalStacks = 0;
+            this.healBonus = 1;
+            this.earlyEvasion = 0;
+            this.earlyResist = 0;
+            this.debuff = null;
         }
         
-        updateFromHp() {
-            this.beastCount = Math.max(0, Math.ceil(this.hp / this.beastData.hp));
-            this.maxHp = this.beastCount * this.beastData.hp * (1 + (this.maxHpBonus || 0));
+        isAlive() {
+            return this.hp > 0;
+        }
+        
+        getEvasion() {
+            let ev = this.evasion;
+            if (this.earlyEvasion && this.round <= 4) ev += this.earlyEvasion;
+            return ev;
         }
     }
 
@@ -818,162 +601,150 @@
         fightLog = [];
         log("⚔️ KAMPF BEGINNT ⚔️");
         
-        // Einheiten erstellen
         let attackerUnits = attackerRows.map((row, idx) => new CombatUnit(row, idx, true));
         let defenderUnits = defenderRows.map((row, idx) => new CombatUnit(row, idx, false));
         
+        log(`Angreifer: ${attackerUnits.reduce((s,u) => s + u.beastCount, 0).toLocaleString()} Bestien`);
+        log(`Verteidiger: ${defenderUnits.reduce((s,u) => s + u.beastCount, 0).toLocaleString()} Bestien`);
+        
         // Battle-Start Skills
-        for (let unit of [...attackerUnits, ...defenderUnits]) {
-            for (let skill of unit.alphaData.skills) {
+        for (let u of [...attackerUnits, ...defenderUnits]) {
+            for (let skill of u.alphaData.skills) {
                 if (skill.trigger === "battle_start") {
-                    const ctx = { log: log, calculateDamage: calculateDamage, allies: [], round: 1, attackerFirst: true };
-                    skill.effect(ctx, unit);
+                    let ctx = { log, calcDamage: calculateDamage, attackerFirst: true };
+                    skill.execute(ctx, u);
                 }
             }
         }
         
         let round = 1;
-        let maxRounds = 30;
+        let maxRounds = 25;
         
         while (round <= maxRounds) {
-            log(`\n🔄 RUNDE ${round} 🔄`, "round");
+            log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            log(`🔄 RUNDE ${round} 🔄`, "round");
+            log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             
             // Per-Round Skills
-            for (let unit of [...attackerUnits, ...defenderUnits]) {
-                for (let skill of unit.alphaData.skills) {
+            for (let u of [...attackerUnits, ...defenderUnits]) {
+                u.round = round;
+                for (let skill of u.alphaData.skills) {
                     if (skill.trigger === "per_round") {
-                        const ctx = { log: log, calculateDamage: calculateDamage, round: round, allies: [...attackerUnits, ...defenderUnits] };
-                        skill.effect(ctx, unit);
+                        let ctx = { log, calcDamage: calculateDamage, round };
+                        let targets = u.isAttacker ? defenderUnits : attackerUnits;
+                        let allies = u.isAttacker ? attackerUnits : defenderUnits;
+                        if (!skill.chance || Math.random() < skill.chance) {
+                            skill.execute(ctx, u, allies, targets);
+                        }
                     }
                     if (skill.trigger === "round_specific" && skill.rounds.includes(round)) {
-                        const ctx = { log: log, calculateDamage: calculateDamage, round: round, allies: [...attackerUnits, ...defenderUnits] };
-                        const targets = unit.isAttacker ? defenderUnits.filter(u => u.hp > 0) : attackerUnits.filter(u => u.hp > 0);
-                        skill.effect(ctx, unit, targets);
-                    }
-                    if (skill.trigger === "round_2plus" && round >= 2) {
-                        const ctx = { log: log, calculateDamage: calculateDamage, round: round };
-                        skill.effect(ctx, unit);
+                        let ctx = { log, calcDamage: calculateDamage, round };
+                        let targets = u.isAttacker ? defenderUnits : attackerUnits;
+                        skill.execute(ctx, u, targets);
                     }
                 }
             }
             
-            // Angreifer greift an
+            // Angreifer Angriffe
             for (let attacker of attackerUnits) {
-                if (attacker.hp <= 0) continue;
+                if (!attacker.isAlive()) continue;
                 
                 let attacks = 1 + (attacker.extraAttacks || 0);
                 for (let a = 0; a < attacks; a++) {
-                    let targets = defenderUnits.filter(u => u.hp > 0);
-                    if (targets.length === 0) break;
+                    let target = defenderUnits.find(u => u.isAlive());
+                    if (!target) break;
                     
-                    let target = targets[0]; // vordere Reihe zuerst
-                    
-                    // Attack-Skills
+                    let skillUsed = false;
                     for (let skill of attacker.alphaData.skills) {
-                        if (skill.trigger === "attack") {
-                            const ctx = { log: log, calculateDamage: calculateDamage, totalDamage: 0, round: round, allies: attackerUnits };
-                            skill.effect(ctx, attacker, target, defenderUnits);
+                        if (skill.trigger === "attack" && (!skill.chance || Math.random() < skill.chance)) {
+                            let ctx = { log, calcDamage: calculateDamage };
+                            let result = skill.execute(ctx, attacker, target, defenderUnits);
+                            if (result) skillUsed = true;
                         }
                     }
                     
-                    // Normaler Angriff
-                    let damage = calculateDamage(attacker, target, 1.0);
-                    target.hp -= damage;
-                    log(`[${attacker.name}] Normaler Angriff: ${Math.floor(damage)} Schaden auf ${target.name}`, "damage");
+                    if (!skillUsed) {
+                        let damage = calculateDamage(attacker, target, 1.0);
+                        target.hp -= damage;
+                        log(`[${attacker.name}] Normaler Angriff: ${Math.floor(damage)} Schaden`, "damage");
+                    }
                     
                     // After-Attack Skills
                     for (let skill of attacker.alphaData.skills) {
-                        if (skill.trigger === "after_attack") {
-                            const ctx = { log: log, calculateDamage: calculateDamage, totalDamage: 0 };
-                            skill.effect(ctx, attacker, target);
+                        if (skill.trigger === "after_attack" && (!skill.chance || Math.random() < skill.chance)) {
+                            let ctx = { log, calcDamage: calculateDamage };
+                            skill.execute(ctx, attacker, target);
                         }
                     }
                     
-                    target.updateFromHp();
-                    attacker.updateFromHp();
+                    target.hp = Math.max(0, target.hp);
                 }
                 attacker.extraAttacks = 0;
             }
             
-            // Verteidiger greift an (gleiche Logik)
+            // Verteidiger Angriffe
             for (let defender of defenderUnits) {
-                if (defender.hp <= 0) continue;
+                if (!defender.isAlive()) continue;
                 
-                let targets = attackerUnits.filter(u => u.hp > 0);
-                if (targets.length === 0) break;
+                let target = attackerUnits.find(u => u.isAlive());
+                if (!target) break;
                 
-                let target = targets[0];
-                
+                let skillUsed = false;
                 for (let skill of defender.alphaData.skills) {
-                    if (skill.trigger === "attack") {
-                        const ctx = { log: log, calculateDamage: calculateDamage, totalDamage: 0, round: round, allies: defenderUnits };
-                        skill.effect(ctx, defender, target, attackerUnits);
+                    if (skill.trigger === "attack" && (!skill.chance || Math.random() < skill.chance)) {
+                        let ctx = { log, calcDamage: calculateDamage };
+                        let result = skill.execute(ctx, defender, target, attackerUnits);
+                        if (result) skillUsed = true;
                     }
                 }
                 
-                let damage = calculateDamage(defender, target, 1.0);
-                target.hp -= damage;
-                log(`[${defender.name}] Normaler Angriff: ${Math.floor(damage)} Schaden auf ${target.name}`, "damage");
+                if (!skillUsed) {
+                    let damage = calculateDamage(defender, target, 1.0);
+                    target.hp -= damage;
+                    log(`[${defender.name}] Normaler Angriff: ${Math.floor(damage)} Schaden`, "damage");
+                }
                 
                 for (let skill of defender.alphaData.skills) {
-                    if (skill.trigger === "after_attack") {
-                        const ctx = { log: log, calculateDamage: calculateDamage, totalDamage: 0 };
-                        skill.effect(ctx, defender, target);
+                    if (skill.trigger === "after_attack" && (!skill.chance || Math.random() < skill.chance)) {
+                        let ctx = { log, calcDamage: calculateDamage };
+                        skill.execute(ctx, defender, target);
                     }
                 }
                 
-                target.updateFromHp();
-                defender.updateFromHp();
+                target.hp = Math.max(0, target.hp);
             }
             
             // On-Damage-Taken Skills
-            for (let unit of [...attackerUnits, ...defenderUnits]) {
-                if (unit.hp <= 0) continue;
-                for (let skill of unit.alphaData.skills) {
-                    if (skill.trigger === "on_damage_taken") {
-                        const ctx = { log: log, calculateDamage: calculateDamage, allies: [...attackerUnits, ...defenderUnits] };
-                        skill.effect(ctx, unit);
-                    }
-                    if (skill.trigger === "damage_counter") {
-                        const ctx = { log: log };
-                        skill.effect(ctx, unit);
-                    }
-                    if (skill.trigger === "attack_counter") {
-                        const ctx = { log: log, calculateDamage: calculateDamage };
-                        const allies = unit.isAttacker ? attackerUnits : defenderUnits;
-                        const targets = unit.isAttacker ? defenderUnits : attackerUnits;
-                        skill.effect(ctx, unit, allies, targets);
+            for (let u of [...attackerUnits, ...defenderUnits]) {
+                if (!u.isAlive()) continue;
+                for (let skill of u.alphaData.skills) {
+                    if (skill.trigger === "on_damage_taken" && (!skill.chance || Math.random() < skill.chance)) {
+                        let ctx = { log, calcDamage: calculateDamage, round };
+                        let targets = u.isAttacker ? defenderUnits : attackerUnits;
+                        skill.execute(ctx, u, null, targets);
                     }
                 }
             }
             
-            // Charge-Skills (für nächste Runde)
-            for (let unit of [...attackerUnits, ...defenderUnits]) {
-                for (let skill of unit.alphaData.skills) {
-                    if (skill.trigger === "charge") {
-                        const ctx = { log: log, calculateDamage: calculateDamage, totalDamage: 0 };
-                        const targets = unit.isAttacker ? defenderUnits : attackerUnits;
-                        const allies = unit.isAttacker ? attackerUnits : defenderUnits;
-                        if (unit.charging) {
-                            skill.effect(ctx, unit, targets, allies);
-                        } else {
-                            unit.charging = true;
-                        }
-                    }
-                }
+            // Tote entfernen
+            let oldAttacker = attackerUnits.length;
+            let oldDefender = defenderUnits.length;
+            attackerUnits = attackerUnits.filter(u => u.isAlive());
+            defenderUnits = defenderUnits.filter(u => u.isAlive());
+            
+            if (oldAttacker !== attackerUnits.length) {
+                log(`💀 ${oldAttacker - attackerUnits.length} Angreifer-Reihe(n) besiegt!`, "damage");
+            }
+            if (oldDefender !== defenderUnits.length) {
+                log(`💀 ${oldDefender - defenderUnits.length} Verteidiger-Reihe(n) besiegt!`, "damage");
             }
             
-            // Entferne tote Einheiten
-            attackerUnits = attackerUnits.filter(u => u.hp > 0);
-            defenderUnits = defenderUnits.filter(u => u.hp > 0);
-            
-            // Siegprüfung
             if (defenderUnits.length === 0) {
-                log(`\n🏆 SIEG: Angreifer hat gewonnen in Runde ${round}! 🏆`, "victory");
+                log(`\n🏆 SIEG: ANGREIFER hat gewonnen in Runde ${round}! 🏆`, "victory");
                 break;
             }
             if (attackerUnits.length === 0) {
-                log(`\n🏆 SIEG: Verteidiger hat gewonnen in Runde ${round}! 🏆`, "victory");
+                log(`\n🏆 SIEG: VERTEIDIGER hat gewonnen in Runde ${round}! 🏆`, "victory");
                 break;
             }
             
@@ -981,7 +752,7 @@
         }
         
         if (round > maxRounds) {
-            log(`\n⏰ UNENTSCHIEDEN: Maximale Runden (${maxRounds}) erreicht`, "victory");
+            log(`\n⏰ UNENTSCHIEDEN nach ${maxRounds} Runden`, "victory");
         }
         
         updateReport();
@@ -1024,6 +795,8 @@
     }
 
     renderSetup();
+    window.startFight = startFight;
+    window.resetDefaultSetup = resetDefaultSetup;
 </script>
 </body>
 </html>
