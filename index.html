@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beast Lord Kampf-Simulator</title>
+    <title>Beast Lord Kampf-Simulator - Detailliert</title>
     <style>
         * {
             box-sizing: border-box;
@@ -16,7 +16,7 @@
             margin: 0;
         }
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
         h1 {
@@ -127,19 +127,26 @@
             border-radius: 8px;
             font-family: monospace;
             font-size: 11px;
-            max-height: 500px;
+            max-height: 550px;
             overflow-y: auto;
             white-space: pre-wrap;
         }
         .type-carni { color: #ff6b6b; }
         .type-herbi { color: #7bed9f; }
         .type-omni { color: #ffd700; }
+        
+        .detail-row {
+            background: rgba(0,0,0,0.3);
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🐺 Beast Lord Kampf-Simulator ⚔️</h1>
-    <div class="subtitle">Fleischfresser 🥩 | Pflanzenfresser 🌿 | Allesfresser 🍂</div>
+    <div class="subtitle">Detaillierte Kampfberichte | Bestien-Schaden | Alpha-Abhängigkeit</div>
 
     <div class="armies-container">
         <div class="army attacker">
@@ -174,20 +181,20 @@
             gigantopithecus: { name: "Gigantopithecus", type: "omni", attack: 121, defense: 78, hp: 24 }
         };
 
-        // ========== ALPHAS (vereinfacht aber funktional) ==========
+        // ========== ALPHAS ==========
         const ALPHAS = {
-            smilodon: { name: "Smilodon", type: "carni", skillChance: 0.7, skillMulti: 2.0 },
-            beutelloewe: { name: "Beutellöwe", type: "carni", skillChance: 0.6, skillMulti: 2.15 },
-            hyaenodon: { name: "Hyaenodon", type: "carni", skillChance: 0.5, skillMulti: 1.8 },
-            amerikanischerGepard: { name: "Gepard", type: "carni", skillChance: 0.5, skillMulti: 1.7 },
-            metridiochoerus: { name: "Metridiochoerus", type: "omni", skillChance: 0.6, skillMulti: 2.0 },
-            dinopithecus: { name: "Dinopithecus", type: "omni", skillChance: 0.7, skillMulti: 2.2 },
-            elefantenvogel: { name: "Elefantenvogel", type: "omni", skillChance: 0.5, skillMulti: 1.8 },
-            kurznasenbaer: { name: "Kurznasenbär", type: "omni", skillChance: 0.7, skillMulti: 2.5 },
-            riesenSivatherium: { name: "Sivatherium", type: "herbi", skillChance: 0.5, skillMulti: 1.6 },
-            meiolanja: { name: "Meiolanja", type: "herbi", skillChance: 0.6, skillMulti: 1.5 },
-            mammut: { name: "Mammut", type: "herbi", skillChance: 0.5, skillMulti: 1.7 },
-            megatherium: { name: "Megatherium", type: "herbi", skillChance: 0.6, skillMulti: 2.0 }
+            smilodon: { name: "Smilodon", type: "carni", skillChance: 0.8, skillMulti: 2.0, skillName: "Tödlicher Comboschlag" },
+            beutelloewe: { name: "Beutellöwe", type: "carni", skillChance: 0.6, skillMulti: 2.15, skillName: "Nachstoß" },
+            hyaenodon: { name: "Hyaenodon", type: "carni", skillChance: 0.5, skillMulti: 1.8, skillName: "Erstschlag" },
+            amerikanischerGepard: { name: "Gepard", type: "carni", skillChance: 0.5, skillMulti: 1.7, skillName: "Blitzangriff" },
+            metridiochoerus: { name: "Metridiochoerus", type: "omni", skillChance: 0.6, skillMulti: 2.0, skillName: "Schwingenschlag" },
+            dinopithecus: { name: "Dinopithecus", type: "omni", skillChance: 0.7, skillMulti: 2.2, skillName: "Echter Schaden" },
+            elefantenvogel: { name: "Elefantenvogel", type: "omni", skillChance: 0.5, skillMulti: 1.8, skillName: "Reaktiver Schlag" },
+            kurznasenbaer: { name: "Kurznasenbär", type: "omni", skillChance: 0.7, skillMulti: 2.5, skillName: "Ausnutzen" },
+            riesenSivatherium: { name: "Sivatherium", type: "herbi", skillChance: 0.5, skillMulti: 1.6, skillName: "Verwirrender Tritt" },
+            meiolanja: { name: "Meiolanja", type: "herbi", skillChance: 0.6, skillMulti: 1.5, skillName: "Gegenschlag" },
+            mammut: { name: "Mammut", type: "herbi", skillChance: 0.5, skillMulti: 1.7, skillName: "Gegenangriff" },
+            megatherium: { name: "Megatherium", type: "herbi", skillChance: 0.6, skillMulti: 2.0, skillName: "Fokussierter Schlag" }
         };
 
         // ========== STANDARD AUFSTELLUNG ==========
@@ -203,19 +210,34 @@
             { alpha: "megatherium", beast: "langhornbison", count: 100000 }
         ];
 
-        // ========== AKTUELLE AUFSTELLUNG ==========
         let attackerRows = JSON.parse(JSON.stringify(defaultAttacker));
         let defenderRows = JSON.parse(JSON.stringify(defaultDefender));
         
         let logEntries = [];
+        
+        // Statistiken für Kampfbericht
+        let roundStats = {
+            attacker: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 },
+            defender: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 }
+        };
+        
+        let rowStats = {
+            attacker: [],
+            defender: []
+        };
 
-        function addLog(msg, type) {
-            logEntries.push({ msg, type: type || 'info' });
+        function addLog(msg, type, indent = 0) {
+            const indentStr = '  '.repeat(indent);
+            logEntries.push({ msg: indentStr + msg, type: type || 'info' });
             console.log(msg);
         }
 
         function clearLog() {
             logEntries = [];
+            roundStats = {
+                attacker: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 },
+                defender: { totalDamage: 0, skillDamage: 0, normalDamage: 0, skillUses: 0 }
+            };
         }
 
         function updateUI() {
@@ -230,153 +252,257 @@
                 if (entry.type === 'heal') color = '#8888ff';
                 if (entry.type === 'round') color = '#ffcc66';
                 if (entry.type === 'victory') color = '#ffaa44';
-                html += `<div style="color: ${color}; margin: 2px 0;">${entry.msg}</div>`;
+                if (entry.type === 'info') color = '#aaa';
+                if (entry.type === 'stat') color = '#ffaa88';
+                html += `<div style="color: ${color}; margin: 2px 0; white-space: pre-wrap;">${escapeHtml(entry.msg)}</div>`;
             }
             container.innerHTML = html;
             container.scrollTop = container.scrollHeight;
         }
-
-        // Schadensberechnung
-        function calcDamage(attacker, defender, multi) {
-            let dmg = (attacker.attack * (attacker.count / 100)) * multi;
-            let defReduction = defender.defense / 300;
-            if (defReduction > 0.6) defReduction = 0.6;
-            dmg = dmg * (1 - defReduction);
-            dmg = dmg * (0.8 + Math.random() * 0.4);
-            return Math.max(1, Math.floor(dmg));
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
-        // Kampf-Funktion
-        function startFight() {
-            // Log zurücksetzen
-            clearLog();
-            addLog("⚔️ KAMPF BEGINNT ⚔️", "victory");
+        // Schadensberechnung mit Bestien-Anzahl
+        function calcDamage(attacker, defender, multi, isSkill = false) {
+            // Bestien machen den Hauptschaden
+            let beastDamage = (attacker.beastAttack * (attacker.count / 100)) * multi;
             
-            // Einheiten erstellen (Kopie)
+            // Alpha-Bonus (abhängig von der Bestien-Anzahl)
+            let alphaBonus = 1 + (attacker.count / 500000);
+            if (alphaBonus > 1.5) alphaBonus = 1.5;
+            
+            let totalDamage = beastDamage * alphaBonus;
+            
+            // Verteidigung reduzieren
+            let defReduction = defender.beastDefense / 400;
+            if (defReduction > 0.6) defReduction = 0.6;
+            totalDamage = totalDamage * (1 - defReduction);
+            
+            // Typ-Vorteil
+            let typeBonus = 1.0;
+            if (attacker.alphaType === 'carni' && defender.alphaType === 'herbi') typeBonus = 1.25;
+            if (attacker.alphaType === 'herbi' && defender.alphaType === 'omni') typeBonus = 1.25;
+            if (attacker.alphaType === 'omni' && defender.alphaType === 'carni') typeBonus = 1.25;
+            totalDamage = totalDamage * typeBonus;
+            
+            // Zufallsfaktor
+            totalDamage = totalDamage * (0.85 + Math.random() * 0.3);
+            
+            // Skills machen mehr Schaden
+            if (isSkill) totalDamage = totalDamage * 1.5;
+            
+            return Math.max(1, Math.floor(totalDamage));
+        }
+        
+        // Bestien-Zahl aus HP berechnen
+        function updateCountFromHp(unit) {
+            unit.count = Math.floor(unit.hp / unit.beastHp);
+            if (unit.count < 0) unit.count = 0;
+            return unit.count;
+        }
+
+        // Kampf-Funktion mit detailliertem Bericht
+        function startFight() {
+            clearLog();
+            addLog("═══════════════════════════════════════════════════", "victory");
+            addLog("⚔️ KAMPF BEGINNT ⚔️", "victory");
+            addLog("═══════════════════════════════════════════════════", "victory");
+            
+            // Einheiten erstellen
             let attacker = attackerRows.map((r, idx) => ({
                 id: idx,
+                rowNum: idx + 1,
                 alphaKey: r.alpha,
                 alphaName: ALPHAS[r.alpha].name,
                 alphaType: ALPHAS[r.alpha].type,
+                alphaSkillChance: ALPHAS[r.alpha].skillChance,
+                alphaSkillMulti: ALPHAS[r.alpha].skillMulti,
+                alphaSkillName: ALPHAS[r.alpha].skillName,
                 beastKey: r.beast,
                 beastName: BEASTS[r.beast].name,
-                attack: BEASTS[r.beast].attack,
-                defense: BEASTS[r.beast].defense,
+                beastAttack: BEASTS[r.beast].attack,
+                beastDefense: BEASTS[r.beast].defense,
+                beastHp: BEASTS[r.beast].hp,
+                beastType: BEASTS[r.beast].type,
+                count: r.count,
                 maxHp: r.count * BEASTS[r.beast].hp,
                 hp: r.count * BEASTS[r.beast].hp,
-                count: r.count,
-                skillChance: ALPHAS[r.alpha].skillChance,
-                skillMulti: ALPHAS[r.alpha].skillMulti,
-                isAlive: true
+                isAlive: true,
+                // Stats für Bericht
+                totalDamageDealt: 0,
+                skillDamageDealt: 0,
+                skillUses: 0,
+                kills: 0
             }));
             
             let defender = defenderRows.map((r, idx) => ({
                 id: idx,
+                rowNum: idx + 1,
                 alphaKey: r.alpha,
                 alphaName: ALPHAS[r.alpha].name,
                 alphaType: ALPHAS[r.alpha].type,
+                alphaSkillChance: ALPHAS[r.alpha].skillChance,
+                alphaSkillMulti: ALPHAS[r.alpha].skillMulti,
+                alphaSkillName: ALPHAS[r.alpha].skillName,
                 beastKey: r.beast,
                 beastName: BEASTS[r.beast].name,
-                attack: BEASTS[r.beast].attack,
-                defense: BEASTS[r.beast].defense,
+                beastAttack: BEASTS[r.beast].attack,
+                beastDefense: BEASTS[r.beast].defense,
+                beastHp: BEASTS[r.beast].hp,
+                beastType: BEASTS[r.beast].type,
+                count: r.count,
                 maxHp: r.count * BEASTS[r.beast].hp,
                 hp: r.count * BEASTS[r.beast].hp,
-                count: r.count,
-                skillChance: ALPHAS[r.alpha].skillChance,
-                skillMulti: ALPHAS[r.alpha].skillMulti,
-                isAlive: true
+                isAlive: true,
+                totalDamageDealt: 0,
+                skillDamageDealt: 0,
+                skillUses: 0,
+                kills: 0
             }));
             
-            addLog(`Angreifer: ${attacker.reduce((s,u) => s + u.count, 0).toLocaleString()} Bestien`);
-            addLog(`Verteidiger: ${defender.reduce((s,u) => s + u.count, 0).toLocaleString()} Bestien`);
+            // Start-Übersicht
+            addLog("\n📊 AUFSTELLUNG:", "info");
+            addLog("┌─────────────────────────────────────────────────┐", "info");
+            for (let a of attacker) {
+                addLog(`│ Angreifer Reihe ${a.rowNum}: ${a.alphaName} + ${a.count.toLocaleString()} ${a.beastName} (${a.beastAttack} Angriff / ${a.beastDefense} Def)`, "info");
+            }
+            addLog("├─────────────────────────────────────────────────┤", "info");
+            for (let d of defender) {
+                addLog(`│ Verteidiger Reihe ${d.rowNum}: ${d.alphaName} + ${d.count.toLocaleString()} ${d.beastName} (${d.beastAttack} Angriff / ${d.beastDefense} Def)`, "info");
+            }
+            addLog("└─────────────────────────────────────────────────┘", "info");
             
             let round = 1;
-            let maxRounds = 20;
+            let maxRounds = 30;
             let winner = null;
+            let roundDetails = [];
             
             while (round <= maxRounds && winner === null) {
-                addLog(`\n━━━━━━ RUNDE ${round} ━━━━━━`, "round");
+                addLog(`\n╔═══════════════════════════════════════════════════╗`, "round");
+                addLog(`║                    RUNDE ${round}                     ║`, "round");
+                addLog(`╚═══════════════════════════════════════════════════╝`, "round");
                 
-                // Typ-Vorteil berechnen
-                function getTypeBonus(att, def) {
-                    if (att === 'carni' && def === 'herbi') return 1.25;
-                    if (att === 'herbi' && def === 'omni') return 1.25;
-                    if (att === 'omni' && def === 'carni') return 1.25;
-                    return 1.0;
+                // Aktuelle Stärke anzeigen
+                addLog(`\n📈 Aktuelle Truppenstärke:`, "info");
+                for (let a of attacker) {
+                    let percent = ((a.hp / a.maxHp) * 100).toFixed(1);
+                    addLog(`   Angreifer R${a.rowNum}: ${Math.floor(a.hp).toLocaleString()} / ${a.maxHp.toLocaleString()} HP (${percent}%) - ${a.count.toLocaleString()} Bestien`, "info");
                 }
+                for (let d of defender) {
+                    let percent = ((d.hp / d.maxHp) * 100).toFixed(1);
+                    addLog(`   Verteidiger R${d.rowNum}: ${Math.floor(d.hp).toLocaleString()} / ${d.maxHp.toLocaleString()} HP (${percent}%) - ${d.count.toLocaleString()} Bestien`, "info");
+                }
+                
+                addLog(`\n⚔️ ANGREIFER greifen an:`, "damage");
                 
                 // Angreifer greifen an
                 for (let a of attacker) {
-                    if (!a.isAlive) continue;
+                    if (!a.isAlive || a.count <= 0) continue;
                     
-                    let target = defender.find(d => d.isAlive);
+                    // Finde lebenden Verteidiger (Reihenfolge: Reihe 1 zuerst)
+                    let target = defender.find(d => d.isAlive && d.count > 0);
                     if (!target) break;
                     
-                    let typeBonus = getTypeBonus(a.alphaType, target.alphaType);
-                    let isSkill = Math.random() < a.skillChance;
-                    let multi = isSkill ? a.skillMulti * typeBonus : 1.0 * typeBonus;
-                    let damage = calcDamage(a, target, multi);
+                    let isSkill = Math.random() < a.alphaSkillChance;
+                    let multi = isSkill ? a.alphaSkillMulti : 1.0;
+                    let damage = calcDamage(a, target, multi, isSkill);
                     
+                    // Schaden anwenden
+                    let oldTargetHp = target.hp;
                     target.hp -= damage;
+                    if (target.hp < 0) target.hp = 0;
+                    
+                    // Bestien-Zahl aktualisieren
+                    let oldTargetCount = target.count;
+                    target.count = Math.floor(target.hp / target.beastHp);
+                    if (target.count < 0) target.count = 0;
+                    
+                    // Stats aktualisieren
+                    a.totalDamageDealt += damage;
+                    if (isSkill) {
+                        a.skillDamageDealt += damage;
+                        a.skillUses++;
+                        roundStats.attacker.skillDamage += damage;
+                        roundStats.attacker.skillUses++;
+                        addLog(`   ✨ Reihe ${a.rowNum} (${a.alphaName}): ${a.alphaSkillName} - ${damage.toLocaleString()} Schaden auf Reihe ${target.rowNum} (${target.alphaName})`, "skill", 1);
+                    } else {
+                        a.skillDamageDealt += 0;
+                        roundStats.attacker.normalDamage += damage;
+                        addLog(`   ⚔️ Reihe ${a.rowNum} (${a.alphaName}): Normaler Angriff - ${damage.toLocaleString()} Schaden auf Reihe ${target.rowNum} (${target.alphaName})`, "damage", 1);
+                    }
+                    roundStats.attacker.totalDamage += damage;
+                    
+                    // Todesnachricht
                     if (target.hp <= 0) {
                         target.isAlive = false;
-                        target.hp = 0;
-                        addLog(`💀 ${a.alphaName} (${a.beastName}) besiegt ${target.alphaName} (${target.beastName}) mit ${damage.toLocaleString()} Schaden!`, "damage");
+                        a.kills++;
+                        addLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde besiegt!`, "damage", 1);
                     } else {
-                        if (isSkill) {
-                            addLog(`✨ ${a.alphaName} nutzt Spezialfähigkeit: ${damage.toLocaleString()} Schaden auf ${target.alphaName}`, "skill");
-                        } else {
-                            addLog(`⚔️ ${a.alphaName} (${a.beastName}) trifft für ${damage.toLocaleString()} Schaden`, "damage");
+                        let lostCount = oldTargetCount - target.count;
+                        if (lostCount > 0) {
+                            addLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName} (${target.count.toLocaleString()} verbleiben)`, "damage", 1);
                         }
                     }
                 }
                 
-                // Tote Verteidiger entfernen (für die Anzeige)
-                let deadDef = defender.filter(d => !d.isAlive).length;
-                if (deadDef > 0) {
-                    addLog(`💀 ${deadDef} Verteidiger-Reihe(n) besiegt!`, "damage");
-                }
-                
-                // Sieg prüfen
-                if (!defender.some(d => d.isAlive)) {
+                // Prüfe Sieg
+                if (!defender.some(d => d.isAlive && d.count > 0)) {
                     winner = "ANGREIFER";
                     break;
                 }
                 
+                addLog(`\n🛡️ VERTEIDIGER greifen an:`, "damage");
+                
                 // Verteidiger greifen an
                 for (let d of defender) {
-                    if (!d.isAlive) continue;
+                    if (!d.isAlive || d.count <= 0) continue;
                     
-                    let target = attacker.find(a => a.isAlive);
+                    let target = attacker.find(a => a.isAlive && a.count > 0);
                     if (!target) break;
                     
-                    let typeBonus = getTypeBonus(d.alphaType, target.alphaType);
-                    let isSkill = Math.random() < d.skillChance;
-                    let multi = isSkill ? d.skillMulti * typeBonus : 1.0 * typeBonus;
-                    let damage = calcDamage(d, target, multi);
+                    let isSkill = Math.random() < d.alphaSkillChance;
+                    let multi = isSkill ? d.alphaSkillMulti : 1.0;
+                    let damage = calcDamage(d, target, multi, isSkill);
                     
+                    let oldTargetHp = target.hp;
                     target.hp -= damage;
+                    if (target.hp < 0) target.hp = 0;
+                    
+                    let oldTargetCount = target.count;
+                    target.count = Math.floor(target.hp / target.beastHp);
+                    if (target.count < 0) target.count = 0;
+                    
+                    d.totalDamageDealt += damage;
+                    if (isSkill) {
+                        d.skillDamageDealt += damage;
+                        d.skillUses++;
+                        roundStats.defender.skillDamage += damage;
+                        roundStats.defender.skillUses++;
+                        addLog(`   ✨ Reihe ${d.rowNum} (${d.alphaName}): ${d.alphaSkillName} - ${damage.toLocaleString()} Schaden auf Reihe ${target.rowNum} (${target.alphaName})`, "skill", 1);
+                    } else {
+                        roundStats.defender.normalDamage += damage;
+                        addLog(`   ⚔️ Reihe ${d.rowNum} (${d.alphaName}): Normaler Angriff - ${damage.toLocaleString()} Schaden auf Reihe ${target.rowNum} (${target.alphaName})`, "damage", 1);
+                    }
+                    roundStats.defender.totalDamage += damage;
+                    
                     if (target.hp <= 0) {
                         target.isAlive = false;
-                        target.hp = 0;
-                        addLog(`💀 ${d.alphaName} (${d.beastName}) besiegt ${target.alphaName} (${target.beastName}) mit ${damage.toLocaleString()} Schaden!`, "damage");
+                        d.kills++;
+                        addLog(`   💀 ${target.alphaName} (Reihe ${target.rowNum}) wurde besiegt!`, "damage", 1);
                     } else {
-                        if (isSkill) {
-                            addLog(`✨ ${d.alphaName} nutzt Spezialfähigkeit: ${damage.toLocaleString()} Schaden auf ${target.alphaName}`, "skill");
-                        } else {
-                            addLog(`⚔️ ${d.alphaName} (${d.beastName}) trifft für ${damage.toLocaleString()} Schaden`, "damage");
+                        let lostCount = oldTargetCount - target.count;
+                        if (lostCount > 0) {
+                            addLog(`   📉 ${target.alphaName} verliert ${lostCount.toLocaleString()} ${target.beastName} (${target.count.toLocaleString()} verbleiben)`, "damage", 1);
                         }
                     }
                 }
                 
-                // Tote Angreifer entfernen
-                let deadAtt = attacker.filter(a => !a.isAlive).length;
-                if (deadAtt > 0) {
-                    addLog(`💀 ${deadAtt} Angreifer-Reihe(n) besiegt!`, "damage");
-                }
-                
-                // Sieg prüfen
-                if (!attacker.some(a => a.isAlive)) {
+                // Prüfe Sieg
+                if (!attacker.some(a => a.isAlive && a.count > 0)) {
                     winner = "VERTEIDIGER";
                     break;
                 }
@@ -384,11 +510,56 @@
                 round++;
             }
             
+            // ========== DETAILLIERTER KAMPFBERICHT ==========
+            addLog(`\n╔═══════════════════════════════════════════════════╗`, "victory");
+            addLog(`║                  KAMPFBERICHT                     ║`, "victory");
+            addLog(`╚═══════════════════════════════════════════════════╝`, "victory");
+            
             if (winner === null) {
-                addLog(`⏰ UNENTSCHIEDEN nach ${maxRounds} Runden!`, "victory");
+                addLog(`\n⏰ UNENTSCHIEDEN nach ${maxRunden} Runden!`, "victory");
             } else {
-                addLog(`\n🏆 SIEG: ${winner} hat gewonnen in Runde ${round}! 🏆`, "victory");
+                addLog(`\n🏆 SIEGER: ${winner} nach ${round} Runden! 🏆`, "victory");
             }
+            
+            // Gesamtstatistiken
+            addLog(`\n📊 GESAMTSTATISTIK:`, "stat");
+            addLog(`┌─────────────────────────────────────────────────┐`, "stat");
+            addLog(`│ ANGREIFER:                                      │`, "stat");
+            addLog(`│   Gesamtschaden: ${roundStats.attacker.totalDamage.toLocaleString()}`, "stat");
+            addLog(`│   Davon Skills: ${roundStats.attacker.skillDamage.toLocaleString()} (${roundStats.attacker.skillUses}×)`, "stat");
+            addLog(`│   Normal: ${roundStats.attacker.normalDamage.toLocaleString()}`, "stat");
+            addLog(`├─────────────────────────────────────────────────┤`, "stat");
+            addLog(`│ VERTEIDIGER:                                    │`, "stat");
+            addLog(`│   Gesamtschaden: ${roundStats.defender.totalDamage.toLocaleString()}`, "stat");
+            addLog(`│   Davon Skills: ${roundStats.defender.skillDamage.toLocaleString()} (${roundStats.defender.skillUses}×)`, "stat");
+            addLog(`│   Normal: ${roundStats.defender.normalDamage.toLocaleString()}`, "stat");
+            addLog(`└─────────────────────────────────────────────────┘`, "stat");
+            
+            // Detaillierte Reihenstatistiken
+            addLog(`\n📋 DETAILS NACH REIHEN:`, "stat");
+            addLog(`┌─────────────────────────────────────────────────┐`, "stat");
+            addLog(`│ ANGREIFER:                                      │`, "stat");
+            for (let a of attacker) {
+                let survived = a.isAlive ? "✅ Überlebt" : "💀 Besiegt";
+                addLog(`│ Reihe ${a.rowNum}: ${a.alphaName} + ${a.beastName}`, "stat");
+                addLog(`│   Schaden: ${a.totalDamageDealt.toLocaleString()} (Skills: ${a.skillDamageDealt.toLocaleString()}, ${a.skillUses}×)`, "stat");
+                addLog(`│   Kills: ${a.kills} | Status: ${survived}`, "stat");
+                addLog(`│   Verbleibende Bestien: ${a.count.toLocaleString()}`, "stat");
+                if (a !== attacker[attacker.length-1]) addLog(`├─────────────────────────────────────────────────┤`, "stat");
+            }
+            addLog(`├─────────────────────────────────────────────────┤`, "stat");
+            addLog(`│ VERTEIDIGER:                                    │`, "stat");
+            for (let d of defender) {
+                let survived = d.isAlive ? "✅ Überlebt" : "💀 Besiegt";
+                addLog(`│ Reihe ${d.rowNum}: ${d.alphaName} + ${d.beastName}`, "stat");
+                addLog(`│   Schaden: ${d.totalDamageDealt.toLocaleString()} (Skills: ${d.skillDamageDealt.toLocaleString()}, ${d.skillUses}×)`, "stat");
+                addLog(`│   Kills: ${d.kills} | Status: ${survived}`, "stat");
+                addLog(`│   Verbleibende Bestien: ${d.count.toLocaleString()}`, "stat");
+                if (d !== defender[defender.length-1]) addLog(`├─────────────────────────────────────────────────┤`, "stat");
+            }
+            addLog(`└─────────────────────────────────────────────────┘`, "stat");
+            
+            addLog(`\n═══════════════════════════════════════════════════`, "victory");
             
             updateUI();
         }
@@ -427,7 +598,6 @@
         }
         
         function attachEvents() {
-            // Alpha Select
             document.querySelectorAll('.alpha-select').forEach(select => {
                 select.onchange = (e) => {
                     const side = e.target.dataset.side;
@@ -438,7 +608,6 @@
                 };
             });
             
-            // Beast Select
             document.querySelectorAll('.beast-select').forEach(select => {
                 select.onchange = (e) => {
                     const side = e.target.dataset.side;
@@ -449,7 +618,6 @@
                 };
             });
             
-            // Count Input
             document.querySelectorAll('.count-input').forEach(input => {
                 input.onchange = (e) => {
                     const side = e.target.dataset.side;
@@ -470,18 +638,11 @@
             updateUI();
         }
         
-        // Event Listener für Buttons
-        document.getElementById('fightBtn').onclick = () => {
-            startFight();
-        };
+        document.getElementById('fightBtn').onclick = () => startFight();
+        document.getElementById('resetBtn').onclick = () => resetSetup();
         
-        document.getElementById('resetBtn').onclick = () => {
-            resetSetup();
-        };
-        
-        // Initial render
         renderAll();
-        addLog("Bereit! Klicke auf 'KAMPF STARTEN'");
+        addLog("✅ Bereit! Klicke auf 'KAMPF STARTEN'");
         updateUI();
     })();
 </script>
