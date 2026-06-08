@@ -146,6 +146,11 @@
         .type-carni { color: #ff6b6b; }
         .type-herbi { color: #7bed9f; }
         .type-omni { color: #ffd700; }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -165,8 +170,8 @@
     </div>
 
     <div class="fight-section">
-        <button class="fight-btn" onclick="startFight()">🔥 KAMPF STARTEN 🔥</button>
-        <button class="reset-btn" onclick="resetDefaultSetup()">↺ Standard-Aufstellung</button>
+        <button class="fight-btn" id="fightBtn">🔥 KAMPF STARTEN 🔥</button>
+        <button class="reset-btn" id="resetBtn">↺ Standard-Aufstellung</button>
     </div>
 
     <div class="report">
@@ -457,19 +462,23 @@
             ]}
     };
 
-    // Standard-Aufstellung
-    let attackerRows = [
+    // Standard-Aufstellung (werden bei jedem Reset neu erstellt)
+    let defaultAttackerRows = [
         { alpha: "smilodon", beast: "hoelhenhyaene", beastCount: 100000 },
         { alpha: "beutelloewe", beast: "hoelhenhyaene", beastCount: 80000 },
         { alpha: "hyaenodon", beast: "hoelhenhyaene", beastCount: 90000 }
     ];
-    let defenderRows = [
+    let defaultDefenderRows = [
         { alpha: "riesenSivatherium", beast: "langhornbison", beastCount: 120000 },
         { alpha: "mammut", beast: "langhornbison", beastCount: 110000 },
         { alpha: "megatherium", beast: "langhornbison", beastCount: 100000 }
     ];
-
+    
+    let attackerRows = JSON.parse(JSON.stringify(defaultAttackerRows));
+    let defenderRows = JSON.parse(JSON.stringify(defaultDefenderRows));
+    
     let fightLog = [];
+    let isFighting = false;
 
     function log(msg, type = "info") {
         fightLog.push({ msg, type });
@@ -524,6 +533,7 @@
             this.earlyEvasion = 0;
             this.earlyResist = 0;
             this.debuff = null;
+            this.round = 1;
         }
         
         isAlive() {
@@ -570,37 +580,76 @@
             container.appendChild(rowDiv);
         });
 
+        // Event-Listener neu binden (ohne doppelte Listener)
         document.querySelectorAll('.alpha-select').forEach(select => {
-            select.addEventListener('change', (e) => {
-                const army = e.target.dataset.army;
-                const row = parseInt(e.target.dataset.row);
-                if (army === 'attacker') attackerRows[row].alpha = e.target.value;
-                else defenderRows[row].alpha = e.target.value;
-            });
+            select.removeEventListener('change', handleAlphaChange);
+            select.addEventListener('change', handleAlphaChange);
         });
         document.querySelectorAll('.beast-select').forEach(select => {
-            select.addEventListener('change', (e) => {
-                const army = e.target.dataset.army;
-                const row = parseInt(e.target.dataset.row);
-                if (army === 'attacker') attackerRows[row].beast = e.target.value;
-                else defenderRows[row].beast = e.target.value;
-            });
+            select.removeEventListener('change', handleBeastChange);
+            select.addEventListener('change', handleBeastChange);
         });
         document.querySelectorAll('.beast-count').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const army = e.target.dataset.army;
-                const row = parseInt(e.target.dataset.row);
-                const val = parseInt(e.target.value) || 0;
-                if (army === 'attacker') attackerRows[row].beastCount = val;
-                else defenderRows[row].beastCount = val;
-            });
+            input.removeEventListener('change', handleCountChange);
+            input.addEventListener('change', handleCountChange);
         });
     }
+    
+    function handleAlphaChange(e) {
+        const army = e.target.dataset.army;
+        const row = parseInt(e.target.dataset.row);
+        if (army === 'attacker') attackerRows[row].alpha = e.target.value;
+        else defenderRows[row].alpha = e.target.value;
+    }
+    
+    function handleBeastChange(e) {
+        const army = e.target.dataset.army;
+        const row = parseInt(e.target.dataset.row);
+        if (army === 'attacker') attackerRows[row].beast = e.target.value;
+        else defenderRows[row].beast = e.target.value;
+    }
+    
+    function handleCountChange(e) {
+        const army = e.target.dataset.army;
+        const row = parseInt(e.target.dataset.row);
+        const val = parseInt(e.target.value) || 0;
+        if (army === 'attacker') attackerRows[row].beastCount = val;
+        else defenderRows[row].beastCount = val;
+    }
 
-    async function startFight() {
+    function startFight() {
+        if (isFighting) {
+            log("⚠️ Ein Kampf läuft bereits!");
+            updateReport();
+            return;
+        }
+        
+        isFighting = true;
+        const fightBtn = document.getElementById('fightBtn');
+        fightBtn.disabled = true;
+        fightBtn.textContent = "⚔️ KAMPF LÄUFT... ⚔️";
+        
+        // Verwende setTimeout, damit der UI-Update sichtbar wird
+        setTimeout(() => {
+            try {
+                executeFight();
+            } catch (error) {
+                console.error("Fehler im Kampf:", error);
+                log(`❌ FEHLER: ${error.message}`, "damage");
+                updateReport();
+            } finally {
+                isFighting = false;
+                fightBtn.disabled = false;
+                fightBtn.textContent = "🔥 KAMPF STARTEN 🔥";
+            }
+        }, 50);
+    }
+    
+    function executeFight() {
         fightLog = [];
         log("⚔️ KAMPF BEGINNT ⚔️");
         
+        // Frische Kopie der Einheiten erstellen (basierend auf aktuellen Einstellungen)
         let attackerUnits = attackerRows.map((row, idx) => new CombatUnit(row, idx, true));
         let defenderUnits = defenderRows.map((row, idx) => new CombatUnit(row, idx, false));
         
@@ -625,9 +674,13 @@
             log(`🔄 RUNDE ${round} 🔄`, "round");
             log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             
-            // Per-Round Skills
+            // Runde für alle Einheiten setzen
             for (let u of [...attackerUnits, ...defenderUnits]) {
                 u.round = round;
+            }
+            
+            // Per-Round Skills
+            for (let u of [...attackerUnits, ...defenderUnits]) {
                 for (let skill of u.alphaData.skills) {
                     if (skill.trigger === "per_round") {
                         let ctx = { log, calcDamage: calculateDamage, round };
@@ -778,23 +831,19 @@
     }
 
     function resetDefaultSetup() {
-        attackerRows = [
-            { alpha: "smilodon", beast: "hoelhenhyaene", beastCount: 100000 },
-            { alpha: "beutelloewe", beast: "hoelhenhyaene", beastCount: 80000 },
-            { alpha: "hyaenodon", beast: "hoelhenhyaene", beastCount: 90000 }
-        ];
-        defenderRows = [
-            { alpha: "riesenSivatherium", beast: "langhornbison", beastCount: 120000 },
-            { alpha: "mammut", beast: "langhornbison", beastCount: 110000 },
-            { alpha: "megatherium", beast: "langhornbison", beastCount: 100000 }
-        ];
+        // Tiefe Kopie der Standardwerte
+        attackerRows = JSON.parse(JSON.stringify(defaultAttackerRows));
+        defenderRows = JSON.parse(JSON.stringify(defaultDefenderRows));
         renderSetup();
         fightLog = [];
         log("🔁 Aufstellung auf Standard zurückgesetzt");
         updateReport();
     }
 
+    // Initialisierung
     renderSetup();
+    
+    // Globale Funktionen für HTML
     window.startFight = startFight;
     window.resetDefaultSetup = resetDefaultSetup;
 </script>
