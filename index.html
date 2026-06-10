@@ -67,6 +67,40 @@
             border-bottom: 2px solid rgba(0, 150, 255, 0.3);
             margin-bottom: 30px;
             border-radius: 0 0 20px 20px;
+            position: relative;
+        }
+
+        .save-indicator {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 0.85em;
+            color: #44ff44;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .save-indicator.visible {
+            opacity: 1;
+        }
+
+        .reset-btn {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            background: rgba(255, 50, 50, 0.3);
+            border: 1px solid rgba(255, 50, 50, 0.5);
+            color: #ff6666;
+            padding: 5px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 50, 50, 0.5);
+            box-shadow: 0 0 15px rgba(255, 50, 50, 0.3);
         }
 
         h1 {
@@ -466,6 +500,8 @@
     <div class="stars" id="stars"></div>
     <div class="container">
         <header>
+            <button class="reset-btn" onclick="resetGame()" title="Spiel zurücksetzen">🔄 Reset</button>
+            <div class="save-indicator" id="saveIndicator">💾 Gespeichert</div>
             <h1>🚀 OGame Expedition</h1>
             <div class="subtitle">Deep Space Exploration Fleet</div>
         </header>
@@ -515,8 +551,8 @@
     </div>
 
     <script>
-        // Spielzustand
-        const state = {
+        // Standard-Startwerte
+        const DEFAULT_STATE = {
             resources: {
                 metal: 5000000,
                 crystal: 2500000,
@@ -528,7 +564,7 @@
                 zerstörer: { count: 0 },
                 schwererJäger: { count: 0 }
             },
-            buildQueue: [], // Array von {shipType, count, startTime, totalDuration}
+            buildQueue: [],
             expedition: {
                 active: false,
                 startTime: null,
@@ -540,9 +576,90 @@
                     schwererJäger: 0
                 },
                 phase: null
-            },
-            reportLog: []
+            }
         };
+
+        // Spielzustand initialisieren
+        let state = loadGameState();
+
+        function loadGameState() {
+            try {
+                const saved = localStorage.getItem('ogameExpeditionState');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Stelle sicher, dass alle Felder existieren
+                    const loaded = {
+                        resources: { ...DEFAULT_STATE.resources, ...parsed.resources },
+                        ships: { ...DEFAULT_STATE.ships, ...parsed.ships },
+                        buildQueue: parsed.buildQueue || [],
+                        expedition: {
+                            ...DEFAULT_STATE.expedition,
+                            ...parsed.expedition,
+                            selectedShips: {
+                                ...DEFAULT_STATE.expedition.selectedShips,
+                                ...(parsed.expedition?.selectedShips || {})
+                            }
+                        }
+                    };
+
+                    // Wenn eine Expedition aktiv war, prüfe ob sie noch läuft
+                    if (loaded.expedition.active && loaded.expedition.returnTime) {
+                        const now = Date.now();
+                        if (now >= loaded.expedition.returnTime) {
+                            // Expedition wäre schon abgeschlossen
+                            console.log('Abgelaufene Expedition gefunden, wird abgeschlossen...');
+                            // Wir setzen sie zurück und schließen sie beim Start ab
+                            loaded.expedition._pendingCompletion = true;
+                        }
+                    }
+
+                    // Baue Queue-Zeiten anpassen
+                    if (loaded.buildQueue.length > 0) {
+                        const now = Date.now();
+                        // Entferne bereits abgeschlossene Aufträge
+                        loaded.buildQueue = loaded.buildQueue.filter(item => item.endTime > now);
+                    }
+
+                    console.log('Spielstand geladen:', loaded);
+                    return loaded;
+                }
+            } catch (e) {
+                console.error('Fehler beim Laden des Spielstands:', e);
+            }
+            return JSON.parse(JSON.stringify(DEFAULT_STATE));
+        }
+
+        function saveGameState() {
+            try {
+                const saveData = JSON.parse(JSON.stringify(state));
+                localStorage.setItem('ogameExpeditionState', JSON.stringify(saveData));
+                showSaveIndicator();
+                console.log('Spielstand gespeichert:', saveData);
+            } catch (e) {
+                console.error('Fehler beim Speichern:', e);
+            }
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('visible');
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 2000);
+        }
+
+        function resetGame() {
+            if (confirm('Möchtest du wirklich das gesamte Spiel zurücksetzen? Alle Fortschritte gehen verloren!')) {
+                localStorage.removeItem('ogameExpeditionState');
+                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                updateDisplay();
+                document.getElementById('expeditionPanel').classList.remove('expedition-active');
+                document.getElementById('startExpeditionBtn').disabled = false;
+                document.getElementById('timerDisplay').textContent = 'Bereit für Expedition';
+                document.getElementById('report').style.display = 'none';
+                console.log('Spiel zurückgesetzt');
+            }
+        }
 
         // Schiffsdefinitionen
         const shipDefinitions = {
@@ -554,7 +671,7 @@
                 shields: 100,
                 armor: 200,
                 cost: { metal: 60000, crystal: 30000, deuterium: 15000 },
-                buildTime: 5 // Sekunden
+                buildTime: 5
             },
             schlachtkreuzer: {
                 name: 'Schlachtkreuzer',
@@ -595,6 +712,7 @@
             renderShipBuildCards();
             renderShipSelector();
             renderBuildQueue();
+            saveGameState();
         }
 
         function canAffordMultiple(cost, count) {
@@ -636,22 +754,23 @@
                 return;
             }
 
-            // Ressourcen sofort abziehen
             deductResources(def.cost, count);
 
-            // Zur Bauwarteschlange hinzufügen (jedes Schiff einzeln für realistischere Anzeige)
             const now = Date.now();
+            const lastEndTime = state.buildQueue.length > 0 ?
+                state.buildQueue[state.buildQueue.length - 1].endTime :
+                now;
+
             for (let i = 0; i < count; i++) {
-                const startOffset = state.buildQueue.length * def.buildTime * 1000;
+                const startTime = lastEndTime + (i * def.buildTime * 1000);
                 state.buildQueue.push({
                     shipType: shipType,
-                    startTime: now + startOffset,
+                    startTime: startTime,
                     duration: def.buildTime * 1000,
-                    endTime: now + startOffset + def.buildTime * 1000
+                    endTime: startTime + def.buildTime * 1000
                 });
             }
 
-            // Input zurücksetzen
             input.value = 1;
             updateDisplay();
             processBuildQueue();
@@ -666,15 +785,12 @@
             const now = Date.now();
             const queue = state.buildQueue;
 
-            // Überprüfe, ob das erste Element fertig ist
             if (queue[0].endTime <= now) {
-                // Schiff fertigstellen
                 const completed = queue.shift();
                 state.ships[completed.shipType].count++;
                 updateDisplay();
-                processBuildQueue(); // Nächstes Element prüfen
+                processBuildQueue();
             } else {
-                // Timer für nächstes Element setzen
                 const timeUntilNext = queue[0].endTime - now;
                 updateDisplay();
                 setTimeout(() => processBuildQueue(), Math.min(timeUntilNext, 1000));
@@ -687,8 +803,6 @@
 
             for (const [key, def] of Object.entries(shipDefinitions)) {
                 const shipState = state.ships[key];
-
-                // Zähle wie viele dieser Schiffe aktuell in der Queue sind
                 const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
                 const isBuilding = inQueue > 0;
 
@@ -746,7 +860,6 @@
             queueDiv.classList.add('active');
             const now = Date.now();
 
-            // Zeige maximal 5 Einträge
             const displayQueue = state.buildQueue.slice(0, 5);
             queueItems.innerHTML = displayQueue.map((item, index) => {
                 const def = shipDefinitions[item.shipType];
@@ -765,12 +878,13 @@
                     `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
             }
 
-            // Aktualisiere die Queue-Anzeige jede Sekunde
-            setTimeout(() => {
-                if (state.buildQueue.length > 0) {
-                    renderBuildQueue();
-                }
-            }, 1000);
+            if (state.buildQueue.length > 0) {
+                setTimeout(() => {
+                    if (state.buildQueue.length > 0) {
+                        renderBuildQueue();
+                    }
+                }, 1000);
+            }
         }
 
         function renderShipSelector() {
@@ -830,7 +944,6 @@
                 return;
             }
 
-            // Schiffe abziehen
             for (const [key, count] of Object.entries(selected)) {
                 state.ships[key].count -= count;
                 state.expedition.selectedShips[key] = count;
@@ -982,7 +1095,6 @@
                     }
                 }
 
-                // Bergung
                 const pirateResources = Math.floor(piratePower * lossRate * 5000);
                 const ownRecovery = (totalOwnLossesMetal + totalOwnLossesCrystal + totalOwnLossesDeuterium) * 0.6;
                 const pirateRecovery = pirateResources * 0.6;
@@ -1045,8 +1157,28 @@
             }
         }
 
+        // Initialisierung
         createStars();
+
+        // Wenn eine abgelaufene Expedition beim Laden gefunden wurde
+        if (state.expedition._pendingCompletion) {
+            console.log('Schließe abgelaufene Expedition ab...');
+            delete state.expedition._pendingCompletion;
+            completeExpedition();
+        } else if (state.expedition.active) {
+            // Expedition läuft noch, Timer starten
+            updateTimer();
+            document.getElementById('expeditionPanel').classList.add('expedition-active');
+            document.getElementById('startExpeditionBtn').disabled = true;
+        }
+
+        // Baue Queue wieder starten falls nötig
+        if (state.buildQueue.length > 0) {
+            processBuildQueue();
+        }
+
         updateDisplay();
+        console.log('Spiel initialisiert und bereit!');
     </script>
 </body>
 </html>
