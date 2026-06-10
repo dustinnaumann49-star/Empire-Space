@@ -169,30 +169,26 @@
 
         .ship-build-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 15px;
         }
 
         .ship-card {
             background: rgba(0, 15, 30, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 10px;
-            padding: 12px;
-            cursor: pointer;
+            padding: 15px;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
             position: relative;
-            overflow: hidden;
         }
 
         .ship-card:hover {
             border-color: rgba(0, 150, 255, 0.6);
             background: rgba(0, 30, 60, 0.8);
-            transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(0, 100, 200, 0.2);
-        }
-
-        .ship-card:active {
-            transform: scale(0.95);
         }
 
         .ship-card.building {
@@ -210,41 +206,101 @@
             }
         }
 
+        .ship-icon-large {
+            font-size: 2.5em;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .ship-info {
+            flex: 1;
+        }
+
         .ship-name {
             font-weight: bold;
             color: #ddd;
-            font-size: 0.95em;
+            font-size: 1.1em;
             margin-bottom: 5px;
         }
 
         .ship-stats {
-            font-size: 0.75em;
+            font-size: 0.8em;
             color: #999;
             display: flex;
-            gap: 8px;
+            gap: 10px;
             flex-wrap: wrap;
+            margin-bottom: 5px;
         }
 
         .ship-cost {
-            font-size: 0.7em;
+            font-size: 0.75em;
             color: #aaa;
-            margin-top: 3px;
+        }
+
+        .ship-build-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 200px;
+        }
+
+        .build-input {
+            width: 70px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .build-btn {
+            background: linear-gradient(135deg, #0066cc, #0044aa);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .build-btn:hover {
+            background: linear-gradient(135deg, #0088ff, #0055cc);
+            box-shadow: 0 5px 15px rgba(0, 100, 200, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .build-btn:active {
+            transform: scale(0.95);
+        }
+
+        .build-btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
 
         .count-badge {
-            position: absolute;
-            top: 8px;
-            right: 8px;
             background: rgba(0, 150, 255, 0.8);
             color: white;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7em;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.8em;
             font-weight: bold;
+            display: inline-block;
+        }
+
+        .building-progress {
+            font-size: 0.75em;
+            color: #ffaa00;
+            margin-top: 3px;
         }
 
         .expedition-section {
@@ -367,12 +423,41 @@
             }
         }
 
+        .build-queue {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 170, 0, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            display: none;
+        }
+
+        .build-queue.active {
+            display: block;
+        }
+
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 0.85em;
+            color: #ffaa00;
+        }
+
         @media (max-width: 768px) {
             .main-grid {
                 grid-template-columns: 1fr;
             }
             .resource-grid {
                 grid-template-columns: repeat(3, 1fr);
+            }
+            .ship-build-controls {
+                flex-direction: column;
+                min-width: 150px;
+            }
+            .ship-selector {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -412,6 +497,10 @@
             <div class="panel">
                 <div class="panel-title">🔧 Schiffe bauen</div>
                 <div class="ship-build-grid" id="shipBuildGrid"></div>
+                <div class="build-queue" id="buildQueue">
+                    <strong style="color:#ffaa00;">⏳ Bauaufträge:</strong>
+                    <div id="queueItems"></div>
+                </div>
             </div>
 
             <!-- Expedition Panel -->
@@ -434,11 +523,12 @@
                 deuterium: 1000000
             },
             ships: {
-                großerTransporter: { count: 0, building: false },
-                schlachtkreuzer: { count: 0, building: false },
-                zerstörer: { count: 0, building: false },
-                schwererJäger: { count: 0, building: false }
+                großerTransporter: { count: 0 },
+                schlachtkreuzer: { count: 0 },
+                zerstörer: { count: 0 },
+                schwererJäger: { count: 0 }
             },
+            buildQueue: [], // Array von {shipType, count, startTime, totalDuration}
             expedition: {
                 active: false,
                 startTime: null,
@@ -449,7 +539,7 @@
                     zerstörer: 0,
                     schwererJäger: 0
                 },
-                phase: null // 'outbound', 'holding', 'return'
+                phase: null
             },
             reportLog: []
         };
@@ -502,20 +592,21 @@
             document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
             document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
             document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
-            renderShipBuildButtons();
+            renderShipBuildCards();
             renderShipSelector();
+            renderBuildQueue();
         }
 
-        function canAfford(cost) {
-            return state.resources.metal >= cost.metal &&
-                state.resources.crystal >= cost.crystal &&
-                state.resources.deuterium >= cost.deuterium;
+        function canAffordMultiple(cost, count) {
+            return state.resources.metal >= cost.metal * count &&
+                state.resources.crystal >= cost.crystal * count &&
+                state.resources.deuterium >= cost.deuterium * count;
         }
 
-        function deductResources(cost) {
-            state.resources.metal -= cost.metal;
-            state.resources.crystal -= cost.crystal;
-            state.resources.deuterium -= cost.deuterium;
+        function deductResources(cost, count = 1) {
+            state.resources.metal -= cost.metal * count;
+            state.resources.crystal -= cost.crystal * count;
+            state.resources.deuterium -= cost.deuterium * count;
             updateDisplay();
         }
 
@@ -524,57 +615,162 @@
             updateDisplay();
         }
 
-        function buildShip(shipType) {
-            const def = shipDefinitions[shipType];
-            const shipState = state.ships[shipType];
+        function buildShips(shipType) {
+            const input = document.getElementById(`build_${shipType}`);
+            const count = parseInt(input.value) || 0;
 
-            if (shipState.building) return;
-            if (!canAfford(def.cost)) {
-                alert('Nicht genügend Ressourcen!');
+            if (count <= 0) {
+                alert('Bitte gib eine gültige Anzahl ein (mindestens 1)!');
                 return;
             }
+
+            const def = shipDefinitions[shipType];
+
             if (state.expedition.active) {
                 alert('Während einer Expedition können keine Schiffe gebaut werden!');
                 return;
             }
 
-            deductResources(def.cost);
-            shipState.building = true;
-            updateDisplay();
+            if (!canAffordMultiple(def.cost, count)) {
+                alert('Nicht genügend Ressourcen für ' + count + ' Schiffe!');
+                return;
+            }
 
-            setTimeout(() => {
-                shipState.building = false;
-                shipState.count++;
-                updateDisplay();
-            }, def.buildTime * 1000);
+            // Ressourcen sofort abziehen
+            deductResources(def.cost, count);
+
+            // Zur Bauwarteschlange hinzufügen (jedes Schiff einzeln für realistischere Anzeige)
+            const now = Date.now();
+            for (let i = 0; i < count; i++) {
+                const startOffset = state.buildQueue.length * def.buildTime * 1000;
+                state.buildQueue.push({
+                    shipType: shipType,
+                    startTime: now + startOffset,
+                    duration: def.buildTime * 1000,
+                    endTime: now + startOffset + def.buildTime * 1000
+                });
+            }
+
+            // Input zurücksetzen
+            input.value = 1;
+            updateDisplay();
+            processBuildQueue();
         }
 
-        function renderShipBuildButtons() {
+        function processBuildQueue() {
+            if (state.buildQueue.length === 0) {
+                updateDisplay();
+                return;
+            }
+
+            const now = Date.now();
+            const queue = state.buildQueue;
+
+            // Überprüfe, ob das erste Element fertig ist
+            if (queue[0].endTime <= now) {
+                // Schiff fertigstellen
+                const completed = queue.shift();
+                state.ships[completed.shipType].count++;
+                updateDisplay();
+                processBuildQueue(); // Nächstes Element prüfen
+            } else {
+                // Timer für nächstes Element setzen
+                const timeUntilNext = queue[0].endTime - now;
+                updateDisplay();
+                setTimeout(() => processBuildQueue(), Math.min(timeUntilNext, 1000));
+            }
+        }
+
+        function renderShipBuildCards() {
             const grid = document.getElementById('shipBuildGrid');
             grid.innerHTML = '';
 
             for (const [key, def] of Object.entries(shipDefinitions)) {
                 const shipState = state.ships[key];
+
+                // Zähle wie viele dieser Schiffe aktuell in der Queue sind
+                const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
+                const isBuilding = inQueue > 0;
+
                 const card = document.createElement('div');
-                card.className = 'ship-card' + (shipState.building ? ' building' : '');
-                card.onclick = () => buildShip(key);
+                card.className = 'ship-card' + (isBuilding ? ' building' : '');
 
                 card.innerHTML = `
-                    <div class="count-badge">${shipState.count}</div>
-                    <div class="ship-name">${def.icon} ${def.name}</div>
-                    <div class="ship-stats">
-                        <span>⚔️${def.weapons}</span>
-                        <span>🛡️${def.shields}</span>
-                        <span>❤️${def.armor}</span>
-                        ${def.capacity > 0 ? `<span>📦${def.capacity.toLocaleString()}</span>` : ''}
+                    <div class="ship-icon-large">${def.icon}</div>
+                    <div class="ship-info">
+                        <div class="ship-name">
+                            ${def.name}
+                            <span class="count-badge">${shipState.count}</span>
+                            ${isBuilding ? `<span class="building-progress"> (${inQueue} in Bau)</span>` : ''}
+                        </div>
+                        <div class="ship-stats">
+                            <span>⚔️ ${def.weapons}</span>
+                            <span>🛡️ ${def.shields}</span>
+                            <span>❤️ ${def.armor}</span>
+                            ${def.capacity > 0 ? `<span>📦 ${def.capacity.toLocaleString()}</span>` : ''}
+                            <span>⏱️ ${def.buildTime}s</span>
+                        </div>
+                        <div class="ship-cost">
+                            🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}
+                        </div>
                     </div>
-                    <div class="ship-cost">
-                        🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}
+                    <div class="ship-build-controls">
+                        <input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1" 
+                               onchange="validateBuildInput('${key}')">
+                        <button class="build-btn" onclick="buildShips('${key}')" ${state.expedition.active ? 'disabled' : ''}>
+                            Bauen
+                        </button>
                     </div>
-                    ${shipState.building ? '<div style="color:#ffaa00;margin-top:5px;">⏳ Bauend...</div>' : ''}
                 `;
                 grid.appendChild(card);
             }
+        }
+
+        function validateBuildInput(shipType) {
+            const input = document.getElementById(`build_${shipType}`);
+            let value = parseInt(input.value) || 0;
+            if (value < 1) value = 1;
+            if (value > 100) value = 100;
+            input.value = value;
+        }
+
+        function renderBuildQueue() {
+            const queueDiv = document.getElementById('buildQueue');
+            const queueItems = document.getElementById('queueItems');
+
+            if (state.buildQueue.length === 0) {
+                queueDiv.classList.remove('active');
+                return;
+            }
+
+            queueDiv.classList.add('active');
+            const now = Date.now();
+
+            // Zeige maximal 5 Einträge
+            const displayQueue = state.buildQueue.slice(0, 5);
+            queueItems.innerHTML = displayQueue.map((item, index) => {
+                const def = shipDefinitions[item.shipType];
+                const remaining = Math.max(0, item.endTime - now);
+                const seconds = Math.ceil(remaining / 1000);
+                return `
+                    <div class="queue-item">
+                        <span>${index + 1}. ${def.name}</span>
+                        <span>${seconds > 0 ? seconds + 's verbleibend' : 'Fertig!'}</span>
+                    </div>
+                `;
+            }).join('');
+
+            if (state.buildQueue.length > 5) {
+                queueItems.innerHTML +=
+                    `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
+            }
+
+            // Aktualisiere die Queue-Anzeige jede Sekunde
+            setTimeout(() => {
+                if (state.buildQueue.length > 0) {
+                    renderBuildQueue();
+                }
+            }, 1000);
         }
 
         function renderShipSelector() {
@@ -582,7 +778,8 @@
             selector.innerHTML = '';
 
             if (state.expedition.active) {
-                selector.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ffaa00;">⏳ Expedition läuft...</div>';
+                selector.innerHTML =
+                    '<div style="grid-column:1/-1;text-align:center;color:#ffaa00;">⏳ Expedition läuft...</div>';
                 return;
             }
 
@@ -622,6 +819,10 @@
 
         function startExpedition() {
             if (state.expedition.active) return;
+            if (state.buildQueue.length > 0) {
+                alert('Warte bis alle Bauaufträge abgeschlossen sind!');
+                return;
+            }
 
             const { selected, total } = getSelectedShips();
             if (total === 0) {
@@ -639,7 +840,6 @@
             state.expedition.active = true;
             state.expedition.startTime = now;
             state.expedition.phase = 'outbound';
-            // Hinflug: 10 Minuten, Halten: 30 Minuten, Rückflug: 10 Minuten
             state.expedition.returnTime = now + (10 + 30 + 10) * 60 * 1000;
 
             updateDisplay();
@@ -657,7 +857,6 @@
 
             const now = Date.now();
             const elapsed = now - state.expedition.startTime;
-            const totalDuration = 50 * 60 * 1000; // 50 Minuten
             const remaining = state.expedition.returnTime - now;
 
             if (remaining <= 0) {
@@ -665,7 +864,6 @@
                 return;
             }
 
-            // Phase bestimmen
             if (elapsed < 10 * 60 * 1000) {
                 state.expedition.phase = 'outbound';
             } else if (elapsed < 40 * 60 * 1000) {
@@ -690,23 +888,22 @@
             let totalMetalGain = 0;
             let totalCrystalGain = 0;
             let totalDeuteriumGain = 0;
-            let totalMetalLoss = 0;
-            let totalCrystalLoss = 0;
-            let totalDeuteriumLoss = 0;
             const survivingShips = {};
             const destroyedShips = {};
 
-            // Initialisiere überlebende und zerstörte Schiffe
             for (const [key, count] of Object.entries(selectedShips)) {
                 survivingShips[key] = count;
                 destroyedShips[key] = 0;
             }
 
             reportLines.push('<h4>📋 Expeditionsbericht</h4>');
-            reportLines.push(`<strong>Flotte:</strong> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(
-                ([k, c]) => `${c}x ${shipDefinitions[k].name}`).join(', ')}`);
+            const fleetList = Object.entries(selectedShips)
+                .filter(([_, c]) => c > 0)
+                .map(([k, c]) => `${c}x ${shipDefinitions[k].name}`)
+                .join(', ');
+            reportLines.push(`<strong>Flotte:</strong> ${fleetList || 'Keine'}`);
 
-            // Ressourcenfund (50% Chance)
+            // Ressourcenfund
             if (Math.random() < 0.5) {
                 const fundLevel = Math.random();
                 let fundAmount = 0;
@@ -731,7 +928,7 @@
                     );
             }
 
-            // Piratenkampf (50% Chance)
+            // Piratenkampf
             if (Math.random() < 0.5) {
                 const pirateLevel = Math.random();
                 let pirateStrength = 0;
@@ -748,7 +945,6 @@
                     pirateLabel = 'starke';
                 }
 
-                // Berechne Kampfstärke
                 let playerPower = 0;
                 for (const [key, count] of Object.entries(selectedShips)) {
                     const def = shipDefinitions[key];
@@ -757,9 +953,12 @@
 
                 const piratePower = playerPower * pirateStrength;
                 const powerRatio = playerPower / (playerPower + piratePower);
+                const lossRate = (1 - powerRatio) * 0.8;
 
-                // Schiffsverluste basierend auf Kampfstärke
-                const lossRate = (1 - powerRatio) * 0.8; // 80% der erwarteten Verlustrate
+                let totalOwnLossesMetal = 0;
+                let totalOwnLossesCrystal = 0;
+                let totalOwnLossesDeuterium = 0;
+
                 for (const [key, count] of Object.entries(selectedShips)) {
                     const losses = Math.floor(count * lossRate * (0.8 + Math.random() * 0.4));
                     destroyedShips[key] = losses;
@@ -767,30 +966,26 @@
 
                     if (losses > 0) {
                         const def = shipDefinitions[key];
-                        totalMetalLoss += losses * def.cost.metal;
-                        totalCrystalLoss += losses * def.cost.crystal;
-                        totalDeuteriumLoss += losses * def.cost.deuterium;
+                        totalOwnLossesMetal += losses * def.cost.metal;
+                        totalOwnLossesCrystal += losses * def.cost.crystal;
+                        totalOwnLossesDeuterium += losses * def.cost.deuterium;
                     }
                 }
 
                 reportLines.push(
-                    `<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, Stärke ${Math.round(pirateStrength * 100)}% deiner Flotte)!</span>`
+                    `<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, ${Math.round(pirateStrength * 100)}% deiner Flottenstärke)!</span>`
                     );
 
-                // Verluste anzeigen
                 for (const [key, losses] of Object.entries(destroyedShips)) {
                     if (losses > 0) {
                         reportLines.push(`<span class="loss">Verloren: ${losses}x ${shipDefinitions[key].name}</span>`);
                     }
                 }
 
-                // 60% der zerstörten Ressourcen zurück (von beiden Seiten)
-                const recoveryRate = 0.6;
-                const pirateLosses = Math.floor(piratePower * lossRate);
-                const pirateResources = pirateLosses * 5000; // Geschätzte Piratenressourcen
-
-                const ownRecovery = (totalMetalLoss + totalCrystalLoss + totalDeuteriumLoss) * recoveryRate;
-                const pirateRecovery = pirateResources * recoveryRate;
+                // Bergung
+                const pirateResources = Math.floor(piratePower * lossRate * 5000);
+                const ownRecovery = (totalOwnLossesMetal + totalOwnLossesCrystal + totalOwnLossesDeuterium) * 0.6;
+                const pirateRecovery = pirateResources * 0.6;
                 const totalRecovery = Math.floor((ownRecovery + pirateRecovery) / 3);
 
                 totalMetalGain += totalRecovery;
@@ -800,10 +995,10 @@
                     `<span class="gain">🔧 Bergung: +${totalRecovery.toLocaleString()} Metall, Kristall, Deuterium (60% der zerstörten Ressourcen)</span>`
                     );
             } else {
-                reportLines.push('<span>Keine Piraten angetroffen.</span>');
+                reportLines.push('<span>✅ Keine Piraten angetroffen.</span>');
             }
 
-            // Ressourcen hinzufügen/zurückgeben
+            // Ressourcen gutschreiben
             state.resources.metal += totalMetalGain;
             state.resources.crystal += totalCrystalGain;
             state.resources.deuterium += totalDeuteriumGain;
@@ -834,7 +1029,6 @@
             updateDisplay();
         }
 
-        // Sterne generieren
         function createStars() {
             const starsContainer = document.getElementById('stars');
             for (let i = 0; i < 200; i++) {
@@ -851,7 +1045,6 @@
             }
         }
 
-        // Initialisierung
         createStars();
         updateDisplay();
     </script>
