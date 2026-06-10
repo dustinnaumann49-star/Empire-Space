@@ -84,6 +84,20 @@
             opacity: 1;
         }
 
+        .offline-indicator {
+            position: absolute;
+            top: 50px;
+            right: 30px;
+            font-size: 0.8em;
+            color: #ffaa00;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .offline-indicator.visible {
+            opacity: 1;
+        }
+
         .reset-btn {
             position: absolute;
             top: 20px;
@@ -364,7 +378,6 @@
             margin-top: 2px;
         }
 
-        /* Upgrade Styles */
         .upgrade-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -425,7 +438,6 @@
             cursor: not-allowed;
         }
 
-        /* Fleet Slots */
         .fleet-slots {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -615,11 +627,11 @@
             <button class="reset-btn" onclick="resetGame()" title="Spiel zurücksetzen">🔄 Reset</button>
             <button class="sound-toggle" onclick="toggleSound()" title="Sound ein/aus">🔊 Sound</button>
             <div class="save-indicator" id="saveIndicator">💾 Gespeichert</div>
+            <div class="offline-indicator" id="offlineIndicator"></div>
             <h1>🚀 OGame Expedition</h1>
             <div class="subtitle">Deep Space Exploration Fleet</div>
         </header>
 
-        <!-- Ressourcen & Upgrades -->
         <div class="main-grid">
             <div class="panel">
                 <div class="panel-title">💎 Ressourcen</div>
@@ -648,7 +660,6 @@
             </div>
         </div>
 
-        <!-- Schiffe bauen & Statistiken -->
         <div class="main-grid">
             <div class="panel">
                 <div class="panel-title">🔧 Schiffe bauen</div>
@@ -665,13 +676,11 @@
             </div>
         </div>
 
-        <!-- 3 Flotten-Slots -->
         <div class="panel full-width" style="margin-bottom: 25px;">
             <div class="panel-title">🌌 Expeditionsflotten (3 Slots)</div>
             <div class="fleet-slots" id="fleetSlots"></div>
         </div>
 
-        <!-- Historie -->
         <div class="panel full-width">
             <div class="panel-title">📋 Expeditions-Historie</div>
             <div class="history-list" id="historyList">
@@ -687,9 +696,7 @@
         let soundEnabled = true;
 
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new AudioContext();
-            }
+            if (!audioCtx) audioCtx = new AudioContext();
         }
 
         function playSound(frequency, duration, type = 'sine', volume = 0.3) {
@@ -706,14 +713,10 @@
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
                 oscillator.start(audioCtx.currentTime);
                 oscillator.stop(audioCtx.currentTime + duration);
-            } catch (e) {
-                console.log('Sound nicht verfügbar');
-            }
+            } catch (e) {}
         }
 
-        function playBuildSound() {
-            playSound(800, 0.2, 'square', 0.1);
-        }
+        function playBuildSound() { playSound(800, 0.2, 'square', 0.1); }
 
         function playExpeditionStartSound() {
             playSound(300, 0.5, 'sine', 0.2);
@@ -735,29 +738,19 @@
 
         function toggleSound() {
             soundEnabled = !soundEnabled;
-            const btn = document.querySelector('.sound-toggle');
-            btn.textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
+            document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
             saveGameState();
         }
 
-        // Standard-Startwerte
         const DEFAULT_STATE = {
-            resources: {
-                metal: 5000000,
-                crystal: 2500000,
-                deuterium: 1000000
-            },
+            resources: { metal: 5000000, crystal: 2500000, deuterium: 1000000 },
             ships: {
                 großerTransporter: { count: 0 },
                 schlachtkreuzer: { count: 0 },
                 zerstörer: { count: 0 },
                 schwererJäger: { count: 0 }
             },
-            upgrades: {
-                weapons: 0,
-                shields: 0,
-                armor: 0
-            },
+            upgrades: { weapons: 0, shields: 0, armor: 0 },
             buildQueue: [],
             expeditions: [
                 { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0,
@@ -776,7 +769,8 @@
                 totalShipsLost: 0,
                 totalCombats: 0
             },
-            history: []
+            history: [],
+            lastSaveTime: Date.now()
         };
 
         let state = loadGameState();
@@ -788,20 +782,6 @@
                     const parsed = JSON.parse(saved);
                     soundEnabled = parsed.soundEnabled !== undefined ? parsed.soundEnabled : true;
                     const loaded = deepMerge(DEFAULT_STATE, parsed);
-
-                    // Prüfe abgelaufene Expeditionen
-                    const now = Date.now();
-                    loaded.expeditions.forEach((exp, index) => {
-                        if (exp.active && exp.returnTime && now >= exp.returnTime) {
-                            exp._pendingCompletion = true;
-                        }
-                    });
-
-                    // Entferne abgeschlossene Bauaufträge
-                    if (loaded.buildQueue.length > 0) {
-                        loaded.buildQueue = loaded.buildQueue.filter(item => item.endTime > now);
-                    }
-
                     return loaded;
                 }
             } catch (e) {
@@ -824,6 +804,7 @@
 
         function saveGameState() {
             try {
+                state.lastSaveTime = Date.now();
                 const saveData = JSON.parse(JSON.stringify(state));
                 saveData.soundEnabled = soundEnabled;
                 localStorage.setItem('ogameExpeditionState', JSON.stringify(saveData));
@@ -913,6 +894,68 @@
             };
         }
 
+        function processOfflineProgress() {
+            const now = Date.now();
+            const timeDiff = now - state.lastSaveTime;
+            if (timeDiff < 1000) return; // Weniger als 1 Sekunde, ignorieren
+
+            let offlineMessage = [];
+
+            // 1. Bau-Queue verarbeiten
+            let queueChanged = false;
+            while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now) {
+                const completed = state.buildQueue.shift();
+                state.ships[completed.shipType].count++;
+                queueChanged = true;
+            }
+
+            if (queueChanged) {
+                const remaining = state.buildQueue.length;
+                offlineMessage.push(
+                    `${state.stats.totalShipsBuilt > 0 ? '🔧 Schiffe fertiggestellt (Bau-Queue)' : ''}`);
+                if (remaining > 0) {
+                    offlineMessage.push(`${remaining} Schiff(e) noch in Bau`);
+                }
+            }
+
+            // 2. Expeditionen verarbeiten
+            let expeditionsCompleted = 0;
+            for (let i = 0; i < state.expeditions.length; i++) {
+                const exp = state.expeditions[i];
+                if (exp.active && exp.returnTime && exp.returnTime <= now) {
+                    // Expedition abschließen
+                    completeSlotExpedition(i, true);
+                    expeditionsCompleted++;
+                }
+            }
+
+            if (expeditionsCompleted > 0) {
+                offlineMessage.push(`🌌 ${expeditionsCompleted} Expedition(en) abgeschlossen`);
+            }
+
+            // Offline-Nachricht anzeigen
+            if (offlineMessage.length > 0) {
+                const minutes = Math.floor(timeDiff / 60000);
+                const hours = Math.floor(minutes / 60);
+                const timeStr = hours > 0 ?
+                    `${hours}h ${minutes % 60}min` :
+                    `${minutes}min ${Math.floor((timeDiff % 60000) / 1000)}s`;
+
+                showOfflineIndicator(`✅ ${timeStr} Offline: ${offlineMessage.join(', ')}`);
+                console.log(`Offline-Fortschritt (${timeStr}):`, offlineMessage.join(', '));
+            }
+
+            state.lastSaveTime = now;
+            saveGameState();
+        }
+
+        function showOfflineIndicator(message) {
+            const indicator = document.getElementById('offlineIndicator');
+            indicator.textContent = message;
+            indicator.classList.add('visible');
+            setTimeout(() => indicator.classList.remove('visible'), 5000);
+        }
+
         function updateDisplay() {
             document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
             document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
@@ -987,26 +1030,30 @@
 
             input.value = 1;
             updateDisplay();
-            processBuildQueue();
+            scheduleQueueCheck();
         }
 
-        function processBuildQueue() {
-            if (state.buildQueue.length === 0) {
-                updateDisplay();
-                return;
-            }
+        function scheduleQueueCheck() {
+            if (state.buildQueue.length === 0) return;
 
             const now = Date.now();
-            if (state.buildQueue[0].endTime <= now) {
-                const completed = state.buildQueue.shift();
-                state.ships[completed.shipType].count++;
-                updateDisplay();
-                processBuildQueue();
-            } else {
-                const timeUntilNext = state.buildQueue[0].endTime - now;
-                updateDisplay();
-                setTimeout(() => processBuildQueue(), Math.min(timeUntilNext, 1000));
-            }
+            const nextEndTime = state.buildQueue[0].endTime;
+            const delay = Math.max(0, nextEndTime - now);
+
+            // Maximal jede Sekunde prüfen, auch wenn der Tab inaktiv ist
+            setTimeout(() => {
+                processOfflineProgress();
+                if (state.buildQueue.length > 0) {
+                    // Fertige Schiffe aus der Queue nehmen
+                    const now2 = Date.now();
+                    while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now2) {
+                        const completed = state.buildQueue.shift();
+                        state.ships[completed.shipType].count++;
+                    }
+                    updateDisplay();
+                    scheduleQueueCheck();
+                }
+            }, Math.min(delay, 1000));
         }
 
         function upgradeType(type) {
@@ -1161,7 +1208,6 @@
                 slots.appendChild(slot);
             });
 
-            // Render ship selectors for inactive slots
             state.expeditions.forEach((exp, index) => {
                 if (!exp.active) {
                     const selectorDiv = document.getElementById(`slotSelector${index}`);
@@ -1205,7 +1251,6 @@
                 return;
             }
 
-            // Prüfe ob Schiffe verfügbar sind
             for (const [key, count] of Object.entries(selected)) {
                 if (state.ships[key].count < count) {
                     alert('Nicht genügend Schiffe verfügbar!');
@@ -1213,7 +1258,6 @@
                 }
             }
 
-            // Schiffe abziehen
             for (const [key, count] of Object.entries(selected)) {
                 state.ships[key].count -= count;
             }
@@ -1228,10 +1272,10 @@
 
             playExpeditionStartSound();
             updateDisplay();
-            updateSlotTimer(slotIndex);
+            scheduleExpeditionCheck(slotIndex);
         }
 
-        function updateSlotTimer(slotIndex) {
+        function scheduleExpeditionCheck(slotIndex) {
             const exp = state.expeditions[slotIndex];
             if (!exp.active) return;
 
@@ -1253,10 +1297,13 @@
             }
 
             updateDisplay();
-            setTimeout(() => updateSlotTimer(slotIndex), 1000);
+
+            // Plane nächsten Check - maximal jede Sekunde
+            const checkDelay = Math.min(remaining, 1000);
+            setTimeout(() => scheduleExpeditionCheck(slotIndex), checkDelay);
         }
 
-        function completeSlotExpedition(slotIndex) {
+        function completeSlotExpedition(slotIndex, isOffline = false) {
             const exp = state.expeditions[slotIndex];
             const { selectedShips } = exp;
             const reportLines = [];
@@ -1272,9 +1319,9 @@
             }
 
             state.stats.totalExpeditions++;
-            reportLines.push(`<strong>Flotte ${slotIndex + 1}:</strong> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].name}`).join(', ') || 'Keine'}`);
+            reportLines.push(
+                `<strong>Flotte ${slotIndex + 1}:</strong> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].name}`).join(', ') || 'Keine'}`);
 
-            // Ressourcenfund
             if (Math.random() < 0.5) {
                 const fundLevel = Math.random();
                 let fundAmount = 0;
@@ -1297,22 +1344,20 @@
                 state.stats.totalMetalFound += fundAmount;
                 state.stats.totalCrystalFound += fundAmount;
                 state.stats.totalDeuteriumFound += fundAmount;
-                reportLines.push(`<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} je Ressource</span>`);
+                reportLines.push(
+                    `<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} je Ressource</span>`);
             }
 
-            // Piratenkampf
             if (Math.random() < 0.5) {
                 state.stats.totalCombats++;
-                playCombatSound();
+                if (!isOffline) playCombatSound();
 
-                // Berechne Spielerstärke
                 let playerPower = 0;
                 for (const [key, count] of Object.entries(selectedShips)) {
                     const stats = getUpgradedStats(key);
                     playerPower += count * (stats.weapons + stats.shields + stats.armor);
                 }
 
-                // Piratenstärke: 50%-150% der Spielerstärke
                 const pirateVariation = 0.5 + Math.random();
                 const pirateStrength = pirateVariation;
                 const piratePower = playerPower * pirateStrength;
@@ -1343,11 +1388,13 @@
                     }
                 }
 
-                reportLines.push(`<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, ${Math.round(pirateStrength * 100)}% deiner Stärke)!</span>`);
+                reportLines.push(
+                    `<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, ${Math.round(pirateStrength * 100)}% deiner Stärke)!</span>`);
 
                 for (const [key, losses] of Object.entries(destroyedShips)) {
                     if (losses > 0) {
-                        reportLines.push(`<span class="loss">Verloren: ${losses}x ${shipDefinitions[key].name}</span>`);
+                        reportLines.push(
+                        `<span class="loss">Verloren: ${losses}x ${shipDefinitions[key].name}</span>`);
                     }
                 }
 
@@ -1359,20 +1406,18 @@
                 totalMetalGain += totalRecovery;
                 totalCrystalGain += totalRecovery;
                 totalDeuteriumGain += totalRecovery;
-                reportLines.push(`<span class="gain">🔧 Bergung: +${totalRecovery.toLocaleString()} je Ressource (60% der Zerstörungen)</span>`);
+                reportLines.push(
+                    `<span class="gain">🔧 Bergung: +${totalRecovery.toLocaleString()} je Ressource (60% der Zerstörungen)</span>`);
             }
 
-            // Ressourcen gutschreiben
             state.resources.metal += totalMetalGain;
             state.resources.crystal += totalCrystalGain;
             state.resources.deuterium += totalDeuteriumGain;
 
-            // Überlebende Schiffe zurück
             for (const [key, count] of Object.entries(survivingShips)) {
                 state.ships[key].count += count;
             }
 
-            // In Historie speichern
             state.history.unshift({
                 time: new Date().toLocaleString(),
                 slot: slotIndex + 1,
@@ -1380,18 +1425,18 @@
                 metalGain: totalMetalGain,
                 crystalGain: totalCrystalGain,
                 deuteriumGain: totalDeuteriumGain,
-                shipsLost: Object.values(destroyedShips).reduce((a, b) => a + b, 0)
+                shipsLost: Object.values(destroyedShips).reduce((a, b) => a + b, 0),
+                wasOffline: isOffline
             });
             if (state.history.length > 10) state.history.pop();
 
-            // Expedition zurücksetzen
             exp.active = false;
             exp.selectedShips = { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 };
             exp.phase = null;
             exp.startTime = null;
             exp.returnTime = null;
 
-            playExpeditionCompleteSound();
+            if (!isOffline) playExpeditionCompleteSound();
             updateDisplay();
         }
 
@@ -1428,13 +1473,17 @@
         function renderHistory() {
             const list = document.getElementById('historyList');
             if (state.history.length === 0) {
-                list.innerHTML = '<div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div>';
+                list.innerHTML =
+                    '<div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div>';
                 return;
             }
 
             list.innerHTML = state.history.map((entry, i) => `
                 <div class="history-item">
-                    <div style="color:#00b4ff;margin-bottom:5px;">${entry.time} - Flotte ${entry.slot}</div>
+                    <div style="color:#00b4ff;margin-bottom:5px;">
+                        ${entry.time} - Flotte ${entry.slot}
+                        ${entry.wasOffline ? ' <span style="color:#ffaa00;">(Offline)</span>' : ''}
+                    </div>
                     ${entry.report}
                     <div style="margin-top:5px;font-size:0.9em;">
                         <span class="gain">+${entry.metalGain.toLocaleString()} Metall</span> | 
@@ -1464,25 +1513,45 @@
 
         // Initialisierung
         createStars();
-        updateDisplay();
 
-        // Abgelaufene Expeditionen abschließen
+        // Offline-Fortschritt verarbeiten
+        processOfflineProgress();
+
+        // Aktive Timer starten
+        if (state.buildQueue.length > 0) {
+            scheduleQueueCheck();
+        }
+
         state.expeditions.forEach((exp, index) => {
-            if (exp._pendingCompletion) {
-                delete exp._pendingCompletion;
-                completeSlotExpedition(index);
-            } else if (exp.active) {
-                updateSlotTimer(index);
+            if (exp.active) {
+                scheduleExpeditionCheck(index);
             }
         });
 
-        // Bau-Queue starten
-        if (state.buildQueue.length > 0) {
-            processBuildQueue();
-        }
-
-        // Sound-Button initialisieren
         document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
+        updateDisplay();
+
+        // Visibility-Change-Event für Tab-Wechsel
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Tab ist wieder aktiv - Offline-Fortschritt verarbeiten
+                console.log('Tab wieder aktiv, verarbeite Offline-Fortschritt...');
+                processOfflineProgress();
+
+                // Timer neu starten falls nötig
+                if (state.buildQueue.length > 0) {
+                    scheduleQueueCheck();
+                }
+                state.expeditions.forEach((exp, index) => {
+                    if (exp.active) {
+                        scheduleExpeditionCheck(index);
+                    }
+                });
+                updateDisplay();
+            }
+        });
+
+        console.log('🚀 Spiel bereit! Offline-Fortschritt aktiv.');
     </script>
 </body>
 </html>
