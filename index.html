@@ -743,7 +743,7 @@
         }
 
         const DEFAULT_STATE = {
-            resources: { metal: 15000000, crystal: 10000000, deuterium: 5000000 },
+            resources: { metal: 5000000, crystal: 2500000, deuterium: 1000000 },
             ships: {
                 großerTransporter: { count: 0 },
                 schlachtkreuzer: { count: 0 },
@@ -847,7 +847,7 @@
                 baseShields: 400,
                 baseArmor: 700,
                 cost: { metal: 30000, crystal: 40000, deuterium: 15000 },
-                buildTime: 15
+                buildTime: 60
             },
             zerstörer: {
                 name: 'Zerstörer',
@@ -857,7 +857,7 @@
                 baseShields: 500,
                 baseArmor: 1000,
                 cost: { metal: 60000, crystal: 50000, deuterium: 15000 },
-                buildTime: 20
+                buildTime: 120
             },
             schwererJäger: {
                 name: 'Schwerer Jäger',
@@ -897,11 +897,11 @@
         function processOfflineProgress() {
             const now = Date.now();
             const timeDiff = now - state.lastSaveTime;
-            if (timeDiff < 1000) return; // Weniger als 1 Sekunde, ignorieren
+            if (timeDiff < 1000) return;
 
             let offlineMessage = [];
 
-            // 1. Bau-Queue verarbeiten
+            // Bau-Queue verarbeiten
             let queueChanged = false;
             while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now) {
                 const completed = state.buildQueue.shift();
@@ -910,20 +910,14 @@
             }
 
             if (queueChanged) {
-                const remaining = state.buildQueue.length;
-                offlineMessage.push(
-                    `${state.stats.totalShipsBuilt > 0 ? '🔧 Schiffe fertiggestellt (Bau-Queue)' : ''}`);
-                if (remaining > 0) {
-                    offlineMessage.push(`${remaining} Schiff(e) noch in Bau`);
-                }
+                offlineMessage.push('🔧 Schiffe fertiggestellt');
             }
 
-            // 2. Expeditionen verarbeiten
+            // Expeditionen verarbeiten
             let expeditionsCompleted = 0;
             for (let i = 0; i < state.expeditions.length; i++) {
                 const exp = state.expeditions[i];
                 if (exp.active && exp.returnTime && exp.returnTime <= now) {
-                    // Expedition abschließen
                     completeSlotExpedition(i, true);
                     expeditionsCompleted++;
                 }
@@ -933,7 +927,6 @@
                 offlineMessage.push(`🌌 ${expeditionsCompleted} Expedition(en) abgeschlossen`);
             }
 
-            // Offline-Nachricht anzeigen
             if (offlineMessage.length > 0) {
                 const minutes = Math.floor(timeDiff / 60000);
                 const hours = Math.floor(minutes / 60);
@@ -942,7 +935,6 @@
                     `${minutes}min ${Math.floor((timeDiff % 60000) / 1000)}s`;
 
                 showOfflineIndicator(`✅ ${timeStr} Offline: ${offlineMessage.join(', ')}`);
-                console.log(`Offline-Fortschritt (${timeStr}):`, offlineMessage.join(', '));
             }
 
             state.lastSaveTime = now;
@@ -956,13 +948,14 @@
             setTimeout(() => indicator.classList.remove('visible'), 5000);
         }
 
-        function updateDisplay() {
+        // Funktion zum sicheren Aktualisieren der Anzeige ohne Eingaben zu verlieren
+        function updateDisplay(preserveInputs = false) {
             document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
             document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
             document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
             renderUpgrades();
             renderShipBuildCards();
-            renderFleetSlots();
+            renderFleetSlots(preserveInputs);
             renderBuildQueue();
             renderStats();
             renderHistory();
@@ -1040,11 +1033,9 @@
             const nextEndTime = state.buildQueue[0].endTime;
             const delay = Math.max(0, nextEndTime - now);
 
-            // Maximal jede Sekunde prüfen, auch wenn der Tab inaktiv ist
             setTimeout(() => {
                 processOfflineProgress();
                 if (state.buildQueue.length > 0) {
-                    // Fertige Schiffe aus der Queue nehmen
                     const now2 = Date.now();
                     while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now2) {
                         const completed = state.buildQueue.shift();
@@ -1173,7 +1164,40 @@
             }
         }
 
-        function renderFleetSlots() {
+        // Speichert die aktuellen Eingabewerte der Flotten-Slots
+        function saveSlotInputs() {
+            const slotInputs = {};
+            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
+                if (!state.expeditions[slotIndex].active) {
+                    slotInputs[slotIndex] = {};
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const input = document.getElementById(`slot${slotIndex}_${key}`);
+                        if (input) {
+                            slotInputs[slotIndex][key] = input.value;
+                        }
+                    }
+                }
+            }
+            return slotInputs;
+        }
+
+        // Stellt die gespeicherten Eingabewerte wieder her
+        function restoreSlotInputs(slotInputs) {
+            if (!slotInputs) return;
+            for (const [slotIndex, inputs] of Object.entries(slotInputs)) {
+                for (const [key, value] of Object.entries(inputs)) {
+                    const input = document.getElementById(`slot${slotIndex}_${key}`);
+                    if (input && !state.expeditions[slotIndex].active) {
+                        input.value = value;
+                    }
+                }
+            }
+        }
+
+        function renderFleetSlots(preserveInputs = false) {
+            // Speichere aktuelle Eingaben bevor wir rendern
+            const savedInputs = preserveInputs ? saveSlotInputs() : null;
+
             const slots = document.getElementById('fleetSlots');
             slots.innerHTML = '';
 
@@ -1208,23 +1232,91 @@
                 slots.appendChild(slot);
             });
 
+            // Render ship selectors for inactive slots
             state.expeditions.forEach((exp, index) => {
                 if (!exp.active) {
                     const selectorDiv = document.getElementById(`slotSelector${index}`);
                     if (selectorDiv) {
                         for (const [key, def] of Object.entries(shipDefinitions)) {
                             const shipCount = state.ships[key];
+                            // Bereits ausgewählte Schiffe in anderen inaktiven Slots abziehen
+                            let availableShips = shipCount;
+                            for (let i = 0; i < 3; i++) {
+                                if (i !== index && !state.expeditions[i].active) {
+                                    const otherInput = document.getElementById(`slot${i}_${key}`);
+                                    if (otherInput) {
+                                        availableShips -= (parseInt(otherInput.value) || 0);
+                                    }
+                                }
+                            }
+                            availableShips = Math.max(0, availableShips);
+
                             const item = document.createElement('div');
                             item.className = 'ship-select-item-mini';
                             item.innerHTML = `
-                                <span>${def.icon} ${def.name} (${shipCount})</span>
-                                <input type="number" id="slot${index}_${key}" min="0" max="${shipCount}" value="0">
+                                <span>${def.icon} ${def.name} (${availableShips} verfügbar)</span>
+                                <input type="number" id="slot${index}_${key}" min="0" max="${availableShips}" value="0"
+                                       onchange="updateSlotAvailability()">
                             `;
                             selectorDiv.appendChild(item);
                         }
                     }
                 }
             });
+
+            // Stelle gespeicherte Eingaben wieder her
+            if (preserveInputs && savedInputs) {
+                restoreSlotInputs(savedInputs);
+            }
+
+            // Aktualisiere Verfügbarkeiten
+            updateSlotAvailability();
+        }
+
+        // Aktualisiert die max-Werte und verfügbaren Anzeigen basierend auf anderen Slots
+        function updateSlotAvailability() {
+            const shipCounts = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                shipCounts[key] = state.ships[key].count;
+            }
+
+            // Sammle alle ausgewählten Schiffe in inaktiven Slots
+            const selectedInSlots = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                selectedInSlots[key] = 0;
+            }
+
+            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
+                if (!state.expeditions[slotIndex].active) {
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const input = document.getElementById(`slot${slotIndex}_${key}`);
+                        if (input) {
+                            selectedInSlots[key] += (parseInt(input.value) || 0);
+                        }
+                    }
+                }
+            }
+
+            // Aktualisiere jeden Slot
+            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
+                if (!state.expeditions[slotIndex].active) {
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const input = document.getElementById(`slot${slotIndex}_${key}`);
+                        const label = input?.parentElement?.querySelector('span');
+                        if (input && label) {
+                            const currentValue = parseInt(input.value) || 0;
+                            const usedInOtherSlots = selectedInSlots[key] - currentValue;
+                            const available = Math.max(0, shipCounts[key] - usedInOtherSlots);
+                            input.max = available;
+                            if (currentValue > available) {
+                                input.value = available;
+                            }
+                            label.textContent =
+                                `${shipDefinitions[key].icon} ${shipDefinitions[key].name} (${available} verfügbar)`;
+                        }
+                    }
+                }
+            }
         }
 
         function getSlotShips(slotIndex) {
@@ -1251,13 +1343,40 @@
                 return;
             }
 
+            // Prüfe ob Schiffe verfügbar sind (berücksichtige andere Slots)
+            const shipUsage = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                shipUsage[key] = 0;
+            }
+
+            // Zähle Schiffe in anderen aktiven Expeditionen
+            for (let i = 0; i < 3; i++) {
+                if (i !== slotIndex && state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                        shipUsage[key] = (shipUsage[key] || 0) + count;
+                    }
+                }
+            }
+
+            // Zähle Schiffe in anderen inaktiven Slots
+            for (let i = 0; i < 3; i++) {
+                if (i !== slotIndex && !state.expeditions[i].active) {
+                    const otherShips = getSlotShips(i);
+                    for (const [key, count] of Object.entries(otherShips.selected)) {
+                        shipUsage[key] = (shipUsage[key] || 0) + count;
+                    }
+                }
+            }
+
             for (const [key, count] of Object.entries(selected)) {
-                if (state.ships[key].count < count) {
-                    alert('Nicht genügend Schiffe verfügbar!');
+                const totalNeeded = (shipUsage[key] || 0) + count;
+                if (state.ships[key].count < totalNeeded) {
+                    alert(`Nicht genügend ${shipDefinitions[key].name} verfügbar! (${state.ships[key].count} vorhanden, ${totalNeeded} benötigt)`);
                     return;
                 }
             }
 
+            // Schiffe abziehen
             for (const [key, count] of Object.entries(selected)) {
                 state.ships[key].count -= count;
             }
@@ -1296,11 +1415,37 @@
                 exp.phase = 'return';
             }
 
-            updateDisplay();
+            // Nur die Timer-Anzeige aktualisieren, nicht die Eingabefelder
+            updateTimerDisplay(slotIndex);
 
-            // Plane nächsten Check - maximal jede Sekunde
             const checkDelay = Math.min(remaining, 1000);
             setTimeout(() => scheduleExpeditionCheck(slotIndex), checkDelay);
+        }
+
+        function updateTimerDisplay(slotIndex) {
+            const exp = state.expeditions[slotIndex];
+            if (!exp.active) return;
+
+            const slot = document.querySelectorAll('.fleet-slot')[slotIndex];
+            if (!slot) return;
+
+            const remaining = exp.returnTime - Date.now();
+            const minutes = Math.floor(Math.max(0, remaining) / 60000);
+            const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
+            const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+            const shipList = Object.entries(exp.selectedShips)
+                .filter(([_, c]) => c > 0)
+                .map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`)
+                .join(' ');
+
+            const titleEl = slot.querySelector('.fleet-slot-title');
+            const timerEl = slot.querySelector('.fleet-timer');
+            const shipsEl = slot.querySelector('div:last-child');
+
+            if (titleEl) titleEl.textContent = `🚀 Flotte ${slotIndex + 1} - ${phaseNames[exp.phase]}`;
+            if (timerEl) timerEl.textContent =
+                `⏳ ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if (shipsEl && shipsEl.style) shipsEl.textContent = shipList || 'Keine Schiffe';
         }
 
         function completeSlotExpedition(slotIndex, isOffline = false) {
@@ -1513,11 +1658,8 @@
 
         // Initialisierung
         createStars();
-
-        // Offline-Fortschritt verarbeiten
         processOfflineProgress();
 
-        // Aktive Timer starten
         if (state.buildQueue.length > 0) {
             scheduleQueueCheck();
         }
@@ -1531,14 +1673,11 @@
         document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
         updateDisplay();
 
-        // Visibility-Change-Event für Tab-Wechsel
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
-                // Tab ist wieder aktiv - Offline-Fortschritt verarbeiten
                 console.log('Tab wieder aktiv, verarbeite Offline-Fortschritt...');
                 processOfflineProgress();
 
-                // Timer neu starten falls nötig
                 if (state.buildQueue.length > 0) {
                     scheduleQueueCheck();
                 }
@@ -1551,7 +1690,7 @@
             }
         });
 
-        console.log('🚀 Spiel bereit! Offline-Fortschritt aktiv.');
+        console.log('🚀 Spiel bereit! Mehrere Flotten-Slots mit Verfügbarkeitsprüfung.');
     </script>
 </body>
 </html>
