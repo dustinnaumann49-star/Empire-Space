@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OGame - Expeditionsflotte</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(0, 100, 200, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 50%, rgba(100, 0, 200, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 0%, rgba(200, 150, 0, 0.1) 0%, transparent 50%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle var(--duration) ease-in-out infinite;
+            animation-delay: var(--delay);
+        }
+
+        @keyframes twinkle {
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: linear-gradient(180deg, rgba(10, 20, 40, 0.9) 0%, rgba(10, 20, 40, 0.7) 100%);
+            border-bottom: 2px solid rgba(0, 150, 255, 0.3);
+            margin-bottom: 30px;
+            border-radius: 0 0 20px 20px;
+        }
+
+        h1 {
+            font-size: 3em;
+            background: linear-gradient(135deg, #00b4ff, #0066ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 100, 255, 0.5);
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            color: #6699cc;
+            font-size: 1.1em;
+            letter-spacing: 5px;
+            margin-top: 5px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .panel {
+            background: linear-gradient(135deg, rgba(15, 25, 45, 0.95), rgba(20, 30, 50, 0.9));
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(0, 150, 255, 0.6);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 100, 255, 0.1);
+        }
+
+        .panel-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #00b4ff;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 2px solid rgba(0, 180, 255, 0.3);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .resource-item {
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .resource-item.metal {
+            border-color: rgba(180, 150, 100, 0.5);
+        }
+        .resource-item.crystal {
+            border-color: rgba(100, 200, 180, 0.5);
+        }
+        .resource-item.deuterium {
+            border-color: rgba(150, 150, 255, 0.5);
+        }
+
+        .resource-icon {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .resource-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .resource-label {
+            font-size: 0.8em;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ship-build-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .ship-card {
+            background: rgba(0, 15, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ship-card:hover {
+            border-color: rgba(0, 150, 255, 0.6);
+            background: rgba(0, 30, 60, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 100, 200, 0.2);
+        }
+
+        .ship-card:active {
+            transform: scale(0.95);
+        }
+
+        .ship-card.building {
+            border-color: rgba(255, 200, 0, 0.6);
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%,
+            100% {
+                box-shadow: 0 0 10px rgba(255, 200, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 25px rgba(255, 200, 0, 0.6);
+            }
+        }
+
+        .ship-name {
+            font-weight: bold;
+            color: #ddd;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .ship-stats {
+            font-size: 0.75em;
+            color: #999;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .ship-cost {
+            font-size: 0.7em;
+            color: #aaa;
+            margin-top: 3px;
+        }
+
+        .count-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 150, 255, 0.8);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+
+        .expedition-section {
+            margin-top: 25px;
+        }
+
+        .ship-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .ship-select-item {
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .ship-select-item input {
+            width: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #0066cc, #0044aa);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 100, 200, 0.3);
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #0088ff, #0055cc);
+            box-shadow: 0 8px 25px rgba(0, 100, 200, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            background: #333;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .timer-display {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffaa00;
+            text-shadow: 0 0 15px rgba(255, 170, 0, 0.5);
+            margin: 15px 0;
+            min-height: 40px;
+        }
+
+        .report {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .report h4 {
+            color: #ffaa00;
+            margin-bottom: 10px;
+        }
+
+        .loss {
+            color: #ff4444;
+        }
+        .gain {
+            color: #44ff44;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .expedition-active {
+            border: 2px solid #ffaa00 !important;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(255, 170, 0, 0.6);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .resource-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+    <div class="container">
+        <header>
+            <h1>🚀 OGame Expedition</h1>
+            <div class="subtitle">Deep Space Exploration Fleet</div>
+        </header>
+
+        <div class="main-grid">
+            <!-- Ressourcen Panel -->
+            <div class="panel">
+                <div class="panel-title">💎 Ressourcen</div>
+                <div class="resource-grid">
+                    <div class="resource-item metal">
+                        <div class="resource-icon">🟤</div>
+                        <div class="resource-value" id="metal">5.000.000</div>
+                        <div class="resource-label">Metall</div>
+                    </div>
+                    <div class="resource-item crystal">
+                        <div class="resource-icon">🟢</div>
+                        <div class="resource-value" id="crystal">2.500.000</div>
+                        <div class="resource-label">Kristall</div>
+                    </div>
+                    <div class="resource-item deuterium">
+                        <div class="resource-icon">🟣</div>
+                        <div class="resource-value" id="deuterium">1.000.000</div>
+                        <div class="resource-label">Deuterium</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schiffe bauen Panel -->
+            <div class="panel">
+                <div class="panel-title">🔧 Schiffe bauen</div>
+                <div class="ship-build-grid" id="shipBuildGrid"></div>
+            </div>
+
+            <!-- Expedition Panel -->
+            <div class="panel full-width" id="expeditionPanel">
+                <div class="panel-title">🌌 Expedition</div>
+                <div class="ship-selector" id="shipSelector"></div>
+                <div class="timer-display" id="timerDisplay">Bereit für Expedition</div>
+                <button class="btn" id="startExpeditionBtn" onclick="startExpedition()">🚀 Expedition starten</button>
+                <div class="report" id="report" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Spielzustand
+        const state = {
+            resources: {
+                metal: 5000000,
+                crystal: 2500000,
+                deuterium: 1000000
+            },
+            ships: {
+                großerTransporter: { count: 0, building: false },
+                schlachtkreuzer: { count: 0, building: false },
+                zerstörer: { count: 0, building: false },
+                schwererJäger: { count: 0, building: false }
+            },
+            expedition: {
+                active: false,
+                startTime: null,
+                returnTime: null,
+                selectedShips: {
+                    großerTransporter: 0,
+                    schlachtkreuzer: 0,
+                    zerstörer: 0,
+                    schwererJäger: 0
+                },
+                phase: null // 'outbound', 'holding', 'return'
+            },
+            reportLog: []
+        };
+
+        // Schiffsdefinitionen
+        const shipDefinitions = {
+            großerTransporter: {
+                name: 'Großer Transporter',
+                icon: '🚛',
+                capacity: 250000,
+                weapons: 50,
+                shields: 100,
+                armor: 200,
+                cost: { metal: 60000, crystal: 30000, deuterium: 15000 },
+                buildTime: 5 // Sekunden
+            },
+            schlachtkreuzer: {
+                name: 'Schlachtkreuzer',
+                icon: '🛡️',
+                capacity: 0,
+                weapons: 700,
+                shields: 400,
+                armor: 700,
+                cost: { metal: 30000, crystal: 40000, deuterium: 15000 },
+                buildTime: 60
+            },
+            zerstörer: {
+                name: 'Zerstörer',
+                icon: '💥',
+                capacity: 0,
+                weapons: 1000,
+                shields: 500,
+                armor: 1000,
+                cost: { metal: 60000, crystal: 50000, deuterium: 15000 },
+                buildTime: 120
+            },
+            schwererJäger: {
+                name: 'Schwerer Jäger',
+                icon: '✈️',
+                capacity: 0,
+                weapons: 150,
+                shields: 75,
+                armor: 100,
+                cost: { metal: 10000, crystal: 6000, deuterium: 2000 },
+                buildTime: 10
+            }
+        };
+
+        function updateDisplay() {
+            document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
+            document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
+            document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
+            renderShipBuildButtons();
+            renderShipSelector();
+        }
+
+        function canAfford(cost) {
+            return state.resources.metal >= cost.metal &&
+                state.resources.crystal >= cost.crystal &&
+                state.resources.deuterium >= cost.deuterium;
+        }
+
+        function deductResources(cost) {
+            state.resources.metal -= cost.metal;
+            state.resources.crystal -= cost.crystal;
+            state.resources.deuterium -= cost.deuterium;
+            updateDisplay();
+        }
+
+        function addResources(type, amount) {
+            state.resources[type] += amount;
+            updateDisplay();
+        }
+
+        function buildShip(shipType) {
+            const def = shipDefinitions[shipType];
+            const shipState = state.ships[shipType];
+
+            if (shipState.building) return;
+            if (!canAfford(def.cost)) {
+                alert('Nicht genügend Ressourcen!');
+                return;
+            }
+            if (state.expedition.active) {
+                alert('Während einer Expedition können keine Schiffe gebaut werden!');
+                return;
+            }
+
+            deductResources(def.cost);
+            shipState.building = true;
+            updateDisplay();
+
+            setTimeout(() => {
+                shipState.building = false;
+                shipState.count++;
+                updateDisplay();
+            }, def.buildTime * 1000);
+        }
+
+        function renderShipBuildButtons() {
+            const grid = document.getElementById('shipBuildGrid');
+            grid.innerHTML = '';
+
+            for (const [key, def] of Object.entries(shipDefinitions)) {
+                const shipState = state.ships[key];
+                const card = document.createElement('div');
+                card.className = 'ship-card' + (shipState.building ? ' building' : '');
+                card.onclick = () => buildShip(key);
+
+                card.innerHTML = `
+                    <div class="count-badge">${shipState.count}</div>
+                    <div class="ship-name">${def.icon} ${def.name}</div>
+                    <div class="ship-stats">
+                        <span>⚔️${def.weapons}</span>
+                        <span>🛡️${def.shields}</span>
+                        <span>❤️${def.armor}</span>
+                        ${def.capacity > 0 ? `<span>📦${def.capacity.toLocaleString()}</span>` : ''}
+                    </div>
+                    <div class="ship-cost">
+                        🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}
+                    </div>
+                    ${shipState.building ? '<div style="color:#ffaa00;margin-top:5px;">⏳ Bauend...</div>' : ''}
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderShipSelector() {
+            const selector = document.getElementById('shipSelector');
+            selector.innerHTML = '';
+
+            if (state.expedition.active) {
+                selector.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#ffaa00;">⏳ Expedition läuft...</div>';
+                return;
+            }
+
+            for (const [key, def] of Object.entries(shipDefinitions)) {
+                const shipState = state.ships[key];
+                const div = document.createElement('div');
+                div.className = 'ship-select-item';
+                div.innerHTML = `
+                    <span>${def.icon} ${def.name} (${shipState.count})</span>
+                    <input type="number" id="select_${key}" min="0" max="${shipState.count}" value="0" 
+                           onchange="validateShipInput('${key}')">
+                `;
+                selector.appendChild(div);
+            }
+        }
+
+        function validateShipInput(shipType) {
+            const input = document.getElementById(`select_${shipType}`);
+            const max = state.ships[shipType].count;
+            let value = parseInt(input.value) || 0;
+            if (value < 0) value = 0;
+            if (value > max) value = max;
+            input.value = value;
+        }
+
+        function getSelectedShips() {
+            const selected = {};
+            let total = 0;
+            for (const key of Object.keys(shipDefinitions)) {
+                const input = document.getElementById(`select_${key}`);
+                const value = parseInt(input?.value) || 0;
+                selected[key] = value;
+                total += value;
+            }
+            return { selected, total };
+        }
+
+        function startExpedition() {
+            if (state.expedition.active) return;
+
+            const { selected, total } = getSelectedShips();
+            if (total === 0) {
+                alert('Wähle mindestens ein Schiff für die Expedition aus!');
+                return;
+            }
+
+            // Schiffe abziehen
+            for (const [key, count] of Object.entries(selected)) {
+                state.ships[key].count -= count;
+                state.expedition.selectedShips[key] = count;
+            }
+
+            const now = Date.now();
+            state.expedition.active = true;
+            state.expedition.startTime = now;
+            state.expedition.phase = 'outbound';
+            // Hinflug: 10 Minuten, Halten: 30 Minuten, Rückflug: 10 Minuten
+            state.expedition.returnTime = now + (10 + 30 + 10) * 60 * 1000;
+
+            updateDisplay();
+            document.getElementById('expeditionPanel').classList.add('expedition-active');
+            document.getElementById('startExpeditionBtn').disabled = true;
+            document.getElementById('report').style.display = 'none';
+            updateTimer();
+        }
+
+        function updateTimer() {
+            if (!state.expedition.active) {
+                document.getElementById('timerDisplay').textContent = 'Bereit für Expedition';
+                return;
+            }
+
+            const now = Date.now();
+            const elapsed = now - state.expedition.startTime;
+            const totalDuration = 50 * 60 * 1000; // 50 Minuten
+            const remaining = state.expedition.returnTime - now;
+
+            if (remaining <= 0) {
+                completeExpedition();
+                return;
+            }
+
+            // Phase bestimmen
+            if (elapsed < 10 * 60 * 1000) {
+                state.expedition.phase = 'outbound';
+            } else if (elapsed < 40 * 60 * 1000) {
+                state.expedition.phase = 'holding';
+            } else {
+                state.expedition.phase = 'return';
+            }
+
+            const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+
+            document.getElementById('timerDisplay').textContent =
+                `⏳ ${phaseNames[state.expedition.phase]} - ${minutes}:${seconds.toString().padStart(2, '0')} verbleibend`;
+
+            setTimeout(updateTimer, 1000);
+        }
+
+        function completeExpedition() {
+            const { selectedShips } = state.expedition;
+            const reportLines = [];
+            let totalMetalGain = 0;
+            let totalCrystalGain = 0;
+            let totalDeuteriumGain = 0;
+            let totalMetalLoss = 0;
+            let totalCrystalLoss = 0;
+            let totalDeuteriumLoss = 0;
+            const survivingShips = {};
+            const destroyedShips = {};
+
+            // Initialisiere überlebende und zerstörte Schiffe
+            for (const [key, count] of Object.entries(selectedShips)) {
+                survivingShips[key] = count;
+                destroyedShips[key] = 0;
+            }
+
+            reportLines.push('<h4>📋 Expeditionsbericht</h4>');
+            reportLines.push(`<strong>Flotte:</strong> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(
+                ([k, c]) => `${c}x ${shipDefinitions[k].name}`).join(', ')}`);
+
+            // Ressourcenfund (50% Chance)
+            if (Math.random() < 0.5) {
+                const fundLevel = Math.random();
+                let fundAmount = 0;
+                let fundLabel = '';
+
+                if (fundLevel < 0.6) {
+                    fundAmount = 1000000;
+                    fundLabel = 'kleinen';
+                } else if (fundLevel < 0.9) {
+                    fundAmount = 5000000;
+                    fundLabel = 'mittleren';
+                } else {
+                    fundAmount = 25000000;
+                    fundLabel = 'großen';
+                }
+
+                totalMetalGain += fundAmount;
+                totalCrystalGain += fundAmount;
+                totalDeuteriumGain += fundAmount;
+                reportLines.push(
+                    `<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} Metall, Kristall, Deuterium</span>`
+                    );
+            }
+
+            // Piratenkampf (50% Chance)
+            if (Math.random() < 0.5) {
+                const pirateLevel = Math.random();
+                let pirateStrength = 0;
+                let pirateLabel = '';
+
+                if (pirateLevel < 0.6) {
+                    pirateStrength = 0.25;
+                    pirateLabel = 'schwache';
+                } else if (pirateLevel < 0.9) {
+                    pirateStrength = 0.5;
+                    pirateLabel = 'mittlere';
+                } else {
+                    pirateStrength = 0.75;
+                    pirateLabel = 'starke';
+                }
+
+                // Berechne Kampfstärke
+                let playerPower = 0;
+                for (const [key, count] of Object.entries(selectedShips)) {
+                    const def = shipDefinitions[key];
+                    playerPower += count * (def.weapons + def.shields + def.armor);
+                }
+
+                const piratePower = playerPower * pirateStrength;
+                const powerRatio = playerPower / (playerPower + piratePower);
+
+                // Schiffsverluste basierend auf Kampfstärke
+                const lossRate = (1 - powerRatio) * 0.8; // 80% der erwarteten Verlustrate
+                for (const [key, count] of Object.entries(selectedShips)) {
+                    const losses = Math.floor(count * lossRate * (0.8 + Math.random() * 0.4));
+                    destroyedShips[key] = losses;
+                    survivingShips[key] = count - losses;
+
+                    if (losses > 0) {
+                        const def = shipDefinitions[key];
+                        totalMetalLoss += losses * def.cost.metal;
+                        totalCrystalLoss += losses * def.cost.crystal;
+                        totalDeuteriumLoss += losses * def.cost.deuterium;
+                    }
+                }
+
+                reportLines.push(
+                    `<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, Stärke ${Math.round(pirateStrength * 100)}% deiner Flotte)!</span>`
+                    );
+
+                // Verluste anzeigen
+                for (const [key, losses] of Object.entries(destroyedShips)) {
+                    if (losses > 0) {
+                        reportLines.push(`<span class="loss">Verloren: ${losses}x ${shipDefinitions[key].name}</span>`);
+                    }
+                }
+
+                // 60% der zerstörten Ressourcen zurück (von beiden Seiten)
+                const recoveryRate = 0.6;
+                const pirateLosses = Math.floor(piratePower * lossRate);
+                const pirateResources = pirateLosses * 5000; // Geschätzte Piratenressourcen
+
+                const ownRecovery = (totalMetalLoss + totalCrystalLoss + totalDeuteriumLoss) * recoveryRate;
+                const pirateRecovery = pirateResources * recoveryRate;
+                const totalRecovery = Math.floor((ownRecovery + pirateRecovery) / 3);
+
+                totalMetalGain += totalRecovery;
+                totalCrystalGain += totalRecovery;
+                totalDeuteriumGain += totalRecovery;
+                reportLines.push(
+                    `<span class="gain">🔧 Bergung: +${totalRecovery.toLocaleString()} Metall, Kristall, Deuterium (60% der zerstörten Ressourcen)</span>`
+                    );
+            } else {
+                reportLines.push('<span>Keine Piraten angetroffen.</span>');
+            }
+
+            // Ressourcen hinzufügen/zurückgeben
+            state.resources.metal += totalMetalGain;
+            state.resources.crystal += totalCrystalGain;
+            state.resources.deuterium += totalDeuteriumGain;
+
+            // Überlebende Schiffe zurückgeben
+            for (const [key, count] of Object.entries(survivingShips)) {
+                state.ships[key].count += count;
+            }
+
+            // Expedition zurücksetzen
+            state.expedition.active = false;
+            state.expedition.selectedShips = {
+                großerTransporter: 0,
+                schlachtkreuzer: 0,
+                zerstörer: 0,
+                schwererJäger: 0
+            };
+            state.expedition.phase = null;
+            state.expedition.startTime = null;
+            state.expedition.returnTime = null;
+
+            document.getElementById('expeditionPanel').classList.remove('expedition-active');
+            document.getElementById('startExpeditionBtn').disabled = false;
+            document.getElementById('timerDisplay').textContent = 'Bereit für Expedition';
+            document.getElementById('report').style.display = 'block';
+            document.getElementById('report').innerHTML = reportLines.join('<br>');
+
+            updateDisplay();
+        }
+
+        // Sterne generieren
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            for (let i = 0; i < 200; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+                star.style.setProperty('--delay', Math.random() * 5 + 's');
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Initialisierung
+        createStars();
+        updateDisplay();
+    </script>
+</body>
+</html>
