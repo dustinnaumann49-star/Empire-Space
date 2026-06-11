@@ -249,6 +249,15 @@
             border-radius: 40px;
             font-weight: bold;
         }
+        .ship-cost {
+            font-size: 0.7rem;
+            font-family: monospace;
+            color: #88ffaa;
+            background: #0a1220;
+            padding: 2px 8px;
+            border-radius: 30px;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
@@ -302,17 +311,17 @@
             <div><strong>💡 Tipp:</strong> Große Transporter erhöhen Laderaum – wichtig für Ressourcenfunde!</div>
         </div>
 
-        <!-- SCHIFFBAU -->
+        <!-- SCHIFFBAU mit Kostenanzeige -->
         <div id="schiffbauPane" class="tab-pane">
             <h3>🏭 Werft – Schiffestats & Bauaufträge</h3>
             <table class="ship-detail-table">
                 <thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th></tr></thead>
                 <tbody>
-                    <tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td><td>2</td><td>800k/500k/300k</td></tr>
-                    <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td><td>2</td><td>200k/100k/0</td></tr>
-                    <tr><td>Schlachtschiff</td><td>800</td><td>1200</td><td>2000</td><td>0</td><td>4</td><td>600k/350k/120k</td></tr>
-                    <tr><td>Schlachtkreuzer</td><td>1500</td><td>2500</td><td>4000</td><td>0</td><td>5</td><td>1.2M/800k/400k</td></tr>
-                    <tr><td>Zerstörer</td><td>6000</td><td>12000</td><td>18000</td><td>0</td><td>7</td><td>3.5M/2M/900k</td></tr>
+                    <tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td><td>2</td><td>800k / 500k / 300k</td></tr>
+                    <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td><td>2</td><td>200k / 100k / 0</td></tr>
+                    <tr><td>Schlachtschiff</td><td>800</td><td>1200</td><td>2000</td><td>0</td><td>4</td><td>600k / 350k / 120k</td></tr>
+                    <tr><td>Schlachtkreuzer</td><td>1500</td><td>2500</td><td>4000</td><td>0</td><td>5</td><td>1.2M / 800k / 400k</td></tr>
+                    <tr><td>Zerstörer</td><td>6000</td><td>12000</td><td>18000</td><td>0</td><td>7</td><td>3.5M / 2M / 900k</td></tr>
                 </tbody>
             </table>
             <div id="shipyardContainer" style="margin: 20px 0;"></div>
@@ -348,12 +357,12 @@
     };
     const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer"];
 
-    // NEUE COOLDOWN WERTE (in Minuten)
+    // COOLDOWN WERTE nach Risiko
     const getCooldownByRisk = (risk) => {
-        if(risk === "niedrig") return 20 * 60 * 1000;   // 20 min
-        if(risk === "mittel") return 15 * 60 * 1000;   // 15 min
-        if(risk === "hoch") return 10 * 60 * 1000;     // 10 min
-        if(risk === "extrem") return 15 * 60 * 1000;   // 15 min
+        if(risk === "niedrig") return 20 * 60 * 1000;
+        if(risk === "mittel") return 15 * 60 * 1000;
+        if(risk === "hoch") return 10 * 60 * 1000;
+        if(risk === "extrem") return 15 * 60 * 1000;
         return 15 * 60 * 1000;
     };
 
@@ -420,7 +429,6 @@
     function saveGame(){ localStorage.setItem("ExpeditionGameSave",JSON.stringify(gameState)); }
     function loadGame(){ let s=localStorage.getItem("ExpeditionGameSave"); if(s){ let d=JSON.parse(s); gameState=d; if(!gameState.activeBoosts) gameState.activeBoosts={}; if(gameState.resources.darkmatter===undefined) gameState.resources.darkmatter=500; } renderAll(); }
 
-    // Kampfsimulation
     function fightSimulation(myShips, enemyPowerPercent, attackBonus=0, defenseBonus=0){
         let comb= getCombatBonus();
         let totalPower=(ships,atk,def)=>{ let sum=0; for(let [t,c] of Object.entries(ships)) if(c>0){ let d=shipsData[t]; sum+=c*(d.weapon*(1+gameState.tech.waffen*0.15+atk+comb) + d.shield*(1+gameState.tech.schild*0.15+def+comb) + d.armor*(1+gameState.tech.panzer*0.15+def)); } return sum; };
@@ -515,7 +523,6 @@
         } else alert("Ressourcen fehlen");
     }
 
-    // Live Cooldown Anzeige für Sektoren
     function updateSectorCooldownDisplays() {
         const now = Date.now();
         for(let [zoneId, ziel] of Object.entries(expeditionZiele)) {
@@ -559,9 +566,20 @@
         document.getElementById("werftCostDisplay").innerHTML=`${upCost("werftLevel",gameState.tech.werftLevel).metal.toLocaleString()}/${upCost("werftLevel",gameState.tech.werftLevel).crystal.toLocaleString()}/${upCost("werftLevel",gameState.tech.werftLevel).deuterium.toLocaleString()}`;
         let fleetHtml=""; for(let t of shipKeys) fleetHtml+=`<div class="fleet-stat"><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}</div>`;
         document.getElementById("fleetStatus").innerHTML=fleetHtml;
-        let shipyardHtml=""; for(let t of shipKeys){ shipyardHtml+=`<div class="ship-item"><span><b>${t}</b> (${shipsData[t].buildTime}s)</span><div><input type="number" id="num_${t.replace(/ /g,'')}" min="1" value="1" style="width:70px"><button class="build-ship-btn" data-ship="${t}">🚧 Bauen</button></div></div>`; }
+        
+        // Schiffsbau mit Kostenanzeige pro Schiff
+        let shipyardHtml=""; 
+        for(let t of shipKeys){ 
+            let cost = shipsData[t].cost;
+            let costText = `${cost.metal.toLocaleString()} / ${cost.crystal.toLocaleString()} / ${cost.deuterium.toLocaleString()}`;
+            shipyardHtml+=`<div class="ship-item">
+                <span><b>${t}</b> <span class="ship-cost">💰 ${costText}</span> <span style="font-size:0.7rem;">⚡ ${shipsData[t].buildTime}s</span></span>
+                <div><input type="number" id="num_${t.replace(/ /g,'')}" min="1" value="1" style="width:70px"><button class="build-ship-btn" data-ship="${t}">🚧 Bauen</button></div>
+            </div>`; 
+        }
         document.getElementById("shipyardContainer").innerHTML=shipyardHtml;
         document.querySelectorAll(".build-ship-btn").forEach(btn=>btn.onclick=()=>{ let s=btn.dataset.ship; let am=parseInt(document.getElementById(`num_${s.replace(/ /g,'')}`).value||1); if(am>0) addToProduction(s,am); });
+        
         // Shop
         let activeHtml="<strong>🔥 Aktive Boosts:</strong><br>"; let has=false; let now=Date.now();
         for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp>now){ has=true; activeHtml+=`<div class="boost-active">✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-now)/60000)} min</div>`; } else delete gameState.activeBoosts[bid];
