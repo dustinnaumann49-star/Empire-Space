@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OGame - Expeditionsflotte</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 20% 50%, rgba(0, 100, 200, 0.1) 0%, transparent 50%), radial-gradient(ellipse at 80% 50%, rgba(100, 0, 200, 0.1) 0%, transparent 50%), radial-gradient(ellipse at 50% 0%, rgba(200, 150, 0, 0.1) 0%, transparent 50%);
+            position: relative;
+            overflow-x: hidden;
+        }
+        .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .star { position: absolute; background: white; border-radius: 50%; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        .container { position: relative; z-index: 1; max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px 0; background: linear-gradient(180deg, rgba(10, 20, 40, 0.9) 0%, rgba(10, 20, 40, 0.7) 100%); border-bottom: 2px solid rgba(0, 150, 255, 0.3); margin-bottom: 30px; border-radius: 0 0 20px 20px; position: relative; }
+        .save-indicator { position: absolute; top: 20px; right: 30px; font-size: 0.85em; color: #44ff44; opacity: 0; transition: opacity 0.3s ease; }
+        .save-indicator.visible { opacity: 1; }
+        .offline-indicator { position: absolute; top: 50px; right: 30px; font-size: 0.8em; color: #ffaa00; opacity: 0; transition: opacity 0.3s ease; }
+        .offline-indicator.visible { opacity: 1; }
+        .reset-btn { position: absolute; top: 20px; left: 30px; background: rgba(255, 50, 50, 0.3); border: 1px solid rgba(255, 50, 50, 0.5); color: #ff6666; padding: 5px 15px; border-radius: 15px; cursor: pointer; font-size: 0.8em; transition: all 0.3s ease; }
+        .reset-btn:hover { background: rgba(255, 50, 50, 0.5); box-shadow: 0 0 15px rgba(255, 50, 50, 0.3); }
+        .sound-toggle { position: absolute; top: 20px; right: 150px; background: rgba(100, 100, 255, 0.3); border: 1px solid rgba(100, 100, 255, 0.5); color: #aaaaff; padding: 5px 15px; border-radius: 15px; cursor: pointer; font-size: 0.8em; transition: all 0.3s ease; }
+        .sound-toggle:hover { background: rgba(100, 100, 255, 0.5); box-shadow: 0 0 15px rgba(100, 100, 255, 0.3); }
+        h1 { font-size: 3em; background: linear-gradient(135deg, #00b4ff, #0066ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: 0 0 30px rgba(0, 100, 255, 0.5); letter-spacing: 3px; }
+        .subtitle { color: #6699cc; font-size: 1.1em; letter-spacing: 5px; margin-top: 5px; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
+        .panel { background: linear-gradient(135deg, rgba(15, 25, 45, 0.95), rgba(20, 30, 50, 0.9)); border: 1px solid rgba(0, 150, 255, 0.3); border-radius: 15px; padding: 25px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05); transition: all 0.3s ease; }
+        .panel:hover { border-color: rgba(0, 150, 255, 0.6); box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 100, 255, 0.1); }
+        .panel-title { font-size: 1.2em; font-weight: bold; color: #00b4ff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid rgba(0, 180, 255, 0.3); padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .resource-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .resource-item { background: rgba(0, 20, 40, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 15px; text-align: center; transition: all 0.3s ease; }
+        .resource-item.metal { border-color: rgba(180, 150, 100, 0.5); }
+        .resource-item.crystal { border-color: rgba(100, 200, 180, 0.5); }
+        .resource-item.deuterium { border-color: rgba(150, 150, 255, 0.5); }
+        .resource-icon { font-size: 2em; margin-bottom: 5px; }
+        .resource-value { font-size: 1.3em; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        .resource-label { font-size: 0.8em; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+        .ship-build-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .ship-card { background: rgba(0, 15, 30, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px; padding: 12px; transition: all 0.3s ease; display: flex; align-items: center; gap: 12px; position: relative; }
+        .ship-card:hover { border-color: rgba(0, 150, 255, 0.6); background: rgba(0, 30, 60, 0.8); box-shadow: 0 5px 20px rgba(0, 100, 200, 0.2); }
+        .ship-card.building { border-color: rgba(255, 200, 0, 0.6); animation: pulse 0.5s ease-in-out infinite; }
+        .ship-card.build-blocked { opacity: 0.5; }
+        .ship-card.build-blocked .build-btn, .ship-card.build-blocked .build-input { pointer-events: none; }
+        @keyframes pulse { 0%, 100% { box-shadow: 0 0 10px rgba(255, 200, 0, 0.3); } 50% { box-shadow: 0 0 25px rgba(255, 200, 0, 0.6); } }
+        .ship-icon-large { font-size: 2em; min-width: 50px; text-align: center; }
+        .ship-info { flex: 1; min-width: 0; }
+        .ship-name { font-weight: bold; color: #ddd; font-size: 0.95em; margin-bottom: 3px; }
+        .ship-stats { font-size: 0.7em; color: #999; display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+        .ship-cost { font-size: 0.7em; color: #aaa; }
+        .ship-build-controls { display: flex; align-items: center; gap: 6px; min-width: 180px; }
+        .build-input { width: 60px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 6px; border-radius: 5px; text-align: center; font-size: 0.85em; }
+        .build-btn { background: linear-gradient(135deg, #0066cc, #0044aa); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; white-space: nowrap; }
+        .build-btn:hover { background: linear-gradient(135deg, #0088ff, #0055cc); box-shadow: 0 5px 15px rgba(0, 100, 200, 0.4); transform: translateY(-2px); }
+        .build-btn:active { transform: scale(0.95); }
+        .build-btn:disabled { background: #333; cursor: not-allowed; box-shadow: none; transform: none; }
+        .count-badge { background: rgba(0, 150, 255, 0.8); color: white; border-radius: 20px; padding: 3px 8px; font-size: 0.75em; font-weight: bold; display: inline-block; }
+        .building-progress { font-size: 0.7em; color: #ffaa00; margin-top: 2px; }
+        .upgrade-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .upgrade-item { background: rgba(0, 20, 40, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .upgrade-info { flex: 1; }
+        .upgrade-name { font-weight: bold; color: #ddd; font-size: 0.9em; }
+        .upgrade-level { font-size: 0.8em; color: #ffaa00; }
+        .upgrade-cost { font-size: 0.7em; color: #aaa; }
+        .upgrade-btn { background: linear-gradient(135deg, #009944, #006633); color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.8em; font-weight: bold; transition: all 0.3s ease; white-space: nowrap; }
+        .upgrade-btn:hover { background: linear-gradient(135deg, #00bb55, #008844); box-shadow: 0 5px 15px rgba(0, 150, 50, 0.4); }
+        .upgrade-btn:disabled { background: #333; cursor: not-allowed; }
+        .fleet-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .fleet-slot { background: rgba(0, 15, 30, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 10px; padding: 15px; transition: all 0.3s ease; }
+        .fleet-slot.active { border: 2px solid #ffaa00; animation: glow 2s ease-in-out infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 15px rgba(255, 170, 0, 0.3); } 50% { box-shadow: 0 0 30px rgba(255, 170, 0, 0.6); } }
+        .fleet-slot-title { font-weight: bold; color: #00b4ff; margin-bottom: 10px; font-size: 0.9em; }
+        .ship-selector-mini { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; }
+        .ship-select-item-mini { display: flex; align-items: center; justify-content: space-between; gap: 5px; font-size: 0.8em; }
+        .ship-select-item-mini input { width: 50px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 4px; border-radius: 5px; text-align: center; font-size: 0.8em; }
+        .fleet-timer { text-align: center; font-size: 0.85em; color: #ffaa00; margin: 8px 0; min-height: 20px; }
+        .btn-small { background: linear-gradient(135deg, #0066cc, #0044aa); color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.8em; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; width: 100%; }
+        .btn-small:hover { background: linear-gradient(135deg, #0088ff, #0055cc); box-shadow: 0 5px 15px rgba(0, 100, 200, 0.4); }
+        .btn-small:disabled { background: #333; cursor: not-allowed; box-shadow: none; }
+        .build-queue { margin-top: 10px; padding: 10px; background: rgba(255, 170, 0, 0.1); border-radius: 8px; border: 1px solid rgba(255, 170, 0, 0.3); display: none; }
+        .build-queue.active { display: block; }
+        .queue-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.8em; color: #ffaa00; }
+        .queue-parallel-info { font-size: 0.75em; color: #ffaa00; margin-bottom: 8px; padding: 5px; background: rgba(255, 170, 0, 0.2); border-radius: 5px; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em; }
+        .stat-item { background: rgba(0, 20, 40, 0.6); padding: 8px; border-radius: 8px; text-align: center; }
+        .stat-value { font-weight: bold; color: #00b4ff; font-size: 1.2em; }
+        .stat-label { font-size: 0.7em; color: #999; text-transform: uppercase; }
+        .history-list { max-height: 300px; overflow-y: auto; font-size: 0.8em; }
+        .history-item { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+        .history-item .gain { color: #44ff44; }
+        .history-item .loss { color: #ff4444; }
+        .history-item .info { color: #ffaa00; }
+        .history-item .pirate { color: #ff8800; }
+        .history-item .warning { color: #ffaa00; }
+        .full-width { grid-column: 1 / -1; }
+        @media (max-width: 1200px) { .fleet-slots { grid-template-columns: 1fr; } .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+    <div class="container">
+        <header>
+            <button class="reset-btn" onclick="resetGame()">🔄 Reset</button>
+            <button class="sound-toggle" onclick="toggleSound()">🔊 Sound</button>
+            <div class="save-indicator" id="saveIndicator">💾 Gespeichert</div>
+            <div class="offline-indicator" id="offlineIndicator"></div>
+            <h1>🚀 OGame Expedition</h1>
+            <div class="subtitle">Deep Space Exploration Fleet</div>
+        </header>
+        <div class="main-grid">
+            <div class="panel">
+                <div class="panel-title">💎 Ressourcen</div>
+                <div class="resource-grid">
+                    <div class="resource-item metal"><div class="resource-icon">🟤</div><div class="resource-value" id="metal">50.000.000</div><div class="resource-label">Metall</div></div>
+                    <div class="resource-item crystal"><div class="resource-icon">🟢</div><div class="resource-value" id="crystal">40.000.000</div><div class="resource-label">Kristall</div></div>
+                    <div class="resource-item deuterium"><div class="resource-icon">🟣</div><div class="resource-value" id="deuterium">30.000.000</div><div class="resource-label">Deuterium</div></div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">⬆️ Upgrades</div>
+                <div class="upgrade-grid" id="upgradeGrid"></div>
+            </div>
+        </div>
+        <div class="main-grid">
+            <div class="panel">
+                <div class="panel-title" id="shipBuildTitle">🔧 Schiffe bauen <span style="font-size:0.7em;color:#ffaa00;"></span></div>
+                <div class="ship-build-grid" id="shipBuildGrid"></div>
+                <div class="build-queue" id="buildQueue"><strong style="color:#ffaa00;">⏳ Bauaufträge:</strong><div id="queueItems"></div></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">📊 Statistiken</div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+        </div>
+        <div class="panel full-width" style="margin-bottom: 25px;">
+            <div class="panel-title">🌌 Expeditionsflotten (3 Slots)</div>
+            <div class="fleet-slots" id="fleetSlots"></div>
+        </div>
+        <div class="panel full-width">
+            <div class="panel-title">📋 Expeditions-Historie</div>
+            <div class="history-list" id="historyList"><div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div></div>
+        </div>
+    </div>
+    <script>
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let soundEnabled = true;
+        function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); }
+        function playSound(f, d, t = 'sine', v = 0.3) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = t;
+                o.frequency.setValueAtTime(f, audioCtx.currentTime);
+                g.gain.setValueAtTime(v, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+                o.start(audioCtx.currentTime);
+                o.stop(audioCtx.currentTime + d);
+            } catch (e) {}
+        }
+        function playBuildSound() { playSound(800, 0.2, 'square', 0.1); }
+        function playExpeditionStartSound() { playSound(300, 0.5, 'sine', 0.2); setTimeout(() => playSound(500, 0.3, 'sine', 0.2), 200); setTimeout(() => playSound(800, 0.4, 'sine', 0.2), 400); }
+        function playExpeditionCompleteSound() { playSound(600, 0.3, 'triangle', 0.3); setTimeout(() => playSound(900, 0.3, 'triangle', 0.3), 150); setTimeout(() => playSound(1200, 0.5, 'triangle', 0.3), 300); }
+        function playCombatSound() { playSound(100, 0.4, 'sawtooth', 0.15); setTimeout(() => playSound(80, 0.3, 'sawtooth', 0.15), 200); setTimeout(() => playSound(120, 0.2, 'sawtooth', 0.15), 400); }
+        function toggleSound() { soundEnabled = !soundEnabled; document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm'; saveGameState(); }
+
+        const pirateShipTypes = [
+            { name: 'Piraten-Jäger', icon: '☠️✈️', baseCost: 8000 },
+            { name: 'Piraten-Fregatte', icon: '☠️🚢', baseCost: 30000 },
+            { name: 'Piraten-Kreuzer', icon: '☠️🛡️', baseCost: 80000 },
+            { name: 'Piraten-Zerstörer', icon: '☠️💥', baseCost: 150000 }
+        ];
+
+        const DEFAULT_STATE = {
+            resources: { metal: 50000000, crystal: 40000000, deuterium: 30000000 },
+            ships: { großerTransporter: { count: 300 }, schlachtkreuzer: { count: 0 }, zerstörer: { count: 0 }, schwererJäger: { count: 0 } },
+            upgrades: { weapons: 0, shields: 0, armor: 0, shipyard: 0 },
+            buildQueue: [], activeBuildTypes: [],
+            expeditions: [
+                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
+                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
+                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } }
+            ],
+            stats: { totalExpeditions: 0, totalMetalFound: 0, totalCrystalFound: 0, totalDeuteriumFound: 0, totalShipsBuilt: 0, totalShipsLost: 0, totalPirateShipsDestroyed: 0, totalCombats: 0 },
+            history: [], lastSaveTime: Date.now()
+        };
+
+        let state = loadGameState();
+
+        function loadGameState() {
+            try {
+                const saved = localStorage.getItem('ogameExpeditionState');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    soundEnabled = parsed.soundEnabled !== undefined ? parsed.soundEnabled : true;
+                    const loaded = deepMerge(DEFAULT_STATE, parsed);
+                    if (!loaded.stats.totalPirateShipsDestroyed) loaded.stats.totalPirateShipsDestroyed = 0;
+                    if (!loaded.upgrades.shipyard) loaded.upgrades.shipyard = 0;
+                    if (!loaded.activeBuildTypes) loaded.activeBuildTypes = [];
+                    return loaded;
+                }
+            } catch (e) { console.error('Fehler beim Laden:', e); }
+            return JSON.parse(JSON.stringify(DEFAULT_STATE));
+        }
+        function deepMerge(target, source) {
+            const output = { ...target };
+            for (const key in source) {
+                if (source[key] instanceof Object && !Array.isArray(source[key])) output[key] = deepMerge(target[key] || {}, source[key]);
+                else output[key] = source[key];
+            }
+            return output;
+        }
+        function saveGameState() {
+            try {
+                state.lastSaveTime = Date.now();
+                const saveData = JSON.parse(JSON.stringify(state));
+                saveData.soundEnabled = soundEnabled;
+                localStorage.setItem('ogameExpeditionState', JSON.stringify(saveData));
+                showSaveIndicator();
+            } catch (e) { console.error('Fehler beim Speichern:', e); }
+        }
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('visible');
+            setTimeout(() => indicator.classList.remove('visible'), 2000);
+        }
+        function resetGame() {
+            if (confirm('Wirklich zurücksetzen?')) {
+                localStorage.removeItem('ogameExpeditionState');
+                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                updateDisplay();
+            }
+        }
+
+        const shipDefinitions = {
+            großerTransporter: { name: 'Großer Transporter', icon: '🚛', capacity: 250000, baseWeapons: 50, baseShields: 100, baseArmor: 200, cost: { metal: 60000, crystal: 30000, deuterium: 15000 }, buildTime: 5 },
+            schlachtkreuzer: { name: 'Schlachtkreuzer', icon: '🛡️', capacity: 0, baseWeapons: 700, baseShields: 400, baseArmor: 700, cost: { metal: 30000, crystal: 40000, deuterium: 15000 }, buildTime: 60 },
+            zerstörer: { name: 'Zerstörer', icon: '💥', capacity: 0, baseWeapons: 1000, baseShields: 500, baseArmor: 1000, cost: { metal: 60000, crystal: 50000, deuterium: 15000 }, buildTime: 120 },
+            schwererJäger: { name: 'Schwerer Jäger', icon: '✈️', capacity: 0, baseWeapons: 150, baseShields: 75, baseArmor: 100, cost: { metal: 10000, crystal: 6000, deuterium: 2000 }, buildTime: 10 }
+        };
+
+        function getMaxParallelBuilds() { return 1 + (state.upgrades.shipyard || 0); }
+        function getUpgradedStats(st) {
+            const d = shipDefinitions[st];
+            const wb = 1 + state.upgrades.weapons * 0.1, sb = 1 + state.upgrades.shields * 0.1, ab = 1 + state.upgrades.armor * 0.1;
+            return { weapons: Math.floor(d.baseWeapons * wb), shields: Math.floor(d.baseShields * sb), armor: Math.floor(d.baseArmor * ab) };
+        }
+        function getUpgradeCost(t) {
+            const l = state.upgrades[t];
+            let bc = { metal: 500000, crystal: 250000, deuterium: 100000 };
+            if (t === 'shipyard') bc = { metal: 2000000, crystal: 1000000, deuterium: 500000 };
+            const m = Math.pow(2, l);
+            return { metal: Math.floor(bc.metal * m), crystal: Math.floor(bc.crystal * m), deuterium: Math.floor(bc.deuterium * m) };
+        }
+        function getMaxShipyardLevel() { return 3; }
+
+        function processOfflineProgress() {
+            const now = Date.now();
+            if (now - state.lastSaveTime < 1000) return;
+            while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now) {
+                const c = state.buildQueue.shift();
+                state.ships[c.shipType].count++;
+                if (!state.buildQueue.some(q => q.shipType === c.shipType)) state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== c.shipType);
+            }
+            let ec = 0;
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active && state.expeditions[i].returnTime <= now) { completeSlotExpedition(i, true); ec++; }
+            }
+            if (ec > 0) {
+                const td = now - state.lastSaveTime;
+                const min = Math.floor(td / 60000);
+                showOfflineIndicator(`✅ ${Math.floor(min/60)}h ${min%60}min Offline: ${ec} Expedition(en) abgeschlossen`);
+            }
+            state.lastSaveTime = now;
+            saveGameState();
+        }
+        function showOfflineIndicator(m) {
+            const i = document.getElementById('offlineIndicator');
+            i.textContent = m; i.classList.add('visible');
+            setTimeout(() => i.classList.remove('visible'), 5000);
+        }
+
+        function updateDisplay() {
+            document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
+            document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
+            document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
+            renderUpgrades(); renderShipBuildCards(); renderFleetSlots(); renderBuildQueue(); renderStats(); renderHistory();
+            saveGameState();
+        }
+        function canAfford(c, n = 1) { return state.resources.metal >= c.metal * n && state.resources.crystal >= c.crystal * n && state.resources.deuterium >= c.deuterium * n; }
+        function deduct(c, n = 1) { state.resources.metal -= c.metal * n; state.resources.crystal -= c.crystal * n; state.resources.deuterium -= c.deuterium * n; updateDisplay(); }
+
+        function buildShips(st) {
+            const inp = document.getElementById(`build_${st}`);
+            const cnt = parseInt(inp.value) || 0;
+            if (cnt <= 0) { alert('Mindestens 1!'); return; }
+            if (state.expeditions.some(e => e.active)) { alert('Während Expeditionen kein Bau möglich!'); return; }
+            const def = shipDefinitions[st];
+            const mp = getMaxParallelBuilds();
+            const cbt = [...new Set(state.buildQueue.map(q => q.shipType))];
+            if (cbt.length >= mp && !cbt.includes(st)) { alert(`Maximal ${mp} Schiffstypen!`); return; }
+            if (!canAfford(def.cost, cnt)) { alert('Nicht genug Ressourcen!'); return; }
+            deduct(def.cost, cnt);
+            state.stats.totalShipsBuilt += cnt;
+            playBuildSound();
+            const now = Date.now();
+            const letm = state.buildQueue.length > 0 ? state.buildQueue[state.buildQueue.length - 1].endTime : now;
+            for (let i = 0; i < cnt; i++) {
+                state.buildQueue.push({ shipType: st, startTime: letm + i * def.buildTime * 1000, duration: def.buildTime * 1000, endTime: letm + (i + 1) * def.buildTime * 1000 });
+            }
+            if (!state.activeBuildTypes.includes(st)) state.activeBuildTypes.push(st);
+            inp.value = 1;
+            updateDisplay();
+            scheduleQueueCheck();
+        }
+        function scheduleQueueCheck() {
+            if (state.buildQueue.length === 0) return;
+            const d = Math.max(0, state.buildQueue[0].endTime - Date.now());
+            setTimeout(() => {
+                processOfflineProgress();
+                if (state.buildQueue.length > 0) {
+                    const n = Date.now();
+                    while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= n) {
+                        const c = state.buildQueue.shift();
+                        state.ships[c.shipType].count++;
+                        if (!state.buildQueue.some(q => q.shipType === c.shipType)) state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== c.shipType);
+                    }
+                    updateDisplay();
+                    scheduleQueueCheck();
+                }
+            }, Math.min(d, 1000));
+        }
+        function upgradeType(t) {
+            if (t === 'shipyard' && state.upgrades.shipyard >= getMaxShipyardLevel()) { alert('Max Level!'); return; }
+            const c = getUpgradeCost(t);
+            if (!canAfford(c)) { alert('Nicht genug Ressourcen!'); return; }
+            deduct(c); state.upgrades[t]++; playBuildSound(); updateDisplay();
+        }
+
+        function renderUpgrades() {
+            const g = document.getElementById('upgradeGrid');
+            g.innerHTML = '';
+            [{ type: 'weapons', icon: '⚔️', name: 'Waffen', desc: '+10% Angriff', max: 99 }, { type: 'shields', icon: '🛡️', name: 'Schilde', desc: '+10% Verteidigung', max: 99 }, { type: 'armor', icon: '❤️', name: 'Panzerung', desc: '+10% Haltbarkeit', max: 99 }, { type: 'shipyard', icon: '🏭', name: 'Werft', desc: `+1 Schiffstyp (${state.upgrades.shipyard+1}/${getMaxShipyardLevel()+1})`, max: getMaxShipyardLevel() }].forEach(upg => {
+                const lv = state.upgrades[upg.type], cost = getUpgradeCost(upg.type), mx = upg.type === 'shipyard' && lv >= upg.max;
+                const d = document.createElement('div'); d.className = 'upgrade-item';
+                d.innerHTML = `<div class="upgrade-info"><div class="upgrade-name">${upg.icon} ${upg.name}</div><div class="upgrade-level">Level ${lv}${upg.max<99?` (max. ${upg.max})`:''} - ${upg.desc}</div><div class="upgrade-cost">🟤${cost.metal.toLocaleString()} 🟢${cost.crystal.toLocaleString()} 🟣${cost.deuterium.toLocaleString()}</div></div><button class="upgrade-btn" onclick="upgradeType('${upg.type}')" ${(!canAfford(cost)||mx)?'disabled':''}>${mx?'MAX':'Upgrade'}</button>`;
+                g.appendChild(d);
+            });
+        }
+
+        function renderShipBuildCards() {
+            const grid = document.getElementById('shipBuildGrid');
+            const mp = getMaxParallelBuilds();
+            const cbt = [...new Set(state.buildQueue.map(q => q.shipType))];
+            const cbm = cbt.length < mp;
+            if (grid.children.length === 4) {
+                Object.keys(shipDefinitions).forEach((key, i) => {
+                    const card = grid.children[i];
+                    if (!card) return;
+                    const def = shipDefinitions[key];
+                    const stats = getUpgradedStats(key);
+                    const iq = state.buildQueue.filter(q => q.shipType === key).length;
+                    const ib = iq > 0;
+                    const blk = !ib && !cbm && cbt.length >= mp;
+                    card.className = 'ship-card' + (ib ? ' building' : '') + (blk ? ' build-blocked' : '');
+                    const cb = card.querySelector('.count-badge'); if (cb) cb.textContent = state.ships[key].count;
+                    const bp = card.querySelector('.building-progress');
+                    if (bp) { if (ib) { bp.textContent = ` (${iq} in Bau)`; bp.style.display = ''; } else bp.style.display = 'none'; }
+                    const ss = card.querySelectorAll('.ship-stats span');
+                    if (ss.length >= 3) { ss[0].textContent = `⚔️ ${stats.weapons}`; ss[1].textContent = `🛡️ ${stats.shields}`; ss[2].textContent = `❤️ ${stats.armor}`; }
+                    const bi = card.querySelector('.build-input'); if (bi) bi.disabled = blk;
+                    const bb = card.querySelector('.build-btn'); if (bb) bb.disabled = blk;
+                    const ob = card.querySelector('.ship-info div[style]'); if (ob) ob.remove();
+                    if (blk) { const bm = document.createElement('div'); bm.style.cssText = 'color:#ff6600;font-size:0.7em;'; bm.textContent = '🚫 Werft ausgelastet'; card.querySelector('.ship-info').appendChild(bm); }
+                });
+            } else {
+                grid.innerHTML = '';
+                Object.entries(shipDefinitions).forEach(([key, def]) => {
+                    const stats = getUpgradedStats(key);
+                    const iq = state.buildQueue.filter(q => q.shipType === key).length;
+                    const ib = iq > 0;
+                    const blk = !ib && !cbm && cbt.length >= mp;
+                    const card = document.createElement('div');
+                    card.className = 'ship-card' + (ib ? ' building' : '') + (blk ? ' build-blocked' : '');
+                    card.setAttribute('data-ship-type', key);
+                    card.innerHTML = `<div class="ship-icon-large">${def.icon}</div><div class="ship-info"><div class="ship-name">${def.name} <span class="count-badge">${state.ships[key].count}</span><span class="building-progress" style="${ib?'':'display:none'}"> (${iq} in Bau)</span></div><div class="ship-stats"><span>⚔️ ${stats.weapons}</span><span>🛡️ ${stats.shields}</span><span>❤️ ${stats.armor}</span>${def.capacity>0?`<span>📦 ${def.capacity.toLocaleString()}</span>`:''}<span>⏱️ ${def.buildTime}s</span></div><div class="ship-cost">🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}</div>${blk?'<div style="color:#ff6600;font-size:0.7em;">🚫 Werft ausgelastet</div>':''}</div><div class="ship-build-controls"><input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1" ${blk?'disabled':''}><button class="build-btn" onclick="buildShips('${key}')" ${blk?'disabled':''}>Bauen</button></div>`;
+                    grid.appendChild(card);
+                });
+            }
+            const titleSpan = document.querySelector('#shipBuildTitle span');
+            if (titleSpan) titleSpan.textContent = `(Parallel: ${cbt.length}/${mp} Typen)`;
+        }
+
+        function renderBuildQueue() {
+            const qd = document.getElementById('buildQueue'), qi = document.getElementById('queueItems');
+            if (state.buildQueue.length === 0) { qd.classList.remove('active'); return; }
+            qd.classList.add('active');
+            const mp = getMaxParallelBuilds(), cbt = [...new Set(state.buildQueue.map(q => q.shipType))];
+            let h = cbt.length > 1 ? `<div class="queue-parallel-info">⚡ ${cbt.length}/${mp} Schiffstypen parallel</div>` : '';
+            const n = Date.now();
+            h += state.buildQueue.slice(0, 5).map((item, i) => {
+                const def = shipDefinitions[item.shipType], s = Math.ceil(Math.max(0, item.endTime - n) / 1000);
+                return `<div class="queue-item"><span>${i+1}. ${def.icon} ${def.name}</span><span>${s>0?s+'s':'Fertig!'}</span></div>`;
+            }).join('');
+            if (state.buildQueue.length > 5) h += `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
+            qi.innerHTML = h;
+            if (state.buildQueue.length > 0) setTimeout(() => { if (state.buildQueue.length > 0) renderBuildQueue(); }, 1000);
+        }
+
+        function renderFleetSlots() {
+            const slots = document.getElementById('fleetSlots');
+            if (slots.children.length === 3) {
+                for (let i = 0; i < 3; i++) {
+                    const exp = state.expeditions[i], slot = slots.children[i];
+                    if (exp.active && !slot.classList.contains('active')) {
+                        slot.className = 'fleet-slot active';
+                        const rem = exp.returnTime - Date.now(), min = Math.floor(Math.max(0, rem) / 60000), sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                        const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                        const sl = Object.entries(exp.selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i+1} - ${pn[exp.phase]}</div><div class="fleet-timer">⏳ ${min}:${sec.toString().padStart(2,'0')}</div><div style="font-size:0.8em;color:#999;">${sl||'Keine Schiffe'}</div>`;
+                    } else if (!exp.active && slot.classList.contains('active')) {
+                        slot.className = 'fleet-slot';
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i+1}</div><div class="ship-selector-mini" id="slotSelector${i}"></div><div class="fleet-timer">Bereit</div><button class="btn-small" onclick="startSlotExpedition(${i})">Starten</button>`;
+                        fillSlotSelector(i);
+                    } else if (exp.active && slot.classList.contains('active')) {
+                        const rem = exp.returnTime - Date.now(), min = Math.floor(Math.max(0, rem) / 60000), sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                        const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                        const sl = Object.entries(exp.selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                        const tEl = slot.querySelector('.fleet-slot-title'), tiEl = slot.querySelector('.fleet-timer'), sEl = slot.querySelector('div:last-child');
+                        if (tEl) tEl.textContent = `🚀 Flotte ${i+1} - ${pn[exp.phase]}`;
+                        if (tiEl) tiEl.textContent = `⏳ ${min}:${sec.toString().padStart(2,'0')}`;
+                        if (sEl) sEl.textContent = sl || 'Keine Schiffe';
+                    }
+                }
+            } else {
+                slots.innerHTML = '';
+                for (let i = 0; i < 3; i++) {
+                    const exp = state.expeditions[i], slot = document.createElement('div');
+                    slot.className = 'fleet-slot' + (exp.active ? ' active' : '');
+                    if (exp.active) {
+                        const rem = exp.returnTime - Date.now(), min = Math.floor(Math.max(0, rem) / 60000), sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                        const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                        const sl = Object.entries(exp.selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i+1} - ${pn[exp.phase]}</div><div class="fleet-timer">⏳ ${min}:${sec.toString().padStart(2,'0')}</div><div style="font-size:0.8em;color:#999;">${sl||'Keine Schiffe'}</div>`;
+                    } else {
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i+1}</div><div class="ship-selector-mini" id="slotSelector${i}"></div><div class="fleet-timer">Bereit</div><button class="btn-small" onclick="startSlotExpedition(${i})">Starten</button>`;
+                    }
+                    slots.appendChild(slot);
+                }
+                for (let i = 0; i < 3; i++) { if (!state.expeditions[i].active) fillSlotSelector(i); }
+            }
+            updateSlotAvailability();
+        }
+
+        function fillSlotSelector(si) {
+            const sd = document.getElementById(`slotSelector${si}`);
+            if (!sd) return;
+            
+            // Aktuelle Werte aus den Inputs speichern
+            const currentValues = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                const existingInput = document.getElementById(`slot${si}_${key}`);
+                if (existingInput) {
+                    currentValues[key] = existingInput.value;
+                }
+            }
+            
+            // Verfügbare Schiffe berechnen (Gesamt - bereits in aktiven Expeditionen)
+            const availableShips = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                availableShips[key] = state.ships[key].count;
+            }
+            
+            // Abziehen der Schiffe in aktiven Expeditionen
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                        availableShips[key] -= count;
+                    }
+                }
+            }
+            
+            // Abziehen der Schiffe in ANDEREN inaktiven Slots (außer dem aktuellen)
+            for (let i = 0; i < 3; i++) {
+                if (i !== si && !state.expeditions[i].active) {
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const otherInput = document.getElementById(`slot${i}_${key}`);
+                        if (otherInput) {
+                            availableShips[key] -= (parseInt(otherInput.value) || 0);
+                        }
+                    }
+                }
+            }
+            
+            // Stelle sicher, dass keine negativen Werte entstehen
+            for (const key of Object.keys(shipDefinitions)) {
+                availableShips[key] = Math.max(0, availableShips[key]);
+            }
+            
+            sd.innerHTML = '';
+            for (const [key, def] of Object.entries(shipDefinitions)) {
+                const maxAvailable = availableShips[key];
+                const currentValue = currentValues[key] || '0';
+                const item = document.createElement('div');
+                item.className = 'ship-select-item-mini';
+                item.innerHTML = `
+                    <span>${def.icon} ${def.name} (${maxAvailable} verfügbar)</span>
+                    <input type="number" id="slot${si}_${key}" min="0" max="${maxAvailable}" value="${currentValue}" onchange="updateSlotAvailability()">
+                `;
+                sd.appendChild(item);
+            }
+        }
+
+        function updateSlotAvailability() {
+            // Für jeden Slot die maximale verfügbare Anzahl berechnen
+            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
+                if (!state.expeditions[slotIndex].active) {
+                    // Verfügbare Schiffe berechnen (Gesamt - aktive Expeditionen)
+                    const availableTotal = {};
+                    for (const key of Object.keys(shipDefinitions)) {
+                        availableTotal[key] = state.ships[key].count;
+                    }
+                    
+                    // Abziehen der Schiffe in aktiven Expeditionen
+                    for (let i = 0; i < 3; i++) {
+                        if (state.expeditions[i].active) {
+                            for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                                availableTotal[key] -= count;
+                            }
+                        }
+                    }
+                    
+                    // Abziehen der Schiffe in ANDEREN inaktiven Slots (außer dem aktuellen)
+                    for (let i = 0; i < 3; i++) {
+                        if (i !== slotIndex && !state.expeditions[i].active) {
+                            for (const key of Object.keys(shipDefinitions)) {
+                                const otherInput = document.getElementById(`slot${i}_${key}`);
+                                if (otherInput) {
+                                    availableTotal[key] -= (parseInt(otherInput.value) || 0);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Stelle sicher, dass keine negativen Werte entstehen
+                    for (const key of Object.keys(shipDefinitions)) {
+                        availableTotal[key] = Math.max(0, availableTotal[key]);
+                    }
+                    
+                    // Aktualisiere die Inputs für diesen Slot
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const input = document.getElementById(`slot${slotIndex}_${key}`);
+                        const label = input?.parentElement?.querySelector('span');
+                        if (input && label) {
+                            const currentValue = parseInt(input.value) || 0;
+                            const maxAvailable = availableTotal[key];
+                            
+                            // Begrenze den aktuellen Wert auf das verfügbare Maximum
+                            if (currentValue > maxAvailable) {
+                                input.value = maxAvailable;
+                            }
+                            input.max = maxAvailable;
+                            
+                            // Aktualisiere den Label-Text
+                            label.textContent = `${shipDefinitions[key].icon} ${shipDefinitions[key].name} (${maxAvailable} verfügbar)`;
+                        }
+                    }
+                }
+            }
+        }
+
+        function getSlotShips(si) {
+            const sel = {}; let t = 0;
+            for (const key of Object.keys(shipDefinitions)) { const inp = document.getElementById(`slot${si}_${key}`); const v = parseInt(inp?.value) || 0; sel[key] = v; t += v; }
+            return { selected: sel, total: t };
+        }
+
+        function startSlotExpedition(si) {
+            if (state.buildQueue.length > 0) { alert('Warte bis Bauaufträge fertig!'); return; }
+            const { selected, total } = getSlotShips(si);
+            if (total === 0) { alert('Mindestens 1 Schiff!'); return; }
+            
+            // Prüfe ob genug Schiffe verfügbar sind
+            const shipUsage = {};
+            for (const key of Object.keys(shipDefinitions)) shipUsage[key] = 0;
+            
+            // Schiffe in aktiven Expeditionen
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                        shipUsage[key] += count;
+                    }
+                }
+            }
+            
+            // Schiffe in anderen inaktiven Slots
+            for (let i = 0; i < 3; i++) {
+                if (i !== si && !state.expeditions[i].active) {
+                    const otherShips = getSlotShips(i);
+                    for (const [key, count] of Object.entries(otherShips.selected)) {
+                        shipUsage[key] += count;
+                    }
+                }
+            }
+            
+            // Prüfung
+            for (const [key, count] of Object.entries(selected)) {
+                if (state.ships[key].count < (shipUsage[key] || 0) + count) {
+                    alert(`Nicht genug ${shipDefinitions[key].name}! (${state.ships[key].count} verfügbar, ${(shipUsage[key] || 0) + count} benötigt)`);
+                    return;
+                }
+            }
+            
+            // Schiffe abziehen
+            for (const [key, count] of Object.entries(selected)) {
+                state.ships[key].count -= count;
+            }
+            
+            const now = Date.now();
+            const exp = state.expeditions[si];
+            exp.active = true;
+            exp.selectedShips = { ...selected };
+            exp.startTime = now;
+            exp.phase = 'outbound';
+            exp.returnTime = now + 50 * 60 * 1000; // 50 Minuten Gesamtdauer
+            
+            playExpeditionStartSound();
+            updateDisplay();
+            scheduleExpeditionCheck(si);
+        }
+
+        function scheduleExpeditionCheck(si) {
+            const exp = state.expeditions[si];
+            if (!exp.active) return;
+            const now = Date.now(), rem = exp.returnTime - now;
+            if (rem <= 0) { completeSlotExpedition(si); return; }
+            const el = now - exp.startTime;
+            if (el < 10 * 60 * 1000) exp.phase = 'outbound';
+            else if (el < 40 * 60 * 1000) exp.phase = 'holding';
+            else exp.phase = 'return';
+            const slot = document.querySelectorAll('.fleet-slot')[si];
+            if (slot && exp.active) {
+                const min = Math.floor(Math.max(0, rem) / 60000), sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                const sl = Object.entries(exp.selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                const tEl = slot.querySelector('.fleet-slot-title'), tiEl = slot.querySelector('.fleet-timer'), sEl = slot.querySelector('div:last-child');
+                if (tEl) tEl.textContent = `🚀 Flotte ${si+1} - ${pn[exp.phase]}`;
+                if (tiEl) tiEl.textContent = `⏳ ${min}:${sec.toString().padStart(2,'0')}`;
+                if (sEl) sEl.textContent = sl || 'Keine Schiffe';
+            }
+            setTimeout(() => scheduleExpeditionCheck(si), Math.min(rem, 1000));
+        }
+
+        function generatePirateFleet(playerPower) {
+            const pf = {};
+            let remainingPower = playerPower;
+            let totalShips = 0;
+            
+            // Bestimme Piratenstärke basierend auf Spielerstärke
+            const strengthFactor = 0.6 + Math.random() * 0.8; // 60-140% der Spielerstärke
+            let targetPower = playerPower * strengthFactor;
+            
+            const shipPool = [...pirateShipTypes];
+            while (targetPower > 2000 && totalShips < 40) {
+                const shipType = shipPool[Math.floor(Math.random() * shipPool.length)];
+                const shipCost = shipType.baseCost;
+                const maxCount = Math.floor(targetPower / shipCost);
+                let count = Math.max(1, Math.floor(Math.random() * Math.min(maxCount, 8)) + 1);
+                count = Math.min(count, Math.floor(targetPower / shipCost));
+                if (count > 0) {
+                    pf[shipType.name] = (pf[shipType.name] || 0) + count;
+                    targetPower -= count * shipCost;
+                    totalShips += count;
+                } else {
+                    break;
+                }
+            }
+            
+            if (totalShips === 0 && playerPower > 0) {
+                const fallback = pirateShipTypes[0];
+                pf[fallback.name] = 1;
+            }
+            
+            return pf;
+        }
+
+        function completeSlotExpedition(si, isOffline = false) {
+            const exp = state.expeditions[si];
+            const { selectedShips } = exp;
+            const reportLines = [];
+            let totalMetalGain = 0, totalCrystalGain = 0, totalDeuteriumGain = 0;
+            const survivingShips = {};
+            const destroyedShips = {};
+            
+            for (const [key, count] of Object.entries(selectedShips)) {
+                survivingShips[key] = count;
+                destroyedShips[key] = 0;
+            }
+            
+            state.stats.totalExpeditions++;
+            
+            const fleetList = Object.entries(selectedShips)
+                .filter(([_, count]) => count > 0)
+                .map(([key, count]) => `${count}x ${shipDefinitions[key].icon}${shipDefinitions[key].name}`)
+                .join(', ');
+            reportLines.push(`<strong>🚀 Flotte ${si + 1}:</strong> ${fleetList || 'Keine Schiffe'}`);
+            
+            // Berechne Laderaum
+            let availableCapacity = 0;
+            for (const [key, count] of Object.entries(selectedShips)) {
+                if (shipDefinitions[key].capacity > 0) {
+                    availableCapacity += count * shipDefinitions[key].capacity;
+                }
+            }
+            
+            // Würfle das Ereignis: 60% Ressourcen, 30% Kampf, 10% nichts
+            const eventRoll = Math.random() * 100;
+            let eventType = 'nothing';
+            if (eventRoll < 60) {
+                eventType = 'resources';
+            } else if (eventRoll < 90) {
+                eventType = 'combat';
+            } else {
+                eventType = 'nothing';
+            }
+            
+            // Ressourcenfund (60% Chance)
+            if (eventType === 'resources') {
+                const sizeRoll = Math.random();
+                let resourceAmount = 0;
+                let sizeText = '';
+                
+                if (sizeRoll < 0.6) {
+                    resourceAmount = 1000000;
+                    sizeText = 'kleinen';
+                } else if (sizeRoll < 0.9) {
+                    resourceAmount = 5000000;
+                    sizeText = 'mittleren';
+                } else {
+                    resourceAmount = 25000000;
+                    sizeText = 'großen';
+                }
+                
+                if (availableCapacity > 0) {
+                    const maxPerResource = Math.floor(availableCapacity / 3);
+                    if (resourceAmount > maxPerResource) {
+                        reportLines.push(`<span class="warning">⚠️ Laderaum begrenzt! Ein ${sizeText}er Fund (${resourceAmount.toLocaleString()} pro Ressource) wurde entdeckt, aber nur ${maxPerResource.toLocaleString()} pro Ressource konnten mitgenommen werden.</span>`);
+                        resourceAmount = maxPerResource;
+                    }
+                    
+                    if (resourceAmount > 0) {
+                        totalMetalGain += resourceAmount;
+                        totalCrystalGain += resourceAmount;
+                        totalDeuteriumGain += resourceAmount;
+                        state.stats.totalMetalFound += resourceAmount;
+                        state.stats.totalCrystalFound += resourceAmount;
+                        state.stats.totalDeuteriumFound += resourceAmount;
+                        reportLines.push(`<span class="gain">✅ Ressourcenfund (${sizeText}): +${resourceAmount.toLocaleString()} Metall, +${resourceAmount.toLocaleString()} Kristall, +${resourceAmount.toLocaleString()} Deuterium</span>`);
+                    }
+                } else {
+                    reportLines.push(`<span class="warning">📦 Keine Transporter dabei! Ein ${sizeText}er Ressourcenfund wurde entdeckt, konnte aber nicht mitgenommen werden (Laderaum: 0).</span>`);
+                }
+            }
+            
+            // Piratenkampf (30% Chance)
+            if (eventType === 'combat') {
+                state.stats.totalCombats++;
+                if (!isOffline) playCombatSound();
+                
+                // Berechne Spielerstärke
+                let playerPower = 0;
+                for (const [key, count] of Object.entries(selectedShips)) {
+                    const stats = getUpgradedStats(key);
+                    playerPower += count * (stats.weapons + stats.shields + stats.armor);
+                }
+                
+                // Bestimme Piratenstärke (50-150% der Spielerstärke)
+                const strengthRoll = Math.random();
+                let strengthPercent = 0;
+                let strengthText = '';
+                
+                if (strengthRoll < 0.33) {
+                    strengthPercent = 0.5 + Math.random() * 0.3;
+                    strengthText = 'schwache';
+                } else if (strengthRoll < 0.66) {
+                    strengthPercent = 0.8 + Math.random() * 0.4;
+                    strengthText = 'mittlere';
+                } else {
+                    strengthPercent = 1.2 + Math.random() * 0.8;
+                    strengthText = 'starke';
+                }
+                
+                const piratePower = playerPower * strengthPercent;
+                const pirateFleet = generatePirateFleet(piratePower);
+                
+                reportLines.push(`<span class="loss">⚔️ Piratenangriff (${strengthText} Piratenflotte, ${Math.round(strengthPercent * 100)}% deiner Stärke)!</span>`);
+                reportLines.push(`<span class="info">📋 Deine Flotte:</span> ${Object.entries(selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ')}`);
+                
+                // Kampfberechnung
+                const powerRatio = playerPower / (playerPower + piratePower);
+                const lossFactor = (1 - powerRatio) * 0.7;
+                
+                let totalMetalLost = 0, totalCrystalLost = 0, totalDeuteriumLost = 0;
+                let totalPirateShipsDestroyed = 0;
+                let pirateResourcesGained = 0;
+                
+                // Eigene Verluste berechnen
+                for (const [key, count] of Object.entries(selectedShips)) {
+                    const losses = Math.floor(count * lossFactor * (0.7 + Math.random() * 0.6));
+                    destroyedShips[key] = losses;
+                    survivingShips[key] = count - losses;
+                    if (losses > 0) {
+                        state.stats.totalShipsLost += losses;
+                        const def = shipDefinitions[key];
+                        totalMetalLost += losses * def.cost.metal;
+                        totalCrystalLost += losses * def.cost.crystal;
+                        totalDeuteriumLost += losses * def.cost.deuterium;
+                    }
+                }
+                
+                const destroyedList = Object.entries(destroyedShips)
+                    .filter(([_, count]) => count > 0)
+                    .map(([key, count]) => `${count}x ${shipDefinitions[key].icon}${shipDefinitions[key].name}`)
+                    .join(', ');
+                
+                if (destroyedList) {
+                    reportLines.push(`<span class="loss">💥 Deine Verluste:</span> ${destroyedList}`);
+                } else {
+                    reportLines.push(`<span class="gain">✨ Keine eigenen Verluste!</span>`);
+                }
+                
+                // Piratenverluste berechnen
+                const pirateLossFactor = powerRatio * 0.6;
+                const destroyedPirates = {};
+                
+                for (const [pirateName, pirateCount] of Object.entries(pirateFleet)) {
+                    const losses = Math.floor(pirateCount * pirateLossFactor * (0.6 + Math.random() * 0.8));
+                    if (losses > 0) {
+                        destroyedPirates[pirateName] = losses;
+                        totalPirateShipsDestroyed += losses;
+                        const pirateDef = pirateShipTypes.find(p => p.name === pirateName);
+                        if (pirateDef) {
+                            pirateResourcesGained += losses * pirateDef.baseCost;
+                        }
+                    }
+                }
+                
+                state.stats.totalPirateShipsDestroyed += totalPirateShipsDestroyed;
+                
+                const pirateDestroyedList = Object.entries(destroyedPirates)
+                    .map(([name, count]) => `${count}x ${name}`)
+                    .join(', ');
+                
+                if (pirateDestroyedList) {
+                    reportLines.push(`<span class="pirate">💀 Piraten-Verluste:</span> ${pirateDestroyedList} (${totalPirateShipsDestroyed} Schiffe zerstört)`);
+                }
+                
+                reportLines.push(`<span class="pirate">☠️ Ursprüngliche Piraten-Flotte:</span> ${Object.entries(pirateFleet).map(([n,c]) => `${c}x ${n}`).join(', ')}`);
+                
+                // Bergung (60% der zerstörten Werte)
+                const ownSalvage = Math.floor((totalMetalLost + totalCrystalLost + totalDeuteriumLost) * 0.6 / 3);
+                const pirateSalvage = Math.floor(pirateResourcesGained * 0.6 / 3);
+                const totalSalvage = ownSalvage + pirateSalvage;
+                
+                if (totalSalvage > 0) {
+                    totalMetalGain += totalSalvage;
+                    totalCrystalGain += totalSalvage;
+                    totalDeuteriumGain += totalSalvage;
+                    reportLines.push(`<span class="gain">🔧 Bergung (60% der Zerstörungen): +${totalSalvage.toLocaleString()} Metall, +${totalSalvage.toLocaleString()} Kristall, +${totalSalvage.toLocaleString()} Deuterium</span>`);
+                    reportLines.push(`<span class="info">   ↳ Eigene Schiffe: ${ownSalvage.toLocaleString()} | Piraten: ${pirateSalvage.toLocaleString()} pro Ressource</span>`);
+                }
+            }
+            
+            // Nichts gefunden (10% Chance)
+            if (eventType === 'nothing') {
+                reportLines.push('<span>🔭 Nichts gefunden - der Sektor war leer.</span>');
+            }
+            
+            // Ressourcen hinzufügen und Schiffe zurückgeben
+            state.resources.metal += totalMetalGain;
+            state.resources.crystal += totalCrystalGain;
+            state.resources.deuterium += totalDeuteriumGain;
+            
+            for (const [key, count] of Object.entries(survivingShips)) {
+                state.ships[key].count += count;
+            }
+            
+            const totalShipsLost = Object.values(destroyedShips).reduce((a, b) => a + b, 0);
+            
+            state.history.unshift({
+                time: new Date().toLocaleString(),
+                slot: si + 1,
+                report: reportLines.join('<br>'),
+                metalGain: totalMetalGain,
+                crystalGain: totalCrystalGain,
+                deuteriumGain: totalDeuteriumGain,
+                shipsLost: totalShipsLost,
+                pirateShipsDestroyed: totalPirateShipsDestroyed || 0,
+                wasOffline: isOffline
+            });
+            
+            if (state.history.length > 10) state.history.pop();
+            
+            exp.active = false;
+            exp.selectedShips = { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 };
+            exp.phase = null;
+            exp.startTime = null;
+            exp.returnTime = null;
+            
+            if (!isOffline) playExpeditionCompleteSound();
+            updateDisplay();
+        }
+
+        function renderStats() {
+            document.getElementById('statsGrid').innerHTML = `
+                <div class="stat-item"><div class="stat-value">${state.stats.totalExpeditions}</div><div class="stat-label">Expeditionen</div></div>
+                <div class="stat-item"><div class="stat-value">${state.stats.totalCombats}</div><div class="stat-label">Kämpfe</div></div>
+                <div class="stat-item"><div class="stat-value">${(state.stats.totalMetalFound + state.stats.totalCrystalFound + state.stats.totalDeuteriumFound).toLocaleString()}</div><div class="stat-label">Ress. gefunden</div></div>
+                <div class="stat-item"><div class="stat-value">${state.stats.totalShipsBuilt}</div><div class="stat-label">Schiffe gebaut</div></div>
+                <div class="stat-item"><div class="stat-value" style="color:#ff4444;">${state.stats.totalShipsLost}</div><div class="stat-label">Schiffe verloren</div></div>
+                <div class="stat-item"><div class="stat-value" style="color:#ff8800;">${state.stats.totalPirateShipsDestroyed || 0}</div><div class="stat-label">Piraten zerstört</div></div>
+                <div class="stat-item"><div class="stat-value">🏭${1 + (state.upgrades.shipyard || 0)} ⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrades</div></div>`;
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            if (state.history.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:#666;">Keine Expeditionen</div>';
+                return;
+            }
+            list.innerHTML = state.history.map(e => `
+                <div class="history-item">
+                    <div style="color:#00b4ff;">${e.time} - Flotte ${e.slot}${e.wasOffline ? ' <span style="color:#ffaa00;">(Offline)</span>' : ''}</div>
+                    ${e.report}
+                    <div style="margin-top:5px;font-size:0.9em;">
+                        <span class="gain">+${e.metalGain.toLocaleString()} Metall</span> |
+                        <span class="gain">+${e.crystalGain.toLocaleString()} Kristall</span> |
+                        <span class="gain">+${e.deuteriumGain.toLocaleString()} Deuterium</span>
+                        ${e.shipsLost > 0 ? ` | <span class="loss">-${e.shipsLost} Schiffe</span>` : ''}
+                        ${e.pirateShipsDestroyed > 0 ? ` | <span class="pirate">☠️ -${e.pirateShipsDestroyed} Piraten</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function createStars() {
+            const sc = document.getElementById('stars');
+            for (let i = 0; i < 200; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+                star.style.setProperty('--delay', Math.random() * 5 + 's');
+                sc.appendChild(star);
+            }
+        }
+
+        createStars();
+        processOfflineProgress();
+        if (state.buildQueue.length > 0) scheduleQueueCheck();
+        state.expeditions.forEach((exp, i) => { if (exp.active) scheduleExpeditionCheck(i); });
+        document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
+        updateDisplay();
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                processOfflineProgress();
+                if (state.buildQueue.length > 0) scheduleQueueCheck();
+                state.expeditions.forEach((exp, i) => { if (exp.active) scheduleExpeditionCheck(i); });
+                updateDisplay();
+            }
+        });
+    </script>
+</body>
+</html>
