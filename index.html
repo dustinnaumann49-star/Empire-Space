@@ -242,10 +242,10 @@
         }
 
         const shipDefinitions = {
-            großerTransporter: { name: 'Großer Transporter', icon: '🚛', capacity: 250000, baseWeapons: 50, baseShields: 100, baseArmor: 200, cost: { metal: 60000, crystal: 30000, deuterium: 15000 }, buildTime: 5 },
-            schlachtkreuzer: { name: 'Schlachtkreuzer', icon: '🛡️', capacity: 0, baseWeapons: 700, baseShields: 400, baseArmor: 700, cost: { metal: 30000, crystal: 40000, deuterium: 15000 }, buildTime: 60 },
-            zerstörer: { name: 'Zerstörer', icon: '💥', capacity: 0, baseWeapons: 1000, baseShields: 500, baseArmor: 1000, cost: { metal: 60000, crystal: 50000, deuterium: 15000 }, buildTime: 120 },
-            schwererJäger: { name: 'Schwerer Jäger', icon: '✈️', capacity: 0, baseWeapons: 150, baseShields: 75, baseArmor: 100, cost: { metal: 10000, crystal: 6000, deuterium: 2000 }, buildTime: 10 }
+            großerTransporter: { name: 'Großer Transporter', icon: '🚛', capacity: 250000, baseWeapons: 50, baseShields: 100, baseArmor: 200, cost: { metal: 60000, crystal: 30000, deuterium: 15000 }, buildTime: 2 },
+            schlachtkreuzer: { name: 'Schlachtkreuzer', icon: '🛡️', capacity: 0, baseWeapons: 700, baseShields: 400, baseArmor: 700, cost: { metal: 30000, crystal: 40000, deuterium: 15000 }, buildTime: 2 },
+            zerstörer: { name: 'Zerstörer', icon: '💥', capacity: 0, baseWeapons: 1000, baseShields: 500, baseArmor: 1000, cost: { metal: 60000, crystal: 50000, deuterium: 15000 }, buildTime: 2 },
+            schwererJäger: { name: 'Schwerer Jäger', icon: '✈️', capacity: 0, baseWeapons: 150, baseShields: 75, baseArmor: 100, cost: { metal: 10000, crystal: 6000, deuterium: 2000 }, buildTime: 2 }
         };
 
         function getMaxParallelBuilds() { return 1 + (state.upgrades.shipyard || 0); }
