@@ -263,6 +263,11 @@
             animation: pulse 0.5s ease-in-out infinite;
         }
 
+        .ship-card.build-blocked {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         @keyframes pulse {
             0%,
             100% {
@@ -549,6 +554,16 @@
             color: #ffaa00;
         }
 
+        .queue-parallel-info {
+            font-size: 0.75em;
+            color: #ffaa00;
+            margin-bottom: 8px;
+            padding: 5px;
+            background: rgba(255, 170, 0, 0.2);
+            border-radius: 5px;
+            text-align: center;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -658,7 +673,7 @@
 
         <div class="main-grid">
             <div class="panel">
-                <div class="panel-title">🔧 Schiffe bauen</div>
+                <div class="panel-title">🔧 Schiffe bauen <span style="font-size:0.7em;color:#ffaa00;">(Parallel: ${1 + (state.upgrades.shipyard || 0)} Typen)</span></div>
                 <div class="ship-build-grid" id="shipBuildGrid"></div>
                 <div class="build-queue" id="buildQueue">
                     <strong style="color:#ffaa00;">⏳ Bauaufträge:</strong>
@@ -711,19 +726,16 @@
         }
 
         function playBuildSound() { playSound(800, 0.2, 'square', 0.1); }
-
         function playExpeditionStartSound() {
             playSound(300, 0.5, 'sine', 0.2);
             setTimeout(() => playSound(500, 0.3, 'sine', 0.2), 200);
             setTimeout(() => playSound(800, 0.4, 'sine', 0.2), 400);
         }
-
         function playExpeditionCompleteSound() {
             playSound(600, 0.3, 'triangle', 0.3);
             setTimeout(() => playSound(900, 0.3, 'triangle', 0.3), 150);
             setTimeout(() => playSound(1200, 0.5, 'triangle', 0.3), 300);
         }
-
         function playCombatSound() {
             playSound(100, 0.4, 'sawtooth', 0.15);
             setTimeout(() => playSound(80, 0.3, 'sawtooth', 0.15), 200);
@@ -736,7 +748,6 @@
             saveGameState();
         }
 
-        // Piraten-Schiffstypen für detaillierte Berichte
         const pirateShipTypes = [
             { name: 'Piraten-Jäger', icon: '☠️✈️', baseCost: 8000 },
             { name: 'Piraten-Fregatte', icon: '☠️🚢', baseCost: 30000 },
@@ -752,8 +763,9 @@
                 zerstörer: { count: 0 },
                 schwererJäger: { count: 0 }
             },
-            upgrades: { weapons: 0, shields: 0, armor: 0 },
+            upgrades: { weapons: 0, shields: 0, armor: 0, shipyard: 0 },
             buildQueue: [],
+            activeBuildTypes: [],
             expeditions: [
                 { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0,
                         schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
@@ -786,6 +798,8 @@
                     soundEnabled = parsed.soundEnabled !== undefined ? parsed.soundEnabled : true;
                     const loaded = deepMerge(DEFAULT_STATE, parsed);
                     if (!loaded.stats.totalPirateShipsDestroyed) loaded.stats.totalPirateShipsDestroyed = 0;
+                    if (!loaded.upgrades.shipyard) loaded.upgrades.shipyard = 0;
+                    if (!loaded.activeBuildTypes) loaded.activeBuildTypes = [];
                     return loaded;
                 }
             } catch (e) {
@@ -875,6 +889,10 @@
             }
         };
 
+        function getMaxParallelBuilds() {
+            return 1 + (state.upgrades.shipyard || 0);
+        }
+
         function getUpgradedStats(shipType) {
             const def = shipDefinitions[shipType];
             const weaponBonus = 1 + (state.upgrades.weapons * 0.1);
@@ -889,13 +907,20 @@
 
         function getUpgradeCost(type) {
             const level = state.upgrades[type];
-            const baseCost = { metal: 500000, crystal: 250000, deuterium: 100000 };
+            let baseCost = { metal: 500000, crystal: 250000, deuterium: 100000 };
+            if (type === 'shipyard') {
+                baseCost = { metal: 2000000, crystal: 1000000, deuterium: 500000 };
+            }
             const multiplier = Math.pow(2, level);
             return {
                 metal: Math.floor(baseCost.metal * multiplier),
                 crystal: Math.floor(baseCost.crystal * multiplier),
                 deuterium: Math.floor(baseCost.deuterium * multiplier)
             };
+        }
+
+        function getMaxShipyardLevel() {
+            return 3;
         }
 
         function processOfflineProgress() {
@@ -907,6 +932,7 @@
             while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now) {
                 const completed = state.buildQueue.shift();
                 state.ships[completed.shipType].count++;
+                state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== completed.shipType);
             }
 
             let expeditionsCompleted = 0;
@@ -968,11 +994,6 @@
             updateDisplay();
         }
 
-        function addResources(type, amount) {
-            state.resources[type] += amount;
-            updateDisplay();
-        }
-
         function buildShips(shipType) {
             const input = document.getElementById(`build_${shipType}`);
             const count = parseInt(input.value) || 0;
@@ -982,24 +1003,42 @@
                 alert('Während Expeditionen können keine Schiffe gebaut werden!');
                 return;
             }
+
+            const maxParallel = getMaxParallelBuilds();
+            const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+
+            if (currentBuildTypes.length >= maxParallel && !currentBuildTypes.includes(shipType)) {
+                alert(`Maximal ${maxParallel} Schiffstypen gleichzeitig! Werfte-Upgrade erhöht die Anzahl.`);
+                return;
+            }
+
             if (!canAffordMultiple(def.cost, count)) {
                 alert('Nicht genügend Ressourcen für ' + count + ' Schiffe!');
                 return;
             }
+
             deductResources(def.cost, count);
             state.stats.totalShipsBuilt += count;
             playBuildSound();
+
             const now = Date.now();
             const lastEndTime = state.buildQueue.length > 0 ?
                 state.buildQueue[state.buildQueue.length - 1].endTime : now;
+
             for (let i = 0; i < count; i++) {
                 const startTime = lastEndTime + (i * def.buildTime * 1000);
                 state.buildQueue.push({
                     shipType: shipType,
                     startTime: startTime,
                     duration: def.buildTime * 1000,
-                    endTime: startTime + def.buildTime * 1000                });
+                    endTime: startTime + def.buildTime * 1000
+                });
             }
+
+            if (!state.activeBuildTypes.includes(shipType)) {
+                state.activeBuildTypes.push(shipType);
+            }
+
             input.value = 1;
             updateDisplay();
             scheduleQueueCheck();
@@ -1017,6 +1056,10 @@
                     while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now2) {
                         const completed = state.buildQueue.shift();
                         state.ships[completed.shipType].count++;
+                        const stillBuilding = state.buildQueue.some(q => q.shipType === completed.shipType);
+                        if (!stillBuilding) {
+                            state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== completed.shipType);
+                        }
                     }
                     updateDisplay();
                     scheduleQueueCheck();
@@ -1025,6 +1068,10 @@
         }
 
         function upgradeType(type) {
+            if (type === 'shipyard' && state.upgrades.shipyard >= getMaxShipyardLevel()) {
+                alert('Maximales Werfte-Level erreicht!');
+                return;
+            }
             const cost = getUpgradeCost(type);
             if (!canAffordMultiple(cost, 1)) {
                 alert('Nicht genügend Ressourcen für das Upgrade!');
@@ -1040,22 +1087,26 @@
             const grid = document.getElementById('upgradeGrid');
             grid.innerHTML = '';
             const upgrades = [
-                { type: 'weapons', icon: '⚔️', name: 'Waffen', desc: '+10% Angriff' },
-                { type: 'shields', icon: '🛡️', name: 'Schilde', desc: '+10% Verteidigung' },
-                { type: 'armor', icon: '❤️', name: 'Panzerung', desc: '+10% Haltbarkeit' }
+                { type: 'weapons', icon: '⚔️', name: 'Waffen', desc: '+10% Angriff pro Level', max: 99 },
+                { type: 'shields', icon: '🛡️', name: 'Schilde', desc: '+10% Verteidigung pro Level', max: 99 },
+                { type: 'armor', icon: '❤️', name: 'Panzerung', desc: '+10% Haltbarkeit pro Level', max: 99 },
+                { type: 'shipyard', icon: '🏭', name: 'Werft', desc: `+1 paralleler Schiffstyp (${state.upgrades.shipyard + 1}/${getMaxShipyardLevel() + 1} Slots)`, max: getMaxShipyardLevel() }
             ];
             upgrades.forEach(upg => {
                 const level = state.upgrades[upg.type];
                 const cost = getUpgradeCost(upg.type);
+                const isMaxed = upg.type === 'shipyard' && level >= upg.max;
                 const item = document.createElement('div');
                 item.className = 'upgrade-item';
                 item.innerHTML = `
                     <div class="upgrade-info">
                         <div class="upgrade-name">${upg.icon} ${upg.name}</div>
-                        <div class="upgrade-level">Level ${level} (${upg.desc})</div>
+                        <div class="upgrade-level">Level ${level}${upg.max < 99 ? ` (max. ${upg.max})` : ''} - ${upg.desc}</div>
                         <div class="upgrade-cost">🟤${cost.metal.toLocaleString()} 🟢${cost.crystal.toLocaleString()} 🟣${cost.deuterium.toLocaleString()}</div>
                     </div>
-                    <button class="upgrade-btn" onclick="upgradeType('${upg.type}')" ${!canAffordMultiple(cost, 1) ? 'disabled' : ''}>Upgrade</button>
+                    <button class="upgrade-btn" onclick="upgradeType('${upg.type}')" ${(!canAffordMultiple(cost, 1) || isMaxed) ? 'disabled' : ''}>
+                        ${isMaxed ? 'MAX' : 'Upgrade'}
+                    </button>
                 `;
                 grid.appendChild(item);
             });
@@ -1064,26 +1115,39 @@
         function renderShipBuildCards() {
             const grid = document.getElementById('shipBuildGrid');
             grid.innerHTML = '';
+            const maxParallel = getMaxParallelBuilds();
+            const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+            const canBuildMore = currentBuildTypes.length < maxParallel;
+
             for (const [key, def] of Object.entries(shipDefinitions)) {
                 const shipState = state.ships[key];
                 const stats = getUpgradedStats(key);
                 const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
                 const isBuilding = inQueue > 0;
+                const isBlocked = !isBuilding && !canBuildMore && currentBuildTypes.length >= maxParallel;
+
                 const card = document.createElement('div');
-                card.className = 'ship-card' + (isBuilding ? ' building' : '');
+                card.className = 'ship-card' + (isBuilding ? ' building' : '') + (isBlocked ? ' build-blocked' : '');
                 card.innerHTML = `
                     <div class="ship-icon-large">${def.icon}</div>
                     <div class="ship-info">
                         <div class="ship-name">${def.name} <span class="count-badge">${shipState.count}</span>${isBuilding ? `<span class="building-progress"> (${inQueue} in Bau)</span>` : ''}</div>
                         <div class="ship-stats"><span>⚔️ ${stats.weapons}</span><span>🛡️ ${stats.shields}</span><span>❤️ ${stats.armor}</span>${def.capacity > 0 ? `<span>📦 ${def.capacity.toLocaleString()}</span>` : ''}<span>⏱️ ${def.buildTime}s</span></div>
                         <div class="ship-cost">🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}</div>
+                        ${isBlocked ? '<div style="color:#ff6600;font-size:0.7em;">🚫 Werft ausgelastet</div>' : ''}
                     </div>
                     <div class="ship-build-controls">
-                        <input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1">
-                        <button class="build-btn" onclick="buildShips('${key}')">Bauen</button>
+                        <input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1" ${isBlocked ? 'disabled' : ''}>
+                        <button class="build-btn" onclick="buildShips('${key}')" ${isBlocked ? 'disabled' : ''}>Bauen</button>
                     </div>
                 `;
                 grid.appendChild(card);
+            }
+
+            // Update Panel-Titel mit aktueller Werft-Info
+            const panelTitle = document.querySelector('.panel:nth-child(3) .panel-title');
+            if (panelTitle) {
+                panelTitle.innerHTML = `🔧 Schiffe bauen <span style="font-size:0.7em;color:#ffaa00;">(Parallel: ${currentBuildTypes.length}/${maxParallel} Typen)</span>`;
             }
         }
 
@@ -1092,15 +1156,27 @@
             const queueItems = document.getElementById('queueItems');
             if (state.buildQueue.length === 0) { queueDiv.classList.remove('active'); return; }
             queueDiv.classList.add('active');
+
+            const maxParallel = getMaxParallelBuilds();
+            const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+
+            let queueHTML = '';
+            if (currentBuildTypes.length > 1) {
+                queueHTML += `<div class="queue-parallel-info">⚡ ${currentBuildTypes.length}/${maxParallel} Schiffstypen in Parallel-Bau</div>`;
+            }
+
             const now = Date.now();
             const displayQueue = state.buildQueue.slice(0, 5);
-            queueItems.innerHTML = displayQueue.map((item, index) => {
+            queueHTML += displayQueue.map((item, index) => {
                 const def = shipDefinitions[item.shipType];
                 const remaining = Math.max(0, item.endTime - now);
                 const seconds = Math.ceil(remaining / 1000);
-                return `<div class="queue-item"><span>${index + 1}. ${def.name}</span><span>${seconds > 0 ? seconds + 's' : 'Fertig!'}</span></div>`;
+                return `<div class="queue-item"><span>${index + 1}. ${def.icon} ${def.name}</span><span>${seconds > 0 ? seconds + 's' : 'Fertig!'}</span></div>`;
             }).join('');
-            if (state.buildQueue.length > 5) queueItems.innerHTML += `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
+
+            if (state.buildQueue.length > 5) queueHTML += `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
+
+            queueItems.innerHTML = queueHTML;
             if (state.buildQueue.length > 0) setTimeout(() => { if (state.buildQueue.length > 0) renderBuildQueue(); }, 1000);
         }
 
@@ -1339,7 +1415,6 @@
             const fleetList = Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
             reportLines.push(`<strong>🚀 Flotte ${slotIndex + 1}:</strong> ${fleetList || 'Keine Schiffe'}`);
 
-            // Ressourcenfund
             let foundResources = false;
             if (Math.random() < 0.5) {
                 foundResources = true;
@@ -1360,7 +1435,6 @@
                     `<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} Metall, +${fundAmount.toLocaleString()} Kristall, +${fundAmount.toLocaleString()} Deuterium</span>`);
             }
 
-            // Piratenkampf
             let hadCombat = false;
             let pirateFleet = {};
             let pirateResourcesDestroyed = 0;
@@ -1380,7 +1454,6 @@
                 const pirateStrength = pirateVariation;
                 const piratePower = playerPower * pirateStrength;
 
-                // Generiere Piratenflotte
                 pirateFleet = generatePirateFleet(piratePower);
 
                 let pirateLabel = '';
@@ -1391,14 +1464,12 @@
                 const powerRatio = playerPower / (playerPower + piratePower);
                 const lossRate = (1 - powerRatio) * 0.8;
 
-                // Spieler-Verluste
                 let totalOwnLossesMetal = 0;
                 let totalOwnLossesCrystal = 0;
                 let totalOwnLossesDeuterium = 0;
 
                 reportLines.push(
                     `<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, ${Math.round(pirateStrength * 100)}% deiner Stärke)!</span>`);
-
                 reportLines.push(`<span class="info">📋 Deine Flotte:</span> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ')}`);
 
                 for (const [key, count] of Object.entries(selectedShips)) {
@@ -1421,7 +1492,6 @@
                     reportLines.push(`<span class="gain">✨ Keine eigenen Verluste!</span>`);
                 }
 
-                // Piraten-Verluste
                 const pirateLossRate = (1 - powerRatio) * 0.7;
                 const destroyedPirateFleet = {};
                 let totalPirateShipsDestroyed = 0;
@@ -1445,7 +1515,6 @@
                     reportLines.push(`<span class="pirate">💀 Piraten-Verluste:</span> ${pirateDestroyedList} (${totalPirateShipsDestroyed} Schiffe zerstört)`);
                 }
 
-                // Bergung
                 const ownRecovery = (totalOwnLossesMetal + totalOwnLossesCrystal + totalOwnLossesDeuterium) * 0.6;
                 const pirateRecovery = pirateResourcesDestroyed * 0.6;
                 const totalRecovery = Math.floor((ownRecovery + pirateRecovery) / 3);
@@ -1463,12 +1532,10 @@
                 reportLines.push('<span>🔭 Nichts gefunden - der Sektor war leer.</span>');
             }
 
-            // Ressourcen gutschreiben
             state.resources.metal += totalMetalGain;
             state.resources.crystal += totalCrystalGain;
             state.resources.deuterium += totalDeuteriumGain;
 
-            // Überlebende Schiffe zurück
             for (const [key, count] of Object.entries(survivingShips)) {
                 state.ships[key].count += count;
             }
@@ -1507,7 +1574,7 @@
                 <div class="stat-item"><div class="stat-value">${state.stats.totalShipsBuilt}</div><div class="stat-label">Schiffe gebaut</div></div>
                 <div class="stat-item"><div class="stat-value" style="color:#ff4444;">${state.stats.totalShipsLost}</div><div class="stat-label">Schiffe verloren</div></div>
                 <div class="stat-item"><div class="stat-value" style="color:#ff8800;">${state.stats.totalPirateShipsDestroyed || 0}</div><div class="stat-label">Piraten zerstört</div></div>
-                <div class="stat-item"><div class="stat-value">⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrade-Level</div></div>
+                <div class="stat-item"><div class="stat-value">🏭${1 + (state.upgrades.shipyard || 0)} ⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrade-Level</div></div>
             `;
         }
 
@@ -1563,7 +1630,7 @@
                 updateDisplay();
             }
         });
-        console.log('🚀 Spiel bereit mit detaillierten Kampfberichten!');
+        console.log('🚀 Spiel bereit mit Werft-Upgrade für parallelen Schiffbau!');
     </script>
 </body>
 </html>
