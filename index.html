@@ -619,6 +619,9 @@
         .history-item .pirate {
             color: #ff8800;
         }
+        .history-item .warning {
+            color: #ffaa00;
+        }
 
         .full-width {
             grid-column: 1 / -1;
@@ -974,7 +977,6 @@
             setTimeout(() => indicator.classList.remove('visible'), 5000);
         }
 
-        // Hilfsfunktion zum Speichern/Wiederherstellen von Build-Inputs
         function saveBuildInputs() {
             const inputs = {};
             for (const key of Object.keys(shipDefinitions)) {
@@ -1001,16 +1003,9 @@
             document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
             document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
             renderUpgrades();
-
-            // Speichere Build-Inputs vor dem Rendern
             const savedBuildInputs = preserveInputs ? saveBuildInputs() : null;
             renderShipBuildCards();
-
-            // Stelle Build-Inputs wieder her
-            if (preserveInputs && savedBuildInputs) {
-                restoreBuildInputs(savedBuildInputs);
-            }
-
+            if (preserveInputs && savedBuildInputs) restoreBuildInputs(savedBuildInputs);
             renderFleetSlots(preserveInputs);
             renderBuildQueue();
             renderStats();
@@ -1040,28 +1035,22 @@
                 alert('Während Expeditionen können keine Schiffe gebaut werden!');
                 return;
             }
-
             const maxParallel = getMaxParallelBuilds();
             const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
-
             if (currentBuildTypes.length >= maxParallel && !currentBuildTypes.includes(shipType)) {
                 alert(`Maximal ${maxParallel} Schiffstypen gleichzeitig! Werfte-Upgrade erhöht die Anzahl.`);
                 return;
             }
-
             if (!canAffordMultiple(def.cost, count)) {
                 alert('Nicht genügend Ressourcen für ' + count + ' Schiffe!');
                 return;
             }
-
             deductResources(def.cost, count);
             state.stats.totalShipsBuilt += count;
             playBuildSound();
-
             const now = Date.now();
             const lastEndTime = state.buildQueue.length > 0 ?
                 state.buildQueue[state.buildQueue.length - 1].endTime : now;
-
             for (let i = 0; i < count; i++) {
                 const startTime = lastEndTime + (i * def.buildTime * 1000);
                 state.buildQueue.push({
@@ -1071,11 +1060,9 @@
                     endTime: startTime + def.buildTime * 1000
                 });
             }
-
             if (!state.activeBuildTypes.includes(shipType)) {
                 state.activeBuildTypes.push(shipType);
             }
-
             input.value = 1;
             updateDisplay(true);
             scheduleQueueCheck();
@@ -1181,7 +1168,6 @@
                 grid.appendChild(card);
             }
 
-            // Update Panel-Titel
             const titleEl = document.getElementById('shipBuildTitle');
             if (titleEl) {
                 const span = titleEl.querySelector('span');
@@ -1194,16 +1180,12 @@
             const queueItems = document.getElementById('queueItems');
             if (state.buildQueue.length === 0) { queueDiv.classList.remove('active'); return; }
             queueDiv.classList.add('active');
-
             const maxParallel = getMaxParallelBuilds();
             const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
-
             let queueHTML = '';
             if (currentBuildTypes.length > 1) {
-                queueHTML +=
-                    `<div class="queue-parallel-info">⚡ ${currentBuildTypes.length}/${maxParallel} Schiffstypen in Parallel-Bau</div>`;
+                queueHTML += `<div class="queue-parallel-info">⚡ ${currentBuildTypes.length}/${maxParallel} Schiffstypen in Parallel-Bau</div>`;
             }
-
             const now = Date.now();
             const displayQueue = state.buildQueue.slice(0, 5);
             queueHTML += displayQueue.map((item, index) => {
@@ -1212,10 +1194,8 @@
                 const seconds = Math.ceil(remaining / 1000);
                 return `<div class="queue-item"><span>${index + 1}. ${def.icon} ${def.name}</span><span>${seconds > 0 ? seconds + 's' : 'Fertig!'}</span></div>`;
             }).join('');
-
             if (state.buildQueue.length > 5) queueHTML +=
                 `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
-
             queueItems.innerHTML = queueHTML;
             if (state.buildQueue.length > 0) setTimeout(() => { if (state.buildQueue.length > 0) renderBuildQueue(); },
             1000);
@@ -1461,6 +1441,15 @@
                 `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
             reportLines.push(`<strong>🚀 Flotte ${slotIndex + 1}:</strong> ${fleetList || 'Keine Schiffe'}`);
 
+            // Berechne verfügbaren Laderaum
+            let availableCapacity = 0;
+            for (const [key, count] of Object.entries(selectedShips)) {
+                if (shipDefinitions[key].capacity > 0) {
+                    availableCapacity += count * shipDefinitions[key].capacity;
+                }
+            }
+
+            // Ressourcenfund - begrenzt durch Laderaum
             let foundResources = false;
             if (Math.random() < 0.5) {
                 foundResources = true;
@@ -1471,16 +1460,36 @@
                     fundLabel = 'kleinen'; } else if (fundLevel < 0.9) { fundAmount = 5000000;
                     fundLabel = 'mittleren'; } else { fundAmount = 25000000;
                     fundLabel = 'großen'; }
-                totalMetalGain += fundAmount;
-                totalCrystalGain += fundAmount;
-                totalDeuteriumGain += fundAmount;
-                state.stats.totalMetalFound += fundAmount;
-                state.stats.totalCrystalFound += fundAmount;
-                state.stats.totalDeuteriumFound += fundAmount;
-                reportLines.push(
-                    `<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} Metall, +${fundAmount.toLocaleString()} Kristall, +${fundAmount.toLocaleString()} Deuterium</span>`);
+
+                // Begrenze Fund durch verfügbaren Laderaum
+                if (availableCapacity > 0) {
+                    const maxPerResource = Math.floor(availableCapacity / 3);
+                    const originalFund = fundAmount;
+                    if (fundAmount > maxPerResource) {
+                        fundAmount = maxPerResource;
+                        reportLines.push(
+                            `<span class="warning">⚠️ Laderaum begrenzt! Fund war ${originalFund.toLocaleString()}, aber nur ${availableCapacity.toLocaleString()} Kapazität (${maxPerResource.toLocaleString()} pro Ressource).</span>`);
+                    }
+                    if (fundAmount > 0) {
+                        totalMetalGain += fundAmount;
+                        totalCrystalGain += fundAmount;
+                        totalDeuteriumGain += fundAmount;
+                        state.stats.totalMetalFound += fundAmount;
+                        state.stats.totalCrystalFound += fundAmount;
+                        state.stats.totalDeuteriumFound += fundAmount;
+                        reportLines.push(
+                            `<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} Metall, +${fundAmount.toLocaleString()} Kristall, +${fundAmount.toLocaleString()} Deuterium</span>`);
+                    } else {
+                        reportLines.push(
+                            `<span class="warning">📦 Laderaum zu klein - Ressourcenfund konnte nicht mitgenommen werden!</span>`);
+                    }
+                } else {
+                    reportLines.push(
+                        `<span class="warning">📦 Keine Transporter dabei - Ressourcenfund konnte nicht mitgenommen werden! (Laderaum: 0)</span>`);
+                }
             }
 
+            // Piratenkampf - Bergung unabhängig vom Laderaum
             let hadCombat = false;
             let pirateFleet = {};
             let pirateResourcesDestroyed = 0;
@@ -1575,7 +1584,7 @@
                 totalDeuteriumGain += totalRecovery;
 
                 reportLines.push(
-                    `<span class="gain">🔧 Bergung:</span> +${totalRecovery.toLocaleString()} je Ressource`);
+                    `<span class="gain">🔧 Bergung (automatisch):</span> +${totalRecovery.toLocaleString()} je Ressource`);
                 reportLines.push(
                     `<span class="info">   ↳ Eigene Schiffe: ${Math.floor(ownRecovery / 3).toLocaleString()} | Piraten: ${Math.floor(pirateRecovery / 3).toLocaleString()} (60% der Zerstörungen)</span>`);
             }
@@ -1634,7 +1643,7 @@
             const list = document.getElementById('historyList');
             if (state.history.length === 0) {
                 list.innerHTML =
-                '<div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div>';
+                    '<div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div>';
                 return;
             }
             list.innerHTML = state.history.map((entry, i) => `
@@ -1683,7 +1692,7 @@
                 updateDisplay(true);
             }
         });
-        console.log('🚀 Spiel bereit! Build-Inputs bleiben jetzt erhalten.');
+        console.log('🚀 Spiel bereit mit Laderaum-Begrenzung!');
     </script>
 </body>
 </html>
