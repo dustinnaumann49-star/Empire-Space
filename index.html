@@ -171,10 +171,6 @@
             white-space: pre-wrap;
         }
 
-        hr {
-            border-color: #2ad4ff33;
-        }
-
         .kampfbericht {
             background: #0a0518;
             border-radius: 16px;
@@ -192,12 +188,32 @@
             margin-top: 10px;
         }
         
-        .slot-selector {
+        .expo-selector {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 15px;
             align-items: center;
             margin-top: 12px;
+            background: #071626;
+            padding: 15px;
+            border-radius: 24px;
+        }
+        
+        .expo-ship-item {
+            background: #0f172f;
+            padding: 8px 12px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .expo-ship-item input {
+            width: 70px;
+            background: #010a15;
+            color: cyan;
+            border: 1px solid #2ad4ff;
+            border-radius: 20px;
+            padding: 5px;
+            text-align: center;
         }
     </style>
 </head>
@@ -244,7 +260,7 @@
             <div id="expeditionSlots"></div>
             <div style="margin-top: 15px;">
                 <h3>📦 Schiffe für neue Expedition wählen</h3>
-                <div id="expoShipSelector"></div>
+                <div id="expoShipSelector" class="expo-selector"></div>
                 <button id="startExpeditionBtn" style="margin-top: 12px; width:100%">🚀 STARTE EXPEDITION (5min hin + 10min halt + 5min rück)</button>
             </div>
         </div>
@@ -269,7 +285,7 @@
             schlachtkreuzer: 0,
             zerstoerer: 0
         },
-        buildQueue: [],          // { shipType, count, remainingSec }
+        buildQueue: [],
         activeExpeditions: [],
         eventLogs: [],
         nextId: 1
@@ -283,6 +299,7 @@
         zerstoerer: { name:"Zerstörer", waffen:5000, schild:10000, panzerung:15000, laderaum:0, bauzeit:5, kosten:{metal:1200000, crystal:800000, deuterium:400000} }
     };
     const shipTypes = ["transporter","leichterJaeger","schlachtschiff","schlachtkreuzer","zerstoerer"];
+    const shipDisplayNames = { transporter:"Großer Transporter", leichterJaeger:"Leichter Jäger", schlachtschiff:"Schlachtschiff", schlachtkreuzer:"Schlachtkreuzer", zerstoerer:"Zerstörer" };
     
     function getTechFactor(level) { return 1 + (level * 0.2); }
     
@@ -390,7 +407,7 @@
         } else { addLog(`Nicht genug Ressourcen für ${displayName}.`); return false; }
     }
 
-    // Schiffe bauen (Warteschlange)
+    // Schiffe bauen
     function buildShips(shipKey, amount) {
         if(amount <= 0) return;
         let def = shipsDef[shipKey];
@@ -404,9 +421,8 @@
             return; 
         }
         
-        // Werft Kapazität prüfen (unterschiedliche Schiffstypen parallel)
         let currentActiveTypes = new Set(gameState.buildQueue.map(b => b.shipType));
-        let maxSlots = gameState.tech.werft + 1; // Level0->1, Level4->5
+        let maxSlots = gameState.tech.werft + 1;
         if(!currentActiveTypes.has(shipKey) && currentActiveTypes.size >= maxSlots) {
             addLog(`🚫 Werft Kapazität erreicht! Max ${maxSlots} verschiedene Schiffstypen gleichzeitig. Upgrade Werft.`);
             return;
@@ -508,12 +524,12 @@
         let fleetPowerVal = fleetPower(exp.fleet);
         let cargoCap = totalCargo(exp.fleet);
         
-        if(r < 10) { // 10% Totalverlust
+        if(r < 10) {
             addLog(`💀 KATASTROPHE! Die gesamte Expeditionstruppe ist verloren. KEINE Schiffe kehren zurück.`);
             for(let k of shipTypes) exp.fleet[k] = 0;
             return;
         }
-        else if(r < 40) { // 30% Pirat
+        else if(r < 40) {
             let piratTyp = Math.random() < 0.33 ? "klein" : (Math.random() < 0.5 ? "mittel" : "groß");
             let multi = piratTyp==="klein"?0.5 : piratTyp==="mittel"?1.0 : 1.5;
             let piratStaerke = Math.floor(fleetPowerVal * multi);
@@ -542,7 +558,7 @@
                 gameState.resources.metal += schrottRess.metal;
                 gameState.resources.crystal += schrottRess.crystal;
                 gameState.resources.deuterium += schrottRess.deuterium;
-                let bericht = `⚔️ SIEG gegen ${piratTyp} Piraten! (Stärke: ${Math.floor(piratStaerke)})\nEigene Verluste: ${JSON.stringify(verloreneSchiffe)}\nSchrott: +${schrottRess.metal} M / +${schrottRess.crystal} K / +${schrottRess.deuterium} D.`;
+                let bericht = `⚔️ SIEG gegen ${piratTyp} Piraten! (Stärke: ${Math.floor(piratStaerke)})\nEigene Verluste: ${JSON.stringify(verloreneSchiffe)}\nSchrott: +${schrottRess.metal.toLocaleString()} M / +${schrottRess.crystal.toLocaleString()} K / +${schrottRess.deuterium.toLocaleString()} D.`;
                 addLog(`🏆 Expedition gegen Piraten gewonnen! Ressourcen erhalten.`, bericht);
             } else {
                 let verlustMult = 0.7 + Math.random()*0.3;
@@ -556,7 +572,7 @@
                 addLog(`❌ Expedition geschlagen! Flotte erlitt Verluste.`, bericht);
             }
         }
-        else { // 60% Ressourcen Fund
+        else {
             let fundTyp = Math.random()<0.33?"klein":(Math.random()<0.5?"mittel":"groß");
             let basis = { klein:{m:6000000,c:4000000,d:2000000}, mittel:{m:10000000,c:8000000,d:6000000}, gross:{m:20000000,c:18000000,d:16000000} };
             let fund = basis[fundTyp];
@@ -574,12 +590,14 @@
             gameState.resources.metal += erhalten.m;
             gameState.resources.crystal += erhalten.c;
             gameState.resources.deuterium += erhalten.d;
-            addLog(`💰 Ressourcenfund! ${fundTyp} Fund: +${erhalten.m} Metall, +${erhalten.c} Kristall, +${erhalten.d} Deuterium (Bonus ${Math.round((bonusFactor-1)*100)}%)`);
+            addLog(`💰 Ressourcenfund! ${fundTyp} Fund: +${erhalten.m.toLocaleString()} Metall, +${erhalten.c.toLocaleString()} Kristall, +${erhalten.d.toLocaleString()} Deuterium (Bonus ${Math.round((bonusFactor-1)*100)}%)`);
         }
     }
 
-    // UI Rendering (ohne die Inputs bei jedem Tick zu überschreiben)
+    // UI Rendering
     let shipyardInitialized = false;
+    let expoSelectorInitialized = false;
+    
     function refreshUI() {
         document.getElementById("metal").innerText = gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText = gameState.resources.crystal.toLocaleString();
@@ -590,10 +608,23 @@
         document.getElementById("werftLv").innerText = gameState.tech.werft;
         document.getElementById("bonusLv").innerText = gameState.tech.bonusFund;
         renderExpeditionSlots();
-        renderExpoShipSelector();
         updateBuildQueueDisplay();
         refreshLogs();
+        
         if(!shipyardInitialized) renderShipyard();
+        if(!expoSelectorInitialized) renderExpoShipSelector();
+        else updateExpoShipMaxValues();
+    }
+    
+    function updateExpoShipMaxValues() {
+        for(let key of shipTypes) {
+            let input = document.getElementById(`expo_${key}`);
+            if(input) {
+                let maxVal = gameState.ships[key] || 0;
+                input.max = maxVal;
+                if(parseInt(input.value) > maxVal) input.value = maxVal;
+            }
+        }
     }
     
     function renderShipyard() {
@@ -606,7 +637,7 @@
             let div = document.createElement("div"); div.className="ship-card";
             div.innerHTML = `
                 <div class="ship-name">${def.name}</div>
-                <div class="ship-stats">⚔️${stats.waffen} 🛡️${stats.schild} 🧱${stats.panzerung}<br>📦L:${def.laderaum}<br>⏱️${def.bauzeit}s</div>
+                <div class="ship-stats">⚔️${stats.waffen} 🛡️${stats.schild} 🧱${stats.panzerung}<br>📦L:${def.laderaum.toLocaleString()}<br>⏱️${def.bauzeit}s</div>
                 <div>Kosten:<br>${def.kosten.metal.toLocaleString()} M<br>${def.kosten.crystal.toLocaleString()} K<br>${def.kosten.deuterium.toLocaleString()} D</div>
                 <input type="number" id="build_${key}" class="build-input" min="1" value="1" step="1">
                 <br><button class="build-ship-btn" data-ship="${key}">🛠️ Bauen</button>
@@ -638,7 +669,8 @@
         container.innerHTML = "";
         for(let exp of gameState.activeExpeditions) {
             let phaseStr = exp.phase==="hin"?"🛫 Hinflug": exp.phase==="halt"?"⏳ Erkundung":"🔄 Rückflug";
-            container.innerHTML += `<div class="expedition-row">🚀 Expedition #${String(exp.id).slice(-6)} ${phaseStr}<br>Flotte: ${JSON.stringify(exp.fleet)}</div>`;
+            let fleetStr = Object.entries(exp.fleet).filter(([,v])=>v>0).map(([k,v])=>`${shipDisplayNames[k]}: ${v}`).join(", ");
+            container.innerHTML += `<div class="expedition-row">🚀 Expedition #${String(exp.id).slice(-6)} ${phaseStr}<br>📦 ${fleetStr || "leer"}</div>`;
         }
         if(gameState.activeExpeditions.length===0) container.innerHTML="<div>✨ Keine aktiven Expeditionen. Sende eine Flotte aus!</div>";
     }
@@ -649,8 +681,16 @@
         container.innerHTML = "";
         for(let key of shipTypes) {
             let vorhanden = gameState.ships[key]||0;
-            container.innerHTML += `<div style="display:inline-block; margin:5px;"><label>${shipsDef[key].name}: <input type="number" id="expo_${key}" min="0" max="${vorhanden}" value="0" style="width:70px;"> (${vorhanden} verfügbar)</label></div>`;
+            let div = document.createElement("div");
+            div.className = "expo-ship-item";
+            div.innerHTML = `
+                <div>${shipsDef[key].name}</div>
+                <div style="font-size:0.7rem">📦 verfügbar: ${vorhanden.toLocaleString()}</div>
+                <input type="number" id="expo_${key}" class="expo-ship-input" min="0" max="${vorhanden}" value="0" step="1">
+            `;
+            container.appendChild(div);
         }
+        expoSelectorInitialized = true;
     }
     
     // Event binding
@@ -665,10 +705,18 @@
     document.getElementById("startExpeditionBtn").onclick = () => {
         let fleet = {};
         for(let key of shipTypes) {
-            let val = parseInt(document.getElementById(`expo_${key}`).value) || 0;
-            if(val>0) fleet[key]=val;
+            let input = document.getElementById(`expo_${key}`);
+            if(input) {
+                let val = parseInt(input.value) || 0;
+                if(val > 0) fleet[key] = val;
+            }
         }
         startExpedition(fleet);
+        // Zurücksetzen der Eingabefelder nach Start
+        for(let key of shipTypes) {
+            let input = document.getElementById(`expo_${key}`);
+            if(input) input.value = 0;
+        }
         refreshUI();
     };
     
