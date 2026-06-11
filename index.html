@@ -999,19 +999,20 @@
         }
 
         function updateDisplay(preserveInputs = false) {
-            document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
-            document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
-            document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
-            renderUpgrades();
-            const savedBuildInputs = preserveInputs ? saveBuildInputs() : null;
-            renderShipBuildCards();
-            if (preserveInputs && savedBuildInputs) restoreBuildInputs(savedBuildInputs);
-            renderFleetSlots(preserveInputs);
-            renderBuildQueue();
-            renderStats();
-            renderHistory();
-            saveGameState();
-        }
+    document.getElementById('metal').textContent = state.resources.metal.toLocaleString();
+    document.getElementById('crystal').textContent = state.resources.crystal.toLocaleString();
+    document.getElementById('deuterium').textContent = state.resources.deuterium.toLocaleString();
+    renderUpgrades();
+    
+    // Die neue renderShipBuildCards speichert Werte jetzt SELBST
+    renderShipBuildCards();
+    
+    renderFleetSlots(preserveInputs);
+    renderBuildQueue();
+    renderStats();
+    renderHistory();
+    saveGameState();
+}
 
         function canAffordMultiple(cost, count) {
             return state.resources.metal >= cost.metal * count &&
@@ -1137,44 +1138,57 @@
         }
 
         function renderShipBuildCards() {
-            const grid = document.getElementById('shipBuildGrid');
-            grid.innerHTML = '';
-            const maxParallel = getMaxParallelBuilds();
-            const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
-            const canBuildMore = currentBuildTypes.length < maxParallel;
-
-            for (const [key, def] of Object.entries(shipDefinitions)) {
-                const shipState = state.ships[key];
-                const stats = getUpgradedStats(key);
-                const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
-                const isBuilding = inQueue > 0;
-                const isBlocked = !isBuilding && !canBuildMore && currentBuildTypes.length >= maxParallel;
-
-                const card = document.createElement('div');
-                card.className = 'ship-card' + (isBuilding ? ' building' : '') + (isBlocked ? ' build-blocked' : '');
-                card.innerHTML = `
-                    <div class="ship-icon-large">${def.icon}</div>
-                    <div class="ship-info">
-                        <div class="ship-name">${def.name} <span class="count-badge">${shipState.count}</span>${isBuilding ? `<span class="building-progress"> (${inQueue} in Bau)</span>` : ''}</div>
-                        <div class="ship-stats"><span>⚔️ ${stats.weapons}</span><span>🛡️ ${stats.shields}</span><span>❤️ ${stats.armor}</span>${def.capacity > 0 ? `<span>📦 ${def.capacity.toLocaleString()}</span>` : ''}<span>⏱️ ${def.buildTime}s</span></div>
-                        <div class="ship-cost">🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}</div>
-                        ${isBlocked ? '<div style="color:#ff6600;font-size:0.7em;">🚫 Werft ausgelastet</div>' : ''}
-                    </div>
-                    <div class="ship-build-controls">
-                        <input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1" ${isBlocked ? 'disabled' : ''}>
-                        <button class="build-btn" onclick="buildShips('${key}')" ${isBlocked ? 'disabled' : ''}>Bauen</button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            }
-
-            const titleEl = document.getElementById('shipBuildTitle');
-            if (titleEl) {
-                const span = titleEl.querySelector('span');
-                if (span) span.textContent = `(Parallel: ${currentBuildTypes.length}/${maxParallel} Typen)`;
-            }
+    // SPEICHERE ALLE AKTUELLEN BUILD-INPUTS VOR DEM RENDERING
+    const savedValues = {};
+    for (const key of Object.keys(shipDefinitions)) {
+        const input = document.getElementById(`build_${key}`);
+        if (input) {
+            savedValues[key] = input.value;
         }
+    }
 
+    const grid = document.getElementById('shipBuildGrid');
+    grid.innerHTML = '';
+    const maxParallel = getMaxParallelBuilds();
+    const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+    const canBuildMore = currentBuildTypes.length < maxParallel;
+
+    for (const [key, def] of Object.entries(shipDefinitions)) {
+        const shipState = state.ships[key];
+        const stats = getUpgradedStats(key);
+        const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
+        const isBuilding = inQueue > 0;
+        const isBlocked = !isBuilding && !canBuildMore && currentBuildTypes.length >= maxParallel;
+
+        const card = document.createElement('div');
+        card.className = 'ship-card' + (isBuilding ? ' building' : '') + (isBlocked ? ' build-blocked' : '');
+        
+        // Verwende gespeicherten Wert oder Standard 1
+        const inputValue = savedValues[key] || '1';
+        
+        card.innerHTML = `
+            <div class="ship-icon-large">${def.icon}</div>
+            <div class="ship-info">
+                <div class="ship-name">${def.name} <span class="count-badge">${shipState.count}</span>${isBuilding ? `<span class="building-progress"> (${inQueue} in Bau)</span>` : ''}</div>
+                <div class="ship-stats"><span>⚔️ ${stats.weapons}</span><span>🛡️ ${stats.shields}</span><span>❤️ ${stats.armor}</span>${def.capacity > 0 ? `<span>📦 ${def.capacity.toLocaleString()}</span>` : ''}<span>⏱️ ${def.buildTime}s</span></div>
+                <div class="ship-cost">🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}</div>
+                ${isBlocked ? '<div style="color:#ff6600;font-size:0.7em;">🚫 Werft ausgelastet</div>' : ''}
+            </div>
+            <div class="ship-build-controls">
+                <input type="number" id="build_${key}" class="build-input" min="1" max="100" value="${inputValue}" ${isBlocked ? 'disabled' : ''}>
+                <button class="build-btn" onclick="buildShips('${key}')" ${isBlocked ? 'disabled' : ''}>Bauen</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    }
+
+    const titleEl = document.getElementById('shipBuildTitle');
+    if (titleEl) {
+        const span = titleEl.querySelector('span');
+        if (span) span.textContent = `(Parallel: ${currentBuildTypes.length}/${maxParallel} Typen)`;
+    }
+}
+        
         function renderBuildQueue() {
             const queueDiv = document.getElementById('buildQueue');
             const queueItems = document.getElementById('queueItems');
