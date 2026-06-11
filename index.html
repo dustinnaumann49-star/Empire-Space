@@ -211,6 +211,12 @@
             padding: 6px 10px;
             border-radius: 12px;
         }
+        .debug-info {
+            font-size: 0.7rem;
+            color: #88aaff;
+            margin-top: 8px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -257,6 +263,7 @@
         <div class="card">
             <div class="card-title">🪐 EXPEDITIONEN (max. 3 Flotten)</div>
             <div id="expeditionSlots"></div>
+            <div class="debug-info">📊 Ereignis-Chancen: 60% Ressourcen-Fund | 30% Piratenkampf | 10% Totalverlust</div>
         </div>
     </div>
 
@@ -267,7 +274,7 @@
         </div>
     </div>
 </div>
-<footer>⚡ Echtzeit-Timer • Expeditionen unabhängig • Ressourcen & Verluste werden lokal gespeichert</footer>
+<footer>⚡ Echtzeit-Timer • Expeditionen unabhängig • Korrekte 60/30/10 Wahrscheinlichkeiten</footer>
 
 <script>
     // ---------- SCHIFFS STATS ----------
@@ -320,7 +327,7 @@
         let myLossFactor;
         if (enemyPowerPercent === 50) myLossFactor = 0.3;
         else if (enemyPowerPercent === 100) myLossFactor = 0.6;
-        else myLossFactor = 0.9;
+        else myLossFactor = 0.9; // 150% Stärke -> 90% Verluste
         
         let lostShips = {};
         let totalValue = 0;
@@ -346,32 +353,36 @@
         gameState.resources.metal += metalGain;
         gameState.resources.crystal += crystalGain;
         gameState.resources.deuterium += deutGain;
-        addLog(`🏭 Schrottbergung aus Kampf: +${metalGain.toLocaleString()} Metall, +${crystalGain.toLocaleString()} Kristall, +${deutGain.toLocaleString()} Deuterium.`, {});
         return { metal: metalGain, crystal: crystalGain, deut: deutGain, total: scrapValue };
     }
 
+    // KORREKTE Ereignis-Logik: 60% Fund, 30% Pirat, 10% Totalverlust
     function processExpedition(slotIndex, fleetSnapshot) {
-        let rand = Math.random() * 100;
+        let rand = Math.random() * 100; // 0-100
         let bonusMult = 1 + (gameState.tech.bonusFund * 0.05);
         let totalCargo = (fleetSnapshot["Großer Transporter"] || 0) * shipsData["Großer Transporter"].cargo;
         
+        // 10% Chance: Totalverlust (0-10)
         if (rand < 10) {
-            addLog(`💀 EXPEDITION SLOT ${slotIndex+1}: FLOTTENVERLUST! Die gesamte Flotte wurde zerstört.`, { event: "total_loss", fleet: fleetSnapshot });
-            return { outcome: "total_loss", newShips: {}, resourcesGained: 0, battleReport: null };
+            addLog(`💀 EXPEDITION SLOT ${slotIndex+1}: ⚰️ FLOTTENVERLUST! Die gesamte Flotte wurde zerstört. (10% Chance)`, { event: "total_loss", fleet: fleetSnapshot });
+            return { outcome: "total_loss", newShips: {}, resourcesGained: 0, battleReport: null, eventType: "total_loss" };
         } 
+        // 30% Chance: Piratenkampf (10-40)
         else if (rand < 40) {
             let piratStufe = Math.random();
             let percentPower;
             let stufeName;
-            if (piratStufe < 0.33) { percentPower = 50; stufeName = "kleiner Pirat (50%)"; }
-            else if (piratStufe < 0.66) { percentPower = 100; stufeName = "mittel Pirat (100%)"; }
-            else { percentPower = 150; stufeName = "großer Pirat (150%)"; }
+            if (piratStufe < 0.33) { percentPower = 50; stufeName = "kleiner Pirat (50% Stärke)"; }
+            else if (piratStufe < 0.66) { percentPower = 100; stufeName = "mittel Pirat (100% Stärke)"; }
+            else { percentPower = 150; stufeName = "großer Pirat (150% Stärke)"; }
             
             let fight = fightSimulation(fleetSnapshot, percentPower);
-            addLog(`🏴‍☠️ SLOT ${slotIndex+1}: PIRATENANGRIFF! ${stufeName}. Verluste: ${JSON.stringify(fight.lostShips)}`, { battle: fight });
             let scrapResult = addResourcesFromScrap(fight.scrap);
-            return { outcome: "combat", newShips: fight.newShips, resourcesGained: scrapResult.total, battleReport: `Kampf gegen ${stufeName}`, resourcesFromCombat: fight.scrap };
+            let verlustText = Object.entries(fight.lostShips).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ");
+            addLog(`🏴‍☠️ SLOT ${slotIndex+1}: PIRATENANGRIFF! ${stufeName} (30% Chance). Verluste: {${verlustText || "keine"}}. Schrott erstattet: ${fight.scrap.toLocaleString()} Ress.`, { battle: fight });
+            return { outcome: "combat", newShips: fight.newShips, resourcesGained: scrapResult.total, battleReport: `Kampf gegen ${stufeName}`, eventType: "pirate" };
         }
+        // 60% Chance: Ressourcen Fund (40-100)
         else {
             let fundTyp = Math.random();
             let baseMetal, baseCrystal, baseDeut;
@@ -389,11 +400,11 @@
                 gameState.resources.metal += metalBonus;
                 gameState.resources.crystal += crystalBonus;
                 gameState.resources.deuterium += deutBonus;
-                addLog(`💰 SLOT ${slotIndex+1}: RESSOURCEN FUND! ${fundName} +${metalBonus.toLocaleString()} Metall, +${crystalBonus.toLocaleString()} Kristall, +${deutBonus.toLocaleString()} Deuterium. (Bonus ${Math.round((bonusMult-1)*100)}%)`, {});
-                return { outcome: "fund", newShips: fleetSnapshot, resourcesGained: totalRes, battleReport: null };
+                addLog(`💰 SLOT ${slotIndex+1}: RESSOURCEN FUND! ${fundName} (60% Chance) +${metalBonus.toLocaleString()} Metall, +${crystalBonus.toLocaleString()} Kristall, +${deutBonus.toLocaleString()} Deuterium. (Bonus +${Math.round((bonusMult-1)*100)}%)`, { fund: {metal:metalBonus, crystal:crystalBonus, deut:deutBonus} });
+                return { outcome: "fund", newShips: fleetSnapshot, resourcesGained: totalRes, battleReport: null, eventType: "fund" };
             } else {
-                addLog(`⚠️ SLOT ${slotIndex+1}: Laderaum unzureichend! (${totalCargo.toLocaleString()} / benötigt ${totalRes.toLocaleString()}) -> Keine Ressourcen.`, {});
-                return { outcome: "fund_fail", newShips: fleetSnapshot, resourcesGained: 0, battleReport: null };
+                addLog(`⚠️ SLOT ${slotIndex+1}: RESSOURCEN FUND fehlgeschlagen! (60% Chance aber Laderaum unzureichend) ${totalCargo.toLocaleString()} / benötigt ${totalRes.toLocaleString()} -> Keine Ressourcen.`, {});
+                return { outcome: "fund_fail", newShips: fleetSnapshot, resourcesGained: 0, battleReport: null, eventType: "fund_fail" };
             }
         }
     }
@@ -612,7 +623,7 @@
             btn.addEventListener("click", buildHandler);
         });
 
-        // Expedition Slots - HIER werden die Auswahlfelder erstellt
+        // Expedition Slots
         let expDiv = "";
         for (let i = 0; i < 3; i++) {
             let exp = gameState.expeditions[i];
@@ -620,14 +631,13 @@
                 expDiv += `<div class="expedition-fleet">
                     <b>🚀 Flotte ${i+1}</b> — <span style="text-transform:uppercase; font-weight:bold;">${exp.phase}</span> 
                     <span class="timer" id="exp_timer_${i}">--:--</span><br>
-                    <small>📦 Schiffe: ${Object.entries(exp.shipsUsed).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ") || "keine"}</small>
+                    <small>📦 Schiffe: ${Object.entries(exp.shipsUsed).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ") || "keine"}</small>
                 </div>`;
             } else {
-                // Bereit-Slot mit Auswahlfeldern für Schiffe
                 expDiv += `<div class="expedition-fleet" id="exp_slot_${i}_container">
                     <b>🆓 Flotte ${i+1}</b> — Bereit zur Expedition<br>
                     <div style="margin: 12px 0; background: #0a1220; padding: 12px; border-radius: 18px;">
-                        <div style="font-size:0.8rem; margin-bottom:8px;">📋 SCHIFFE AUSWÄHLEN:</div>
+                        <div style="font-size:0.8rem; margin-bottom:8px;">📋 SCHIFFE AUSWÄHLEN (verfügbare Bestände):</div>
                         <div id="exp_select_${i}"></div>
                     </div>
                     <button class="start-expedition-btn" data-slot="${i}">🚀 Expedition starten</button>
@@ -636,7 +646,7 @@
         }
         document.getElementById("expeditionSlots").innerHTML = expDiv;
         
-        // Auswahlfelder für jeden freien Slot befüllen
+        // Auswahlfelder für freie Slots (aktuelle Schiffsbestände anzeigen)
         for (let i = 0; i < 3; i++) {
             if (gameState.expeditions[i] === null) {
                 let selectDiv = document.getElementById(`exp_select_${i}`);
@@ -645,7 +655,7 @@
                     for (let type of shipKeys) {
                         let maxVal = gameState.ships[type] || 0;
                         selectHtml += `<div class="exp-input-group">
-                            <label>${type}:</label>
+                            <label>${type} (max ${maxVal.toLocaleString()}):</label>
                             <input type="number" id="exp_slot${i}_${type.replace(/ /g, '')}" min="0" max="${maxVal}" value="0" step="1" style="width:90px">
                         </div>`;
                     }
@@ -690,14 +700,15 @@
             div.className = "log-entry";
             div.innerHTML = `🕒 ${log.timestamp} — ${log.text}`;
             if (log.details && log.details.battle) {
-                div.innerHTML += `<div class="kampfbericht">⚔️ Verlorene Schiffe: ${JSON.stringify(log.details.battle.lostShips)} | Schrottwert: ${log.details.battle.scrap.toLocaleString()} Ress.</div>`;
+                let verluste = Object.entries(log.details.battle.lostShips).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ");
+                div.innerHTML += `<div class="kampfbericht">⚔️ Kampfdetails - Verlorene Schiffe: {${verluste || "keine"}} | Schrottwert: ${log.details.battle.scrap.toLocaleString()} Ressourcen</div>`;
             }
             logDiv.appendChild(div);
         }
     }
 
     function resetGame() {
-        if (confirm("ALLE Daten werden zurückgesetzt! Start mit 80M/60M/40M Ressourcen und leeren Schiffen.")) {
+        if (confirm("⚠️ ALLE Daten werden zurückgesetzt! Start mit 80M/60M/40M Ressourcen und leeren Schiffen.")) {
             localStorage.removeItem("ExpeditionGameSave");
             location.reload();
         }
