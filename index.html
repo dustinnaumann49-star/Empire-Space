@@ -182,7 +182,7 @@
 
         const DEFAULT_STATE = {
             resources: { metal: 50000000, crystal: 40000000, deuterium: 30000000 },
-            ships: { großerTransporter: { count: 0 }, schlachtkreuzer: { count: 0 }, zerstörer: { count: 0 }, schwererJäger: { count: 0 } },
+            ships: { großerTransporter: { count: 300 }, schlachtkreuzer: { count: 0 }, zerstörer: { count: 0 }, schwererJäger: { count: 0 } },
             upgrades: { weapons: 0, shields: 0, armor: 0, shipyard: 0 },
             buildQueue: [], activeBuildTypes: [],
             expeditions: [
@@ -242,10 +242,10 @@
         }
 
         const shipDefinitions = {
-            großerTransporter: { name: 'Großer Transporter', icon: '🚛', capacity: 250000, baseWeapons: 50, baseShields: 100, baseArmor: 200, cost: { metal: 60000, crystal: 30000, deuterium: 15000 }, buildTime: 2 },
-            schlachtkreuzer: { name: 'Schlachtkreuzer', icon: '🛡️', capacity: 0, baseWeapons: 700, baseShields: 400, baseArmor: 700, cost: { metal: 30000, crystal: 40000, deuterium: 15000 }, buildTime: 2 },
-            zerstörer: { name: 'Zerstörer', icon: '💥', capacity: 0, baseWeapons: 1000, baseShields: 500, baseArmor: 1000, cost: { metal: 60000, crystal: 50000, deuterium: 15000 }, buildTime: 2 },
-            schwererJäger: { name: 'Schwerer Jäger', icon: '✈️', capacity: 0, baseWeapons: 150, baseShields: 75, baseArmor: 100, cost: { metal: 10000, crystal: 6000, deuterium: 2000 }, buildTime: 2 }
+            großerTransporter: { name: 'Großer Transporter', icon: '🚛', capacity: 250000, baseWeapons: 50, baseShields: 100, baseArmor: 200, cost: { metal: 60000, crystal: 30000, deuterium: 15000 }, buildTime: 5 },
+            schlachtkreuzer: { name: 'Schlachtkreuzer', icon: '🛡️', capacity: 0, baseWeapons: 700, baseShields: 400, baseArmor: 700, cost: { metal: 30000, crystal: 40000, deuterium: 15000 }, buildTime: 60 },
+            zerstörer: { name: 'Zerstörer', icon: '💥', capacity: 0, baseWeapons: 1000, baseShields: 500, baseArmor: 1000, cost: { metal: 60000, crystal: 50000, deuterium: 15000 }, buildTime: 120 },
+            schwererJäger: { name: 'Schwerer Jäger', icon: '✈️', capacity: 0, baseWeapons: 150, baseShields: 75, baseArmor: 100, cost: { metal: 10000, crystal: 6000, deuterium: 2000 }, buildTime: 10 }
         };
 
         function getMaxParallelBuilds() { return 1 + (state.upgrades.shipyard || 0); }
@@ -464,44 +464,114 @@
         function fillSlotSelector(si) {
             const sd = document.getElementById(`slotSelector${si}`);
             if (!sd) return;
-            const sv = {};
-            for (const key of Object.keys(shipDefinitions)) { const ei = document.getElementById(`slot${si}_${key}`); if (ei) sv[key] = ei.value; }
-            const sc = {};
-            for (const key of Object.keys(shipDefinitions)) sc[key] = state.ships[key].count;
-            for (let i = 0; i < 3; i++) {
-                if (state.expeditions[i].active) for (const [key, cnt] of Object.entries(state.expeditions[i].selectedShips)) sc[key] -= cnt;
+            
+            // Aktuelle Werte aus den Inputs speichern
+            const currentValues = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                const existingInput = document.getElementById(`slot${si}_${key}`);
+                if (existingInput) {
+                    currentValues[key] = existingInput.value;
+                }
             }
-            for (let i = 0; i < 3; i++) {
-                if (i !== si && !state.expeditions[i].active) for (const key of Object.keys(shipDefinitions)) { const oi = document.getElementById(`slot${i}_${key}`); if (oi) sc[key] -= (parseInt(oi.value) || 0); }
+            
+            // Verfügbare Schiffe berechnen (Gesamt - bereits in aktiven Expeditionen)
+            const availableShips = {};
+            for (const key of Object.keys(shipDefinitions)) {
+                availableShips[key] = state.ships[key].count;
             }
+            
+            // Abziehen der Schiffe in aktiven Expeditionen
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                        availableShips[key] -= count;
+                    }
+                }
+            }
+            
+            // Abziehen der Schiffe in ANDEREN inaktiven Slots (außer dem aktuellen)
+            for (let i = 0; i < 3; i++) {
+                if (i !== si && !state.expeditions[i].active) {
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const otherInput = document.getElementById(`slot${i}_${key}`);
+                        if (otherInput) {
+                            availableShips[key] -= (parseInt(otherInput.value) || 0);
+                        }
+                    }
+                }
+            }
+            
+            // Stelle sicher, dass keine negativen Werte entstehen
+            for (const key of Object.keys(shipDefinitions)) {
+                availableShips[key] = Math.max(0, availableShips[key]);
+            }
+            
             sd.innerHTML = '';
             for (const [key, def] of Object.entries(shipDefinitions)) {
-                const av = Math.max(0, sc[key]), iv = sv[key] || '0';
-                const item = document.createElement('div'); item.className = 'ship-select-item-mini';
-                item.innerHTML = `<span>${def.icon} ${def.name} (${av} verfügbar)</span><input type="number" id="slot${si}_${key}" min="0" max="${av}" value="${iv}" onchange="updateSlotAvailability()">`;
+                const maxAvailable = availableShips[key];
+                const currentValue = currentValues[key] || '0';
+                const item = document.createElement('div');
+                item.className = 'ship-select-item-mini';
+                item.innerHTML = `
+                    <span>${def.icon} ${def.name} (${maxAvailable} verfügbar)</span>
+                    <input type="number" id="slot${si}_${key}" min="0" max="${maxAvailable}" value="${currentValue}" onchange="updateSlotAvailability()">
+                `;
                 sd.appendChild(item);
             }
         }
 
         function updateSlotAvailability() {
-            const sc = {};
-            for (const key of Object.keys(shipDefinitions)) sc[key] = state.ships[key].count;
-            const sia = {};
-            for (const key of Object.keys(shipDefinitions)) sia[key] = 0;
-            for (let i = 0; i < 3; i++) { if (state.expeditions[i].active) for (const [key, cnt] of Object.entries(state.expeditions[i].selectedShips)) sia[key] += cnt; }
-            const at = {};
-            for (const key of Object.keys(shipDefinitions)) at[key] = Math.max(0, sc[key] - sia[key]);
-            for (let si = 0; si < 3; si++) {
-                if (!state.expeditions[si].active) {
+            // Für jeden Slot die maximale verfügbare Anzahl berechnen
+            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
+                if (!state.expeditions[slotIndex].active) {
+                    // Verfügbare Schiffe berechnen (Gesamt - aktive Expeditionen)
+                    const availableTotal = {};
                     for (const key of Object.keys(shipDefinitions)) {
-                        const inp = document.getElementById(`slot${si}_${key}`), lbl = inp?.parentElement?.querySelector('span');
-                        if (inp && lbl) {
-                            const cv = parseInt(inp.value) || 0;
-                            let sio = 0;
-                            for (let i = 0; i < 3; i++) { if (i !== si && !state.expeditions[i].active) { const oi = document.getElementById(`slot${i}_${key}`); if (oi) sio += (parseInt(oi.value) || 0); } }
-                            const av = Math.max(0, at[key] - sio);
-                            inp.max = av; if (cv > av) inp.value = av;
-                            lbl.textContent = `${shipDefinitions[key].icon} ${shipDefinitions[key].name} (${av} verfügbar)`;
+                        availableTotal[key] = state.ships[key].count;
+                    }
+                    
+                    // Abziehen der Schiffe in aktiven Expeditionen
+                    for (let i = 0; i < 3; i++) {
+                        if (state.expeditions[i].active) {
+                            for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                                availableTotal[key] -= count;
+                            }
+                        }
+                    }
+                    
+                    // Abziehen der Schiffe in ANDEREN inaktiven Slots (außer dem aktuellen)
+                    for (let i = 0; i < 3; i++) {
+                        if (i !== slotIndex && !state.expeditions[i].active) {
+                            for (const key of Object.keys(shipDefinitions)) {
+                                const otherInput = document.getElementById(`slot${i}_${key}`);
+                                if (otherInput) {
+                                    availableTotal[key] -= (parseInt(otherInput.value) || 0);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Stelle sicher, dass keine negativen Werte entstehen
+                    for (const key of Object.keys(shipDefinitions)) {
+                        availableTotal[key] = Math.max(0, availableTotal[key]);
+                    }
+                    
+                    // Aktualisiere die Inputs für diesen Slot
+                    for (const key of Object.keys(shipDefinitions)) {
+                        const input = document.getElementById(`slot${slotIndex}_${key}`);
+                        const label = input?.parentElement?.querySelector('span');
+                        if (input && label) {
+                            const currentValue = parseInt(input.value) || 0;
+                            const maxAvailable = availableTotal[key];
+                            
+                            // Begrenze den aktuellen Wert auf das verfügbare Maximum
+                            if (currentValue > maxAvailable) {
+                                input.value = maxAvailable;
+                            }
+                            input.max = maxAvailable;
+                            
+                            // Aktualisiere den Label-Text
+                            label.textContent = `${shipDefinitions[key].icon} ${shipDefinitions[key].name} (${maxAvailable} verfügbar)`;
                         }
                     }
                 }
@@ -518,15 +588,54 @@
             if (state.buildQueue.length > 0) { alert('Warte bis Bauaufträge fertig!'); return; }
             const { selected, total } = getSlotShips(si);
             if (total === 0) { alert('Mindestens 1 Schiff!'); return; }
-            const su = {};
-            for (const key of Object.keys(shipDefinitions)) su[key] = 0;
-            for (let i = 0; i < 3; i++) { if (i !== si && state.expeditions[i].active) for (const [key, cnt] of Object.entries(state.expeditions[i].selectedShips)) su[key] = (su[key] || 0) + cnt; }
-            for (let i = 0; i < 3; i++) { if (i !== si && !state.expeditions[i].active) { const os = getSlotShips(i); for (const [key, cnt] of Object.entries(os.selected)) su[key] = (su[key] || 0) + cnt; } }
-            for (const [key, cnt] of Object.entries(selected)) { if (state.ships[key].count < (su[key] || 0) + cnt) { alert(`Nicht genug ${shipDefinitions[key].name}!`); return; } }
-            for (const [key, cnt] of Object.entries(selected)) state.ships[key].count -= cnt;
-            const now = Date.now(), exp = state.expeditions[si];
-            exp.active = true; exp.selectedShips = { ...selected }; exp.startTime = now; exp.phase = 'outbound'; exp.returnTime = now + 50 * 60 * 1000;
-            playExpeditionStartSound(); updateDisplay(); scheduleExpeditionCheck(si);
+            
+            // Prüfe ob genug Schiffe verfügbar sind
+            const shipUsage = {};
+            for (const key of Object.keys(shipDefinitions)) shipUsage[key] = 0;
+            
+            // Schiffe in aktiven Expeditionen
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
+                        shipUsage[key] += count;
+                    }
+                }
+            }
+            
+            // Schiffe in anderen inaktiven Slots
+            for (let i = 0; i < 3; i++) {
+                if (i !== si && !state.expeditions[i].active) {
+                    const otherShips = getSlotShips(i);
+                    for (const [key, count] of Object.entries(otherShips.selected)) {
+                        shipUsage[key] += count;
+                    }
+                }
+            }
+            
+            // Prüfung
+            for (const [key, count] of Object.entries(selected)) {
+                if (state.ships[key].count < (shipUsage[key] || 0) + count) {
+                    alert(`Nicht genug ${shipDefinitions[key].name}! (${state.ships[key].count} verfügbar, ${(shipUsage[key] || 0) + count} benötigt)`);
+                    return;
+                }
+            }
+            
+            // Schiffe abziehen
+            for (const [key, count] of Object.entries(selected)) {
+                state.ships[key].count -= count;
+            }
+            
+            const now = Date.now();
+            const exp = state.expeditions[si];
+            exp.active = true;
+            exp.selectedShips = { ...selected };
+            exp.startTime = now;
+            exp.phase = 'outbound';
+            exp.returnTime = now + 50 * 60 * 1000; // 50 Minuten Gesamtdauer
+            
+            playExpeditionStartSound();
+            updateDisplay();
+            scheduleExpeditionCheck(si);
         }
 
         function scheduleExpeditionCheck(si) {
