@@ -306,22 +306,57 @@
             if (state.expeditions.some(e => e.active)) { alert('Während Expeditionen kein Bau möglich!'); return; }
             const def = shipDefinitions[st];
             const mp = getMaxParallelBuilds();
-            const cbt = [...new Set(state.buildQueue.map(q => q.shipType))];
-            if (cbt.length >= mp && !cbt.includes(st)) { alert(`Maximal ${mp} Schiffstypen!`); return; }
+            
+            // Aktuell aktive Schiffstypen in der Warteschlange (ohne Duplikate)
+            const activeShipTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+            
+            // Prüfen, ob dieser Schiffstyp bereits aktiv ist
+            const isAlreadyBuilding = activeShipTypes.includes(st);
+            
+            // Wenn der Typ nicht aktiv ist, prüfen, ob das Limit der parallelen Typen erreicht ist
+            if (!isAlreadyBuilding && activeShipTypes.length >= mp) {
+                alert(`Maximal ${mp} Schiffstypen gleichzeitig!`);
+                return;
+            }
+
             if (!canAfford(def.cost, cnt)) { alert('Nicht genug Ressourcen!'); return; }
             deduct(def.cost, cnt);
             state.stats.totalShipsBuilt += cnt;
             playBuildSound();
+            
             const now = Date.now();
-            const letm = state.buildQueue.length > 0 ? state.buildQueue[state.buildQueue.length - 1].endTime : now;
-            for (let i = 0; i < cnt; i++) {
-                state.buildQueue.push({ shipType: st, startTime: letm + i * def.buildTime * 1000, duration: def.buildTime * 1000, endTime: letm + (i + 1) * def.buildTime * 1000 });
+            // Startzeit für die neuen Aufträge: Entweder jetzt, oder wenn bereits Aufträge für diesen Typ existieren, 
+            // dann nach dem letzten Auftrag dieses Typs
+            let baseStartTime = now;
+            if (isAlreadyBuilding) {
+                const lastSameType = state.buildQueue.filter(q => q.shipType === st).pop();
+                if (lastSameType) baseStartTime = lastSameType.endTime;
+            } else {
+                // Wenn alle Slots voll sind (alle Typen bereits aktiv), aber der Typ nicht aktiv ist, 
+                // sollte dies durch die obige Prüfung verhindert werden. Für den Fall, dass der Typ aktiv ist, 
+                // aber die Warteschlange noch Platz hat (wird durch aktiveShipTypes.length >= mp abgedeckt)
+                // Dieser Fall tritt nicht ein, da wir oben schon prüfen.
             }
+            
+            for (let i = 0; i < cnt; i++) {
+                state.buildQueue.push({ 
+                    shipType: st, 
+                    startTime: baseStartTime + i * def.buildTime * 1000, 
+                    duration: def.buildTime * 1000, 
+                    endTime: baseStartTime + (i + 1) * def.buildTime * 1000 
+                });
+            }
+            
             if (!state.activeBuildTypes.includes(st)) state.activeBuildTypes.push(st);
             inp.value = 1;
+            
+            // Warteschlange sortieren nach Endzeit, um korrekte Abarbeitung zu gewährleisten
+            state.buildQueue.sort((a, b) => a.endTime - b.endTime);
+            
             updateDisplay();
             scheduleQueueCheck();
         }
+        
         function scheduleQueueCheck() {
             if (state.buildQueue.length === 0) return;
             const d = Math.max(0, state.buildQueue[0].endTime - Date.now());
@@ -360,8 +395,9 @@
         function renderShipBuildCards() {
             const grid = document.getElementById('shipBuildGrid');
             const mp = getMaxParallelBuilds();
-            const cbt = [...new Set(state.buildQueue.map(q => q.shipType))];
-            const cbm = cbt.length < mp;
+            const activeShipTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+            const isSlotAvailable = activeShipTypes.length < mp;
+            
             if (grid.children.length === 4) {
                 Object.keys(shipDefinitions).forEach((key, i) => {
                     const card = grid.children[i];
@@ -370,7 +406,7 @@
                     const stats = getUpgradedStats(key);
                     const iq = state.buildQueue.filter(q => q.shipType === key).length;
                     const ib = iq > 0;
-                    const blk = !ib && !cbm && cbt.length >= mp;
+                    const blk = !ib && !isSlotAvailable && activeShipTypes.length >= mp;
                     card.className = 'ship-card' + (ib ? ' building' : '') + (blk ? ' build-blocked' : '');
                     const cb = card.querySelector('.count-badge'); if (cb) cb.textContent = state.ships[key].count;
                     const bp = card.querySelector('.building-progress');
@@ -388,7 +424,7 @@
                     const stats = getUpgradedStats(key);
                     const iq = state.buildQueue.filter(q => q.shipType === key).length;
                     const ib = iq > 0;
-                    const blk = !ib && !cbm && cbt.length >= mp;
+                    const blk = !ib && !isSlotAvailable && activeShipTypes.length >= mp;
                     const card = document.createElement('div');
                     card.className = 'ship-card' + (ib ? ' building' : '') + (blk ? ' build-blocked' : '');
                     card.setAttribute('data-ship-type', key);
@@ -397,15 +433,16 @@
                 });
             }
             const titleSpan = document.querySelector('#shipBuildTitle span');
-            if (titleSpan) titleSpan.textContent = `(Parallel: ${cbt.length}/${mp} Typen)`;
+            if (titleSpan) titleSpan.textContent = `(Parallel: ${activeShipTypes.length}/${mp} Typen)`;
         }
 
         function renderBuildQueue() {
             const qd = document.getElementById('buildQueue'), qi = document.getElementById('queueItems');
             if (state.buildQueue.length === 0) { qd.classList.remove('active'); return; }
             qd.classList.add('active');
-            const mp = getMaxParallelBuilds(), cbt = [...new Set(state.buildQueue.map(q => q.shipType))];
-            let h = cbt.length > 1 ? `<div class="queue-parallel-info">⚡ ${cbt.length}/${mp} Schiffstypen parallel</div>` : '';
+            const mp = getMaxParallelBuilds();
+            const activeShipTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
+            let h = activeShipTypes.length > 1 ? `<div class="queue-parallel-info">⚡ ${activeShipTypes.length}/${mp} Schiffstypen parallel</div>` : '';
             const n = Date.now();
             h += state.buildQueue.slice(0, 5).map((item, i) => {
                 const def = shipDefinitions[item.shipType], s = Math.ceil(Math.max(0, item.endTime - n) / 1000);
