@@ -7,7 +7,6 @@
     <style>
         * {
             box-sizing: border-box;
-            user-select: none; /* Vermeidet verseentliches markieren, aber stört nicht */
         }
 
         body {
@@ -18,7 +17,6 @@
             padding: 20px;
         }
 
-        /* Hauptcontainer - flexible Grid-Struktur */
         .game-dashboard {
             max-width: 1800px;
             margin: 0 auto;
@@ -27,7 +25,6 @@
             gap: 20px;
         }
 
-        /* Zwei Hauptspalten (links: Ressourcen+Upgrades+Flotte; rechts: Expeditionen) + unteres Log */
         .dashboard-row {
             display: flex;
             flex-wrap: wrap;
@@ -92,7 +89,6 @@
             display: none;
         }
 
-        /* Ressourcen-Panel */
         .resources-panel {
             display: flex;
             flex-wrap: wrap;
@@ -115,7 +111,6 @@
         .crystal { color: #66ccff; }
         .deuterium { color: #66ffcc; }
 
-        /* Upgrades - kompakt */
         .upgrade-item {
             background: #101a2c;
             margin: 8px 0;
@@ -148,7 +143,6 @@
         button.danger { background: #7a2e2e; }
         button.success { background: #1f6e43; }
 
-        /* Werft & Schiffsbau */
         .ship-item {
             background: #101a2c;
             margin: 10px 0;
@@ -205,6 +199,7 @@
             border-radius: 20px;
             cursor: pointer;
             font-size: 0.8rem;
+            transition: 0.1s;
         }
         .ziel-option.selected, .commander-option.selected {
             background: #3b82f6;
@@ -273,6 +268,37 @@
         .risk-low { color: #2ecc71; }
         .risk-medium { color: #f39c12; }
         .risk-high { color: #e74c3c; }
+        
+        /* Neue Info-Box für Sektoren */
+        .sektor-info {
+            background: #071222;
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border: 1px solid #2c4c7c;
+        }
+        .sektor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .sektor-card {
+            background: #0f1a2c;
+            padding: 10px;
+            border-radius: 18px;
+            border-left: 4px solid;
+        }
+        .sektor-card h4 {
+            margin: 0 0 6px 0;
+            font-size: 1rem;
+        }
+        .sektor-stats {
+            font-size: 0.7rem;
+            font-family: monospace;
+            margin-top: 5px;
+            color: #bbccff;
+        }
 
         @media (max-width: 1000px) {
             .dashboard-row { flex-direction: column; }
@@ -282,7 +308,6 @@
 </head>
 <body>
 <div class="game-dashboard">
-    <!-- ERSTE ZEILE: Linke Seite (Ressourcen, Upgrades) & Rechte Seite (Expeditions-Slots) -->
     <div class="dashboard-row">
         <!-- LINKE SPALTE -->
         <div class="col-left">
@@ -348,7 +373,7 @@
                 <div class="card-content">
                     <div style="max-height: 250px; overflow-y: auto; margin-bottom: 12px;">
                         <table class="ship-detail-table">
-                            <thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th></tr></thead>
+                            <thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th></td></thead>
                             <tbody>
                                 <tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td></tr>
                                 <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td></tr>
@@ -364,8 +389,23 @@
             </div>
         </div>
 
-        <!-- RECHTE SPALTE: Expeditionen (drei Slots) -->
+        <!-- RECHTE SPALTE: Expeditionen + Sektoren-Info -->
         <div class="col-right">
+            <!-- NEUE CARD: Sektoren-Lexikon / Anleitung -->
+            <div class="card" id="cardSektorGuide">
+                <div class="card-header">
+                    <span>📖 EXPEDITIONS-SEKTOREN (Info)</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="sektor-info">
+                        <strong>🌌 Jeder Sektor birgt eigene Chancen & Risiken:</strong>
+                        <div class="sektor-grid" id="sektorGuideGrid"></div>
+                        <div style="font-size:0.7rem; margin-top: 8px; text-align:center;">💡 Kampfwahrscheinlichkeit & Verlustrisiko beeinflussen Ereignisse | Kommandeure können Risiken mindern.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="card" id="cardExpeditions">
                 <div class="card-header">
                     <span>🪐 EXPEDITIONEN (max. 3 Flotten)</span>
@@ -373,13 +413,13 @@
                 </div>
                 <div class="card-content">
                     <div id="expeditionSlots"></div>
-                    <div class="debug-info" style="font-size:0.7rem; text-align:center;">✨ 12+ Ereignisse | Ziel & Kommandeur wählbar</div>
+                    <div class="debug-info" style="font-size:0.7rem; text-align:center;">✨ 12+ Ereignisse | Ziel & Kommandeur beeinflussen Funde/Kämpfe</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ZWEITE ZEILE: LOG (volle Breite) -->
+    <!-- LOG-ZEILE -->
     <div class="dashboard-row">
         <div class="card" style="width:100%;" id="cardLog">
             <div class="card-header">
@@ -392,7 +432,7 @@
         </div>
     </div>
 </div>
-<footer>⚡ Zusammenklappbare Menüs | Zielrisiko & Kommandeur-Boni aktivierbar</footer>
+<footer>⚡ Zusammenklappbare Menüs | Zielsektor-Boni & Risiken beachten | Kommandeure verbessern Überlebenschance</footer>
 
 <script>
     // ==================== SCHIFFSDATEN ====================
@@ -406,10 +446,10 @@
     const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer"];
 
     const expeditionZiele = {
-        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03 },
-        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15 },
-        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25 },
-        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08 }
+        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03, beschreibung: "Stabile Funde, geringe Gefahr durch Piraten oder Naturereignisse." },
+        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15, beschreibung: "Hohe Kampfwahrscheinlichkeit, aber Beute kann erbeutete Schiffe enthalten." },
+        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25, beschreibung: "Gewaltige Schätze, doch Gefahr durch schwarze Löcher & Aliens." },
+        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, beschreibung: "Technologiefunde & Kristallvorkommen, moderate Risiken." }
     };
     const kommandeurBonuses = {
         "keiner": { name: "❌ Kein Kommandeur", attackBonus: 0, defenseBonus: 0, lootBonus: 0, speedBonus: 0, cost: 0 },
@@ -603,6 +643,20 @@
     function saveGame(){ localStorage.setItem("ExpeditionGameSave", JSON.stringify(gameState)); }
     function loadGame(){ let s = localStorage.getItem("ExpeditionGameSave"); if(s){ let d = JSON.parse(s); gameState = d; if(!gameState.productionQueue) gameState.productionQueue = []; if(!gameState.expeditions) gameState.expeditions = [null,null,null]; if(!gameState.eventLogs) gameState.eventLogs = []; if(!gameState.tech.speed) gameState.tech.speed=0; } renderAll(); }
 
+    function renderSektorGuide(){
+        let guideHtml = "";
+        for(let [id, z] of Object.entries(expeditionZiele)){
+            let riskClass = z.risk === "niedrig" ? "risk-low" : (z.risk === "hoch" ? "risk-high" : "risk-medium");
+            guideHtml += `<div class="sektor-card" style="border-left-color: ${z.risk === 'niedrig' ? '#2ecc71' : (z.risk === 'hoch' ? '#e74c3c' : '#f39c12')}">
+                <h4>${z.name}</h4>
+                <div>📖 ${z.beschreibung}</div>
+                <div class="sektor-stats">⚡ Basis-Fund: ~${(z.baseMetal/1000000).toFixed(0)}M Metall | 💎 Kristall | ⚡ Deut</div>
+                <div class="sektor-stats ${riskClass}">⚠️ Kampfrisiko: ${Math.round(z.combatChance*100)}% | ⚰️ Totalverlust-Risiko: ${Math.round(z.lossChance*100)}%</div>
+            </div>`;
+        }
+        document.getElementById("sektorGuideGrid").innerHTML = guideHtml;
+    }
+
     function renderAll(){
         document.getElementById("metal").innerText = gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText = gameState.resources.crystal.toLocaleString();
@@ -638,7 +692,7 @@
         document.querySelectorAll(".ziel-option").forEach(el => el.onclick = (e) => { let z=el.dataset.ziel, s=parseInt(el.dataset.slot); selectedZiele[s]=z; renderAll(); });
         document.querySelectorAll(".commander-option").forEach(el => el.onclick = (e) => { let k=el.dataset.komm, s=parseInt(el.dataset.slot); selectedKommandeur[s]=k; renderAll(); });
         document.querySelectorAll(".start-expedition-btn").forEach(btn => btn.onclick = (e) => { let slot = parseInt(btn.dataset.slot); let selShips={}; for(let t of shipKeys){ let inp = document.getElementById(`exp_slot${slot}_${t.replace(/ /g,'')}`); if(inp) selShips[t]=parseInt(inp.value)||0; } startExpedition(slot, selShips, selectedZiele[slot], selectedKommandeur[slot]); });
-        updateQueueDisplay(); updateTimers();
+        updateQueueDisplay(); updateTimers(); renderSektorGuide();
     }
     function updateQueueDisplay(){ let qDiv = document.getElementById("productionQueueDisplay"); if(!qDiv) return; if(gameState.productionQueue.length===0){ qDiv.innerHTML="<small>📦 Keine Schiffe in Produktion</small>"; return; } let html="<strong>🏭 Aktive Bauaufträge:</strong><br>"; for(let item of gameState.productionQueue){ let remain = Math.max(0, Math.ceil((item.finishTimestamp-Date.now())/1000)); html+=`<div class="queue-item">🔨 ${item.amount}x ${item.shipType} — fertig in ${Math.floor(remain/60)}:${(remain%60).toString().padStart(2,'0')}</div>`; } qDiv.innerHTML=html; }
     function updateTimers(){ for(let i=0;i<3;i++){ let exp=gameState.expeditions[i]; if(exp){ let now=Date.now(), remain=0; if(exp.phase==="hinflug") remain=Math.max(0,(exp.hinEnde-now)/1000); else if(exp.phase==="halten") remain=Math.max(0,(exp.halteEnde-now)/1000); else remain=Math.max(0,(exp.rückEnde-now)/1000); let span=document.getElementById(`exp_timer_${i}`); if(span) span.innerText = `${Math.floor(remain/60)}:${Math.floor(remain%60).toString().padStart(2,'0')}`; } } }
