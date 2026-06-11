@@ -1273,57 +1273,134 @@
         }
 
         function renderFleetSlots(preserveInputs = false) {
-            const savedInputs = preserveInputs ? saveSlotInputs() : null;
-            const slots = document.getElementById('fleetSlots');
-            slots.innerHTML = '';
-            state.expeditions.forEach((exp, index) => {
-                const slot = document.createElement('div');
-                slot.className = 'fleet-slot' + (exp.active ? ' active' : '');
-                if (exp.active) {
-                    const remaining = exp.returnTime - Date.now();
-                    const minutes = Math.floor(Math.max(0, remaining) / 60000);
-                    const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
-                    const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
-                    const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) =>
-                        `${c}x ${shipDefinitions[k].icon}`).join(' ');
-                    slot.innerHTML = `
-                        <div class="fleet-slot-title">🚀 Flotte ${index + 1} - ${phaseNames[exp.phase]}</div>
-                        <div class="fleet-timer">⏳ ${minutes}:${seconds.toString().padStart(2, '0')}</div>
-                        <div style="font-size:0.8em;color:#999;">${shipList || 'Keine Schiffe'}</div>
-                    `;
-                } else {
-                    slot.innerHTML = `
-                        <div class="fleet-slot-title">🚀 Flotte ${index + 1}</div>
-                        <div class="ship-selector-mini" id="slotSelector${index}"></div>
-                        <div class="fleet-timer">Bereit</div>
-                        <button class="btn-small" onclick="startSlotExpedition(${index})">Starten</button>
-                    `;
-                }
-                slots.appendChild(slot);
-            });
-            state.expeditions.forEach((exp, index) => {
-                if (!exp.active) {
-                    const selectorDiv = document.getElementById(`slotSelector${index}`);
-                    if (selectorDiv) {
-                        for (const [key, def] of Object.entries(shipDefinitions)) {
-                            const shipCount = state.ships[key];
-                            let availableShips = shipCount;
-                            for (let i = 0; i < 3; i++) {
-                                if (i !== index && !state.expeditions[i].active) {
-                                    const otherInput = document.getElementById(`slot${i}_${key}`);
-                                    if (otherInput) availableShips -= (parseInt(otherInput.value) || 0);
-                                }
-                            }
-                            availableShips = Math.max(0, availableShips);
-                            const item = document.createElement('div');
-                            item.className = 'ship-select-item-mini';
-                            item.innerHTML = `
-                                <span>${def.icon} ${def.name} (${availableShips} verfügbar)</span>
-                                <input type="number" id="slot${index}_${key}" min="0" max="${availableShips}" value="0" onchange="updateSlotAvailability()">
-                            `;
-                            selectorDiv.appendChild(item);
-                        }
-                    }
+    const slots = document.getElementById('fleetSlots');
+    
+    // Prüfe ob Slots bereits existieren
+    if (slots.children.length === 3) {
+        // Nur Timer und aktive Slots aktualisieren, keine Inputs!
+        for (let index = 0; index < 3; index++) {
+            const exp = state.expeditions[index];
+            const slot = slots.children[index];
+            
+            if (exp.active) {
+                // Aktiven Slot komplett neu rendern (keine Inputs)
+                const remaining = exp.returnTime - Date.now();
+                const minutes = Math.floor(Math.max(0, remaining) / 60000);
+                const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
+                const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                
+                slot.className = 'fleet-slot active';
+                slot.innerHTML = `
+                    <div class="fleet-slot-title">🚀 Flotte ${index + 1} - ${phaseNames[exp.phase]}</div>
+                    <div class="fleet-timer">⏳ ${minutes}:${seconds.toString().padStart(2, '0')}</div>
+                    <div style="font-size:0.8em;color:#999;">${shipList || 'Keine Schiffe'}</div>
+                `;
+            } else if (exp.active === false && slot.classList.contains('active')) {
+                // Slot war aktiv, jetzt inaktiv - neu rendern
+                slot.className = 'fleet-slot';
+                slot.innerHTML = `
+                    <div class="fleet-slot-title">🚀 Flotte ${index + 1}</div>
+                    <div class="ship-selector-mini" id="slotSelector${index}"></div>
+                    <div class="fleet-timer">Bereit</div>
+                    <button class="btn-small" onclick="startSlotExpedition(${index})">Starten</button>
+                `;
+                // Selektor befüllen
+                fillSlotSelector(index);
+            } else if (!exp.active && !slot.classList.contains('active')) {
+                // Inaktiver Slot - nur Verfügbarkeiten aktualisieren
+                updateSlotAvailability();
+            }
+        }
+    } else {
+        // Erstes Rendering: Alle Slots neu aufbauen
+        slots.innerHTML = '';
+        for (let index = 0; index < 3; index++) {
+            const exp = state.expeditions[index];
+            const slot = document.createElement('div');
+            slot.className = 'fleet-slot' + (exp.active ? ' active' : '');
+            
+            if (exp.active) {
+                const remaining = exp.returnTime - Date.now();
+                const minutes = Math.floor(Math.max(0, remaining) / 60000);
+                const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
+                const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                
+                slot.innerHTML = `
+                    <div class="fleet-slot-title">🚀 Flotte ${index + 1} - ${phaseNames[exp.phase]}</div>
+                    <div class="fleet-timer">⏳ ${minutes}:${seconds.toString().padStart(2, '0')}</div>
+                    <div style="font-size:0.8em;color:#999;">${shipList || 'Keine Schiffe'}</div>
+                `;
+            } else {
+                slot.innerHTML = `
+                    <div class="fleet-slot-title">🚀 Flotte ${index + 1}</div>
+                    <div class="ship-selector-mini" id="slotSelector${index}"></div>
+                    <div class="fleet-timer">Bereit</div>
+                    <button class="btn-small" onclick="startSlotExpedition(${index})">Starten</button>
+                `;
+            }
+            slots.appendChild(slot);
+        }
+        
+        // Befülle alle inaktiven Slot-Selektoren
+        for (let index = 0; index < 3; index++) {
+            if (!state.expeditions[index].active) {
+                fillSlotSelector(index);
+            }
+        }
+    }
+    
+    updateSlotAvailability();
+}
+
+// Neue Hilfsfunktion zum Befüllen eines Slot-Selectors
+function fillSlotSelector(slotIndex) {
+    const selectorDiv = document.getElementById(`slotSelector${slotIndex}`);
+    if (!selectorDiv) return;
+    
+    // Speichere aktuelle Werte falls vorhanden
+    const savedValues = {};
+    for (const key of Object.keys(shipDefinitions)) {
+        const existingInput = document.getElementById(`slot${slotIndex}_${key}`);
+        if (existingInput) {
+            savedValues[key] = existingInput.value;
+        }
+    }
+    
+    selectorDiv.innerHTML = '';
+    
+    for (const [key, def] of Object.entries(shipDefinitions)) {
+        const shipCount = state.ships[key];
+        let availableShips = shipCount;
+        
+        // Berechne verfügbare Schiffe
+        for (let i = 0; i < 3; i++) {
+            if (i !== slotIndex && !state.expeditions[i].active) {
+                const otherInput = document.getElementById(`slot${i}_${key}`);
+                if (otherInput) availableShips -= (parseInt(otherInput.value) || 0);
+            }
+        }
+        for (let i = 0; i < 3; i++) {
+            if (i !== slotIndex && state.expeditions[i].active) {
+                availableShips -= (state.expeditions[i].selectedShips[key] || 0);
+            }
+        }
+        
+        availableShips = Math.max(0, availableShips);
+        
+        // Verwende gespeicherten Wert oder 0
+        const inputValue = savedValues[key] || '0';
+        
+        const item = document.createElement('div');
+        item.className = 'ship-select-item-mini';
+        item.innerHTML = `
+            <span>${def.icon} ${def.name} (${availableShips} verfügbar)</span>
+            <input type="number" id="slot${slotIndex}_${key}" min="0" max="${availableShips}" value="${inputValue}" onchange="updateSlotAvailability()">
+        `;
+        selectorDiv.appendChild(item);
+    }
+}
                 }
             });
             if (preserveInputs && savedInputs) restoreSlotInputs(savedInputs);
