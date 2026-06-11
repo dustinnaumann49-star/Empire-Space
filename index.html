@@ -18,7 +18,7 @@
         }
 
         .game-container {
-            max-width: 1600px;
+            max-width: 1800px;
             margin: 0 auto;
             display: flex;
             flex-wrap: wrap;
@@ -74,7 +74,7 @@
 
         .col {
             flex: 1;
-            min-width: 280px;
+            min-width: 320px;
         }
 
         .ship-item, .upgrade-item {
@@ -88,6 +88,15 @@
             flex-wrap: wrap;
             gap: 10px;
             border-bottom: 1px solid #2a3a60;
+        }
+
+        .ship-stats {
+            font-size: 0.7rem;
+            font-family: monospace;
+            background: #0a1022;
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: #aad4ff;
         }
 
         button {
@@ -194,13 +203,6 @@
             border-radius: 16px;
             font-size: 0.8rem;
         }
-        .start-exp-btn {
-            margin-top: 12px;
-            width: 100%;
-            background: #2c5a2c;
-            padding: 10px;
-            font-size: 1rem;
-        }
         .fleet-status-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -208,8 +210,31 @@
         }
         .fleet-stat {
             background: #0f1a2c;
-            padding: 6px 10px;
-            border-radius: 12px;
+            padding: 8px 12px;
+            border-radius: 16px;
+        }
+        .fleet-stat strong {
+            color: #ffcc88;
+        }
+        .ship-detail-table {
+            width: 100%;
+            font-size: 0.75rem;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .ship-detail-table th, .ship-detail-table td {
+            padding: 6px 4px;
+            text-align: left;
+            border-bottom: 1px solid #2a3a60;
+        }
+        .cost-text {
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #ffaa66;
+        }
+        .upgrade-cost {
+            font-size: 0.7rem;
+            color: #88ffaa;
         }
         .debug-info {
             font-size: 0.7rem;
@@ -233,11 +258,24 @@
         </div>
 
         <div class="card">
+            <div class="card-title">📋 SCHIFFSSTATISTIKEN (Basiswerte)</div>
+            <table class="ship-detail-table">
+                <tr><th>Schiff</th><th>⚔️ Waffe</th><th>🛡️ Schild</th><th>🧱 Panzerung</th><th>📦 Laderaum</th></tr>
+                <tr><td>Großer Transporter</td><td>10</td><td>1000</td><td>2000</td><td>1.000.000</td></tr>
+                <tr><td>Leichter Jäger</td><td>100</td><td>200</td><td>300</td><td>0</td></tr>
+                <tr><td>Schlachtschiff</td><td>500</td><td>1000</td><td>1500</td><td>0</td></tr>
+                <tr><td>Schlachtkreuzer</td><td>1000</td><td>2000</td><td>3000</td><td>0</td></tr>
+                <tr><td>Zerstörer</td><td>5000</td><td>10000</td><td>15000</td><td>0</td></tr>
+            </table>
+            <div class="debug-info" style="margin-top:8px">✨ Tech-Upgrades: +20% pro Level (Waffen/Schild/Panzerung max Lv.5)</div>
+        </div>
+
+        <div class="card">
             <div class="card-title">🏭 WERFT | Bauzeit (Sek.)</div>
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <span><strong>⚙️ Werft Upgrade Level <span id="werftLevel">0</span></strong></span>
-                <button id="upgradeWerftBtn" style="background:#2c5a2c;">⬆️ Upgrade (+1 Bauschiene)</button>
-                <span class="badge">Max Level 4 ➕ max 5 Schiffe gleichzeitig bauen</span>
+                <span><strong>⚙️ Werft Upgrade Level <span id="werftLevel">0</span>/4</strong></span>
+                <button id="upgradeWerftBtn" style="background:#2c5a2c;">⬆️ Upgrade</button>
+                <span class="badge" id="werftCostDisplay">Kosten: 5M / 3M / 2M</span>
             </div>
             <div style="font-size:0.75rem; margin:8px 0">Aktive Bauschienen: <span id="activeSlots">0</span> / <span id="maxSlots">1</span></div>
             <hr>
@@ -246,11 +284,23 @@
         </div>
 
         <div class="card">
-            <div class="card-title">📈 FORSCHUNG & UPGRADES</div>
-            <div class="upgrade-item">🔫 Waffentechnik (20% pro Lvl) <span>Lv.<span id="waffenLvl">0</span>/5</span> <button id="upgradeWaffenBtn">+</button></div>
-            <div class="upgrade-item">🛡️ Schildtechnik (20% pro Lvl) <span>Lv.<span id="schildLvl">0</span>/5</span> <button id="upgradeSchildBtn">+</button></div>
-            <div class="upgrade-item">🧱 Panzerungtechnik (20% pro Lvl) <span>Lv.<span id="panzerLvl">0</span>/5</span> <button id="upgradePanzerBtn">+</button></div>
-            <div class="upgrade-item">💰 Bonus Ressourcen Fund (5%/Lv) <span>Lv.<span id="bonusFundLvl">0</span>/10</span> <button id="upgradeBonusBtn">+</button></div>
+            <div class="card-title">📈 FORSCHUNG & UPGRADES (teuer)</div>
+            <div class="upgrade-item">
+                <div>🔫 Waffentechnik (+20% Angriff) <span>Lv.<span id="waffenLvl">0</span>/5</span></div>
+                <div><span class="upgrade-cost" id="waffenCost">Kosten: 1.2M / 0.8M / 0.4M</span> <button id="upgradeWaffenBtn">+</button></div>
+            </div>
+            <div class="upgrade-item">
+                <div>🛡️ Schildtechnik (+20% Schild) <span>Lv.<span id="schildLvl">0</span>/5</span></div>
+                <div><span class="upgrade-cost" id="schildCost">Kosten: 1.2M / 0.8M / 0.4M</span> <button id="upgradeSchildBtn">+</button></div>
+            </div>
+            <div class="upgrade-item">
+                <div>🧱 Panzerungtechnik (+20% HP) <span>Lv.<span id="panzerLvl">0</span>/5</span></div>
+                <div><span class="upgrade-cost" id="panzerCost">Kosten: 1.2M / 0.8M / 0.4M</span> <button id="upgradePanzerBtn">+</button></div>
+            </div>
+            <div class="upgrade-item">
+                <div>💰 Bonus Ressourcen Fund (+5% pro Lv) <span>Lv.<span id="bonusFundLvl">0</span>/10</span></div>
+                <div><span class="upgrade-cost" id="bonusCost">Kosten: 0.8M / 0.6M / 0.4M</span> <button id="upgradeBonusBtn">+</button></div>
+            </div>
         </div>
     </div>
 
@@ -258,6 +308,7 @@
         <div class="card">
             <div class="card-title">🚀 MEINE FLOTTE (Verfügbar)</div>
             <div id="fleetStatus"></div>
+            <div class="debug-info" style="margin-top:10px">💡 Schiffe werden nach Expedition zurückgebracht (Verluste möglich).</div>
         </div>
 
         <div class="card">
@@ -274,7 +325,7 @@
         </div>
     </div>
 </div>
-<footer>⚡ Echtzeit-Timer • Expeditionen unabhängig • Korrekte 60/30/10 Wahrscheinlichkeiten</footer>
+<footer>⚡ Echtzeit-Timer • Ressourcen managen • Teure Upgrades für Langzeitmotivation</footer>
 
 <script>
     // ---------- SCHIFFS STATS ----------
@@ -287,6 +338,23 @@
     };
     const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer"];
 
+    // TEURE UPGRADE KOSTEN (progressiv)
+    function getUpgradeCost(type, currentLevel) {
+        if (type === "werftLevel") {
+            let next = currentLevel + 1;
+            return { metal: 5000000 * next, crystal: 3000000 * next, deuterium: 2000000 * next };
+        }
+        if (type === "waffen" || type === "schild" || type === "panzer") {
+            let next = currentLevel + 1;
+            return { metal: 1200000 * next, crystal: 800000 * next, deuterium: 400000 * next };
+        }
+        if (type === "bonusFund") {
+            let next = currentLevel + 1;
+            return { metal: 800000 * next, crystal: 600000 * next, deuterium: 400000 * next };
+        }
+        return { metal: 999999, crystal: 999999, deuterium: 999999 };
+    }
+
     // Spielstand
     let gameState = {
         resources: { metal: 80000000, crystal: 60000000, deuterium: 40000000 },
@@ -297,7 +365,6 @@
         eventLogs: []
     };
 
-    // Hilfsfunktionen
     function calculatePower(shipType, count) {
         let base = shipsData[shipType];
         let wf = 1 + (gameState.tech.waffen * 0.2);
@@ -327,7 +394,7 @@
         let myLossFactor;
         if (enemyPowerPercent === 50) myLossFactor = 0.3;
         else if (enemyPowerPercent === 100) myLossFactor = 0.6;
-        else myLossFactor = 0.9; // 150% Stärke -> 90% Verluste
+        else myLossFactor = 0.9;
         
         let lostShips = {};
         let totalValue = 0;
@@ -356,22 +423,18 @@
         return { metal: metalGain, crystal: crystalGain, deut: deutGain, total: scrapValue };
     }
 
-    // KORREKTE Ereignis-Logik: 60% Fund, 30% Pirat, 10% Totalverlust
     function processExpedition(slotIndex, fleetSnapshot) {
-        let rand = Math.random() * 100; // 0-100
+        let rand = Math.random() * 100;
         let bonusMult = 1 + (gameState.tech.bonusFund * 0.05);
         let totalCargo = (fleetSnapshot["Großer Transporter"] || 0) * shipsData["Großer Transporter"].cargo;
         
-        // 10% Chance: Totalverlust (0-10)
         if (rand < 10) {
-            addLog(`💀 EXPEDITION SLOT ${slotIndex+1}: ⚰️ FLOTTENVERLUST! Die gesamte Flotte wurde zerstört. (10% Chance)`, { event: "total_loss", fleet: fleetSnapshot });
-            return { outcome: "total_loss", newShips: {}, resourcesGained: 0, battleReport: null, eventType: "total_loss" };
+            addLog(`💀 SLOT ${slotIndex+1}: ⚰️ FLOTTENVERLUST! Die gesamte Flotte wurde zerstört. (10% Chance)`, { event: "total_loss" });
+            return { outcome: "total_loss", newShips: {}, resourcesGained: 0 };
         } 
-        // 30% Chance: Piratenkampf (10-40)
         else if (rand < 40) {
             let piratStufe = Math.random();
-            let percentPower;
-            let stufeName;
+            let percentPower, stufeName;
             if (piratStufe < 0.33) { percentPower = 50; stufeName = "kleiner Pirat (50% Stärke)"; }
             else if (piratStufe < 0.66) { percentPower = 100; stufeName = "mittel Pirat (100% Stärke)"; }
             else { percentPower = 150; stufeName = "großer Pirat (150% Stärke)"; }
@@ -379,14 +442,12 @@
             let fight = fightSimulation(fleetSnapshot, percentPower);
             let scrapResult = addResourcesFromScrap(fight.scrap);
             let verlustText = Object.entries(fight.lostShips).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ");
-            addLog(`🏴‍☠️ SLOT ${slotIndex+1}: PIRATENANGRIFF! ${stufeName} (30% Chance). Verluste: {${verlustText || "keine"}}. Schrott erstattet: ${fight.scrap.toLocaleString()} Ress.`, { battle: fight });
-            return { outcome: "combat", newShips: fight.newShips, resourcesGained: scrapResult.total, battleReport: `Kampf gegen ${stufeName}`, eventType: "pirate" };
+            addLog(`🏴‍☠️ SLOT ${slotIndex+1}: PIRATEN! ${stufeName} (30% Chance). Verluste: {${verlustText || "keine"}}. Schrott: ${fight.scrap.toLocaleString()} Ress.`, { battle: fight });
+            return { outcome: "combat", newShips: fight.newShips, resourcesGained: scrapResult.total };
         }
-        // 60% Chance: Ressourcen Fund (40-100)
         else {
             let fundTyp = Math.random();
-            let baseMetal, baseCrystal, baseDeut;
-            let fundName;
+            let baseMetal, baseCrystal, baseDeut, fundName;
             if (fundTyp < 0.33) { baseMetal = 6000000; baseCrystal = 4000000; baseDeut = 2000000; fundName = "Kleiner Fund"; }
             else if (fundTyp < 0.66) { baseMetal = 10000000; baseCrystal = 8000000; baseDeut = 6000000; fundName = "Mittel Fund"; }
             else { baseMetal = 20000000; baseCrystal = 18000000; baseDeut = 16000000; fundName = "Großer Fund"; }
@@ -400,11 +461,11 @@
                 gameState.resources.metal += metalBonus;
                 gameState.resources.crystal += crystalBonus;
                 gameState.resources.deuterium += deutBonus;
-                addLog(`💰 SLOT ${slotIndex+1}: RESSOURCEN FUND! ${fundName} (60% Chance) +${metalBonus.toLocaleString()} Metall, +${crystalBonus.toLocaleString()} Kristall, +${deutBonus.toLocaleString()} Deuterium. (Bonus +${Math.round((bonusMult-1)*100)}%)`, { fund: {metal:metalBonus, crystal:crystalBonus, deut:deutBonus} });
-                return { outcome: "fund", newShips: fleetSnapshot, resourcesGained: totalRes, battleReport: null, eventType: "fund" };
+                addLog(`💰 SLOT ${slotIndex+1}: ${fundName}! +${metalBonus.toLocaleString()} Metall, +${crystalBonus.toLocaleString()} Kristall, +${deutBonus.toLocaleString()} Deuterium. (Bonus +${Math.round((bonusMult-1)*100)}%)`, {});
+                return { outcome: "fund", newShips: fleetSnapshot, resourcesGained: totalRes };
             } else {
-                addLog(`⚠️ SLOT ${slotIndex+1}: RESSOURCEN FUND fehlgeschlagen! (60% Chance aber Laderaum unzureichend) ${totalCargo.toLocaleString()} / benötigt ${totalRes.toLocaleString()} -> Keine Ressourcen.`, {});
-                return { outcome: "fund_fail", newShips: fleetSnapshot, resourcesGained: 0, battleReport: null, eventType: "fund_fail" };
+                addLog(`⚠️ SLOT ${slotIndex+1}: Fund fehlgeschlagen! Laderaum: ${totalCargo.toLocaleString()} / ${totalRes.toLocaleString()}`, {});
+                return { outcome: "fund_fail", newShips: fleetSnapshot, resourcesGained: 0 };
             }
         }
     }
@@ -423,49 +484,34 @@
 
     function startExpedition(slotIndex, selectedShips) {
         if (gameState.expeditions[slotIndex] !== null) { alert("Expedition läuft bereits!"); return false; }
-        
         let anyShip = false;
         let fleetObj = {};
         for (let type of shipKeys) {
             let val = selectedShips[type] || 0;
             if (val < 0) val = 0;
             if (val > (gameState.ships[type] || 0)) { 
-                alert(`Nicht genügend ${type} verfügbar! (Hast: ${gameState.ships[type]})`); 
+                alert(`Nicht genügend ${type}! Verfügbar: ${gameState.ships[type]}`); 
                 return false; 
             }
             if (val > 0) anyShip = true;
             fleetObj[type] = val;
         }
-        if (!anyShip) { alert("Wähle mindestens ein Schiff für die Expedition."); return false; }
+        if (!anyShip) { alert("Wähle mindestens ein Schiff."); return false; }
         
-        // Schiffe abziehen
-        for (let type of shipKeys) {
-            gameState.ships[type] -= fleetObj[type];
-        }
+        for (let type of shipKeys) gameState.ships[type] -= fleetObj[type];
         
         let now = Date.now();
-        let flightTime = 5 * 60 * 1000;
-        let holdTime = 10 * 60 * 1000;
-        let returnTime = 5 * 60 * 1000;
-        let endHin = now + flightTime;
-        let endHold = endHin + holdTime;
-        let endReturn = endHold + returnTime;
-        
+        let flightTime = 5 * 60 * 1000, holdTime = 10 * 60 * 1000, returnTime = 5 * 60 * 1000;
         gameState.expeditions[slotIndex] = {
-            shipsUsed: { ...fleetObj },
-            fleetObj: { ...fleetObj },
-            phase: "hinflug",
-            startTime: now,
-            hinEnde: endHin,
-            halteEnde: endHold,
-            rückEnde: endReturn
+            shipsUsed: { ...fleetObj }, fleetObj: { ...fleetObj },
+            phase: "hinflug", startTime: now,
+            hinEnde: now + flightTime, halteEnde: now + flightTime + holdTime, rückEnde: now + flightTime + holdTime + returnTime
         };
         saveGame();
         renderAll();
         return true;
     }
 
-    // Timer updates
     let timerInterval = null;
     function startTimerUpdates() {
         if (timerInterval) clearInterval(timerInterval);
@@ -475,18 +521,9 @@
             for (let i = 0; i < gameState.expeditions.length; i++) {
                 let exp = gameState.expeditions[i];
                 if (!exp) continue;
-                if (exp.phase === "hinflug" && now >= exp.hinEnde) {
-                    exp.phase = "halten";
-                    needsRender = true;
-                }
-                else if (exp.phase === "halten" && now >= exp.halteEnde) {
-                    exp.phase = "rückflug";
-                    needsRender = true;
-                }
-                else if (exp.phase === "rückflug" && now >= exp.rückEnde) {
-                    finishExpedition(i);
-                    needsRender = true;
-                }
+                if (exp.phase === "hinflug" && now >= exp.hinEnde) { exp.phase = "halten"; needsRender = true; }
+                else if (exp.phase === "halten" && now >= exp.halteEnde) { exp.phase = "rückflug"; needsRender = true; }
+                else if (exp.phase === "rückflug" && now >= exp.rückEnde) { finishExpedition(i); needsRender = true; }
             }
             if (needsRender) renderAll();
             updateTimersDisplay();
@@ -504,23 +541,8 @@
             else if (exp.phase === "halten") remain = Math.max(0, Math.ceil((exp.halteEnde - now) / 1000));
             else remain = Math.max(0, Math.ceil((exp.rückEnde - now) / 1000));
             let timerSpan = document.getElementById(`exp_timer_${i}`);
-            if (timerSpan) {
-                let min = Math.floor(remain / 60);
-                let sec = remain % 60;
-                timerSpan.innerText = `${min}:${sec < 10 ? '0' + sec : sec}`;
-            }
+            if (timerSpan) timerSpan.innerText = `${Math.floor(remain/60)}:${(remain%60).toString().padStart(2,'0')}`;
         }
-    }
-
-    function updateProductionQueueDisplay() {
-        let queueHtml = "<strong>🏗️ Bauaufträge:</strong><br>";
-        if (gameState.productionQueue.length === 0) queueHtml += "<div>Keine aktiven Bauaufträge</div>";
-        for (let q of gameState.productionQueue) {
-            let remain = Math.max(0, Math.ceil((q.finishTimestamp - Date.now()) / 1000));
-            queueHtml += `<div class="queue-item">⚙️ ${q.amount}x ${q.shipType} - fertig in ${remain} Sek.</div>`;
-        }
-        let queueDiv = document.getElementById("productionQueueDisplay");
-        if (queueDiv) queueDiv.innerHTML = queueHtml;
     }
 
     function updateProduction() {
@@ -529,16 +551,12 @@
         for (let i = 0; i < gameState.productionQueue.length; i++) {
             if (now >= gameState.productionQueue[i].finishTimestamp) {
                 let item = gameState.productionQueue[i];
-                gameState.ships[item.shipType] = (gameState.ships[item.shipType] || 0) + item.amount;
-                gameState.productionQueue.splice(i, 1);
-                changed = true;
-                i--;
+                gameState.ships[item.shipType] += item.amount;
+                gameState.productionQueue.splice(i,1);
+                changed = true; i--;
             }
         }
-        if (changed) {
-            saveGame();
-            renderAll();
-        }
+        if (changed) { saveGame(); renderAll(); }
         updateProductionQueueDisplay();
         setTimeout(updateProduction, 500);
     }
@@ -546,43 +564,40 @@
     function addToProduction(shipType, amount) {
         let maxSlots = Math.min(5, gameState.tech.werftLevel + 1);
         if (gameState.productionQueue.length >= maxSlots) {
-            alert(`Werft Level ${gameState.tech.werftLevel} erlaubt maximal ${maxSlots} parallele Bautypen.`);
+            alert(`Werft Level ${gameState.tech.werftLevel} max. ${maxSlots} parallele Bautypen!`);
             return false;
         }
         let cost = shipsData[shipType].cost;
-        let totalMetal = cost.metal * amount;
-        let totalCrystal = cost.crystal * amount;
-        let totalDeut = cost.deuterium * amount;
+        let totalMetal = cost.metal * amount, totalCrystal = cost.crystal * amount, totalDeut = cost.deuterium * amount;
         if (gameState.resources.metal < totalMetal || gameState.resources.crystal < totalCrystal || gameState.resources.deuterium < totalDeut) {
-            alert(`Nicht genug Ressourcen! Benötigt: ${totalMetal.toLocaleString()} Metall, ${totalCrystal.toLocaleString()} Kristall, ${totalDeut.toLocaleString()} Deuterium`);
+            alert(`Zu wenig Ressourcen! Fehlen: ${Math.max(0,totalMetal-gameState.resources.metal).toLocaleString()} Metall`);
             return false;
         }
         gameState.resources.metal -= totalMetal;
         gameState.resources.crystal -= totalCrystal;
         gameState.resources.deuterium -= totalDeut;
-        let buildTimeSec = shipsData[shipType].buildTime * amount;
-        let finishTime = Date.now() + (buildTimeSec * 1000);
-        gameState.productionQueue.push({ shipType: shipType, amount: amount, finishTimestamp: finishTime });
+        let finishTime = Date.now() + (shipsData[shipType].buildTime * amount * 1000);
+        gameState.productionQueue.push({ shipType, amount, finishTimestamp: finishTime });
         saveGame();
         renderAll();
         return true;
     }
 
-    function upgradeTech(type, max, costMetal, costCrystal, costDeut) {
+    function upgradeTech(type, max) {
         let current = gameState.tech[type];
-        if (current + 1 > max) { alert(`Max Level ${max} erreicht!`); return; }
-        if (gameState.resources.metal >= costMetal && gameState.resources.crystal >= costCrystal && gameState.resources.deuterium >= costDeut) {
-            gameState.resources.metal -= costMetal;
-            gameState.resources.crystal -= costCrystal;
-            gameState.resources.deuterium -= costDeut;
+        if (current >= max) { alert(`Max Level ${max} erreicht!`); return; }
+        let cost = getUpgradeCost(type, current);
+        if (gameState.resources.metal >= cost.metal && gameState.resources.crystal >= cost.crystal && gameState.resources.deuterium >= cost.deuterium) {
+            gameState.resources.metal -= cost.metal;
+            gameState.resources.crystal -= cost.crystal;
+            gameState.resources.deuterium -= cost.deuterium;
             gameState.tech[type]++;
             saveGame();
             renderAll();
-        } else { alert("Ressourcen für Upgrade nicht ausreichend!"); }
+        } else { alert(`Ressourcen fehlen! Benötigt: ${cost.metal.toLocaleString()} Metall, ${cost.crystal.toLocaleString()} Kristall, ${cost.deuterium.toLocaleString()} Deuterium`); }
     }
 
     function renderAll() {
-        // Ressourcen & Technologien
         document.getElementById("metal").innerText = gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText = gameState.resources.crystal.toLocaleString();
         document.getElementById("deuterium").innerText = gameState.resources.deuterium.toLocaleString();
@@ -591,11 +606,22 @@
         document.getElementById("panzerLvl").innerText = gameState.tech.panzer;
         document.getElementById("bonusFundLvl").innerText = gameState.tech.bonusFund;
         document.getElementById("werftLevel").innerText = gameState.tech.werftLevel;
-        let maxSlots = Math.min(5, gameState.tech.werftLevel + 1);
+        let maxSlots = Math.min(5, gameState.tech.werftLevel+1);
         document.getElementById("maxSlots").innerText = maxSlots;
         document.getElementById("activeSlots").innerText = gameState.productionQueue.length;
 
-        // Flottenstatus
+        // Update Kostenanzeigen
+        let wCost = getUpgradeCost("waffen", gameState.tech.waffen);
+        let sCost = getUpgradeCost("schild", gameState.tech.schild);
+        let pCost = getUpgradeCost("panzer", gameState.tech.panzer);
+        let bCost = getUpgradeCost("bonusFund", gameState.tech.bonusFund);
+        let wfCost = getUpgradeCost("werftLevel", gameState.tech.werftLevel);
+        document.getElementById("waffenCost").innerHTML = `Kosten: ${wCost.metal.toLocaleString()} / ${wCost.crystal.toLocaleString()} / ${wCost.deuterium.toLocaleString()}`;
+        document.getElementById("schildCost").innerHTML = `Kosten: ${sCost.metal.toLocaleString()} / ${sCost.crystal.toLocaleString()} / ${sCost.deuterium.toLocaleString()}`;
+        document.getElementById("panzerCost").innerHTML = `Kosten: ${pCost.metal.toLocaleString()} / ${pCost.crystal.toLocaleString()} / ${pCost.deuterium.toLocaleString()}`;
+        document.getElementById("bonusCost").innerHTML = `Kosten: ${bCost.metal.toLocaleString()} / ${bCost.crystal.toLocaleString()} / ${bCost.deuterium.toLocaleString()}`;
+        document.getElementById("werftCostDisplay").innerHTML = `Kosten: ${wfCost.metal.toLocaleString()} / ${wfCost.crystal.toLocaleString()} / ${wfCost.deuterium.toLocaleString()}`;
+
         let fleetHtml = "<div class='fleet-status-grid'>";
         for (let type of shipKeys) {
             fleetHtml += `<div class='fleet-stat'><strong>${type}:</strong> ${gameState.ships[type].toLocaleString()} Stk</div>`;
@@ -603,50 +629,40 @@
         fleetHtml += "</div>";
         document.getElementById("fleetStatus").innerHTML = fleetHtml;
 
-        // Werft UI
         let shipyardHtml = "";
         for (let type of shipKeys) {
             let c = shipsData[type].cost;
             shipyardHtml += `<div class="ship-item">
-                <span><b>${type}</b> (⚡${shipsData[type].buildTime}s)</span>
+                <span><b>${type}</b> (⚡${shipsData[type].buildTime}s) <span class="ship-stats">⚔️${shipsData[type].weapon} 🛡️${shipsData[type].shield} 🧱${shipsData[type].armor}</span></span>
                 <div class="bau-slider">
-                    <span>🪨${c.metal.toLocaleString()} 💎${c.crystal.toLocaleString()} ⚡${c.deuterium.toLocaleString()}</span>
+                    <span class="cost-text">🪨${c.metal.toLocaleString()} 💎${c.crystal.toLocaleString()} ⚡${c.deuterium.toLocaleString()}</span>
                     <input type="number" id="num_${type.replace(/ /g, '')}" min="1" value="1" style="width:70px">
                     <button class="build-ship-btn" data-ship="${type}">🚧 Bauen</button>
                 </div>
             </div>`;
         }
         document.getElementById("shipyardContainer").innerHTML = shipyardHtml;
-        
         document.querySelectorAll(".build-ship-btn").forEach(btn => {
             btn.removeEventListener("click", buildHandler);
             btn.addEventListener("click", buildHandler);
         });
 
-        // Expedition Slots
         let expDiv = "";
         for (let i = 0; i < 3; i++) {
             let exp = gameState.expeditions[i];
             if (exp) {
-                expDiv += `<div class="expedition-fleet">
-                    <b>🚀 Flotte ${i+1}</b> — <span style="text-transform:uppercase; font-weight:bold;">${exp.phase}</span> 
-                    <span class="timer" id="exp_timer_${i}">--:--</span><br>
-                    <small>📦 Schiffe: ${Object.entries(exp.shipsUsed).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ") || "keine"}</small>
-                </div>`;
+                expDiv += `<div class="expedition-fleet"><b>🚀 Flotte ${i+1}</b> — ${exp.phase.toUpperCase()} <span class="timer" id="exp_timer_${i}">--:--</span><br>
+                <small>📦 Schiffe: ${Object.entries(exp.shipsUsed).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ")}</small></div>`;
             } else {
-                expDiv += `<div class="expedition-fleet" id="exp_slot_${i}_container">
-                    <b>🆓 Flotte ${i+1}</b> — Bereit zur Expedition<br>
-                    <div style="margin: 12px 0; background: #0a1220; padding: 12px; border-radius: 18px;">
-                        <div style="font-size:0.8rem; margin-bottom:8px;">📋 SCHIFFE AUSWÄHLEN (verfügbare Bestände):</div>
-                        <div id="exp_select_${i}"></div>
-                    </div>
-                    <button class="start-expedition-btn" data-slot="${i}">🚀 Expedition starten</button>
-                </div>`;
+                expDiv += `<div class="expedition-fleet"><b>🆓 Flotte ${i+1}</b> — Bereit<br>
+                <div style="margin:12px 0; background:#0a1220; padding:12px; border-radius:18px;">
+                    <div id="exp_select_${i}"></div>
+                </div>
+                <button class="start-expedition-btn" data-slot="${i}">🚀 Expedition starten</button></div>`;
             }
         }
         document.getElementById("expeditionSlots").innerHTML = expDiv;
         
-        // Auswahlfelder für freie Slots (aktuelle Schiffsbestände anzeigen)
         for (let i = 0; i < 3; i++) {
             if (gameState.expeditions[i] === null) {
                 let selectDiv = document.getElementById(`exp_select_${i}`);
@@ -656,27 +672,24 @@
                         let maxVal = gameState.ships[type] || 0;
                         selectHtml += `<div class="exp-input-group">
                             <label>${type} (max ${maxVal.toLocaleString()}):</label>
-                            <input type="number" id="exp_slot${i}_${type.replace(/ /g, '')}" min="0" max="${maxVal}" value="0" step="1" style="width:90px">
+                            <input type="number" id="exp_slot${i}_${type.replace(/ /g, '')}" min="0" max="${maxVal}" value="0" step="1">
                         </div>`;
                     }
                     selectDiv.innerHTML = selectHtml;
                 }
             }
         }
-        
         document.querySelectorAll(".start-expedition-btn").forEach(btn => {
             btn.removeEventListener("click", expeditionHandler);
             btn.addEventListener("click", expeditionHandler);
         });
-        
         updateProductionQueueDisplay();
         updateTimersDisplay();
     }
 
     function buildHandler(e) {
         let ship = e.currentTarget.getAttribute("data-ship");
-        let inputId = `num_${ship.replace(/ /g, '')}`;
-        let input = document.getElementById(inputId);
+        let input = document.getElementById(`num_${ship.replace(/ /g, '')}`);
         let amount = parseInt(input?.value || 1);
         if (amount > 0) addToProduction(ship, amount);
     }
@@ -699,56 +712,42 @@
             let div = document.createElement("div");
             div.className = "log-entry";
             div.innerHTML = `🕒 ${log.timestamp} — ${log.text}`;
-            if (log.details && log.details.battle) {
+            if (log.details?.battle) {
                 let verluste = Object.entries(log.details.battle.lostShips).filter(([_,v])=>v>0).map(([k,v])=>`${k}: ${v}`).join(", ");
-                div.innerHTML += `<div class="kampfbericht">⚔️ Kampfdetails - Verlorene Schiffe: {${verluste || "keine"}} | Schrottwert: ${log.details.battle.scrap.toLocaleString()} Ressourcen</div>`;
+                div.innerHTML += `<div class="kampfbericht">⚔️ Verluste: {${verluste || "keine"}} | Schrott: ${log.details.battle.scrap.toLocaleString()} Ress.</div>`;
             }
             logDiv.appendChild(div);
         }
     }
 
     function resetGame() {
-        if (confirm("⚠️ ALLE Daten werden zurückgesetzt! Start mit 80M/60M/40M Ressourcen und leeren Schiffen.")) {
+        if (confirm("ALLE Daten werden zurückgesetzt!")) {
             localStorage.removeItem("ExpeditionGameSave");
             location.reload();
         }
     }
 
-    function saveGame() {
-        let save = {
-            resources: gameState.resources,
-            tech: gameState.tech,
-            ships: gameState.ships,
-            productionQueue: gameState.productionQueue,
-            expeditions: gameState.expeditions,
-            eventLogs: gameState.eventLogs
-        };
-        localStorage.setItem("ExpeditionGameSave", JSON.stringify(save));
-    }
-
+    function saveGame() { localStorage.setItem("ExpeditionGameSave", JSON.stringify(gameState)); }
     function loadGame() {
         let saved = localStorage.getItem("ExpeditionGameSave");
         if (saved) {
             try {
                 let data = JSON.parse(saved);
-                gameState.resources = data.resources;
-                gameState.tech = data.tech;
-                gameState.ships = data.ships;
-                gameState.productionQueue = data.productionQueue || [];
-                gameState.expeditions = data.expeditions || [null, null, null];
-                gameState.eventLogs = data.eventLogs || [];
-            } catch(e) { console.warn(e); }
+                gameState = data;
+                if (!gameState.productionQueue) gameState.productionQueue = [];
+                if (!gameState.expeditions) gameState.expeditions = [null,null,null];
+                if (!gameState.eventLogs) gameState.eventLogs = [];
+            } catch(e) {}
         }
         renderAll();
         renderLogs();
     }
 
-    // Event Listener
-    document.getElementById("upgradeWerftBtn").onclick = () => upgradeTech("werftLevel", 4, 1000000, 500000, 200000);
-    document.getElementById("upgradeWaffenBtn").onclick = () => upgradeTech("waffen", 5, 800000, 400000, 200000);
-    document.getElementById("upgradeSchildBtn").onclick = () => upgradeTech("schild", 5, 800000, 400000, 200000);
-    document.getElementById("upgradePanzerBtn").onclick = () => upgradeTech("panzer", 5, 800000, 400000, 200000);
-    document.getElementById("upgradeBonusBtn").onclick = () => upgradeTech("bonusFund", 10, 600000, 600000, 300000);
+    document.getElementById("upgradeWerftBtn").onclick = () => upgradeTech("werftLevel", 4);
+    document.getElementById("upgradeWaffenBtn").onclick = () => upgradeTech("waffen", 5);
+    document.getElementById("upgradeSchildBtn").onclick = () => upgradeTech("schild", 5);
+    document.getElementById("upgradePanzerBtn").onclick = () => upgradeTech("panzer", 5);
+    document.getElementById("upgradeBonusBtn").onclick = () => upgradeTech("bonusFund", 10);
     document.getElementById("resetGameBtn").onclick = resetGame;
 
     loadGame();
