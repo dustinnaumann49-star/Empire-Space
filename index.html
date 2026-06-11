@@ -174,10 +174,10 @@
         function toggleSound() { soundEnabled = !soundEnabled; document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm'; saveGameState(); }
 
         const pirateShipTypes = [
-            { name: 'Piraten-Jäger', baseCost: 8000 },
-            { name: 'Piraten-Fregatte', baseCost: 30000 },
-            { name: 'Piraten-Kreuzer', baseCost: 80000 },
-            { name: 'Piraten-Zerstörer', baseCost: 150000 }
+            { name: 'Piraten-Jäger', icon: '☠️✈️', baseCost: 8000 },
+            { name: 'Piraten-Fregatte', icon: '☠️🚢', baseCost: 30000 },
+            { name: 'Piraten-Kreuzer', icon: '☠️🛡️', baseCost: 80000 },
+            { name: 'Piraten-Zerstörer', icon: '☠️💥', baseCost: 150000 }
         ];
 
         const DEFAULT_STATE = {
@@ -396,7 +396,8 @@
                     grid.appendChild(card);
                 });
             }
-            document.querySelector('#shipBuildTitle span').textContent = `(Parallel: ${cbt.length}/${mp} Typen)`;
+            const titleSpan = document.querySelector('#shipBuildTitle span');
+            if (titleSpan) titleSpan.textContent = `(Parallel: ${cbt.length}/${mp} Typen)`;
         }
 
         function renderBuildQueue() {
@@ -534,7 +535,9 @@
             const now = Date.now(), rem = exp.returnTime - now;
             if (rem <= 0) { completeSlotExpedition(si); return; }
             const el = now - exp.startTime;
-            if (el < 10 * 60 * 1000) exp.phase = 'outbound'; else if (el < 40 * 60 * 1000) exp.phase = 'holding'; else exp.phase = 'return';
+            if (el < 10 * 60 * 1000) exp.phase = 'outbound';
+            else if (el < 40 * 60 * 1000) exp.phase = 'holding';
+            else exp.phase = 'return';
             const slot = document.querySelectorAll('.fleet-slot')[si];
             if (slot && exp.active) {
                 const min = Math.floor(Math.max(0, rem) / 60000), sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
@@ -548,93 +551,262 @@
             setTimeout(() => scheduleExpeditionCheck(si), Math.min(rem, 1000));
         }
 
-        function generatePirateFleet(pp) {
-            const pf = {}; let rp = pp, ts = 0;
-            while (rp > 1000 && ts < 50) {
-                const st = pirateShipTypes[Math.floor(Math.random() * pirateShipTypes.length)];
-                const sp = st.baseCost, ms = Math.floor(rp / sp), c = Math.max(1, Math.floor(Math.random() * ms * 0.3));
-                if (c > 0) { pf[st.name] = (pf[st.name] || 0) + c; rp -= c * sp; ts += c; } else break;
+        function generatePirateFleet(playerPower) {
+            const pf = {};
+            let remainingPower = playerPower;
+            let totalShips = 0;
+            
+            // Bestimme Piratenstärke basierend auf Spielerstärke
+            const strengthFactor = 0.6 + Math.random() * 0.8; // 60-140% der Spielerstärke
+            let targetPower = playerPower * strengthFactor;
+            
+            const shipPool = [...pirateShipTypes];
+            while (targetPower > 2000 && totalShips < 40) {
+                const shipType = shipPool[Math.floor(Math.random() * shipPool.length)];
+                const shipCost = shipType.baseCost;
+                const maxCount = Math.floor(targetPower / shipCost);
+                let count = Math.max(1, Math.floor(Math.random() * Math.min(maxCount, 8)) + 1);
+                count = Math.min(count, Math.floor(targetPower / shipCost));
+                if (count > 0) {
+                    pf[shipType.name] = (pf[shipType.name] || 0) + count;
+                    targetPower -= count * shipCost;
+                    totalShips += count;
+                } else {
+                    break;
+                }
             }
+            
+            if (totalShips === 0 && playerPower > 0) {
+                const fallback = pirateShipTypes[0];
+                pf[fallback.name] = 1;
+            }
+            
             return pf;
         }
 
         function completeSlotExpedition(si, isOffline = false) {
-            const exp = state.expeditions[si], { selectedShips } = exp;
-            const rl = []; let tmg = 0, tcg = 0, tdg = 0;
-            const sv = {}, ds = {};
-            for (const [key, cnt] of Object.entries(selectedShips)) { sv[key] = cnt; ds[key] = 0; }
+            const exp = state.expeditions[si];
+            const { selectedShips } = exp;
+            const reportLines = [];
+            let totalMetalGain = 0, totalCrystalGain = 0, totalDeuteriumGain = 0;
+            const survivingShips = {};
+            const destroyedShips = {};
+            
+            for (const [key, count] of Object.entries(selectedShips)) {
+                survivingShips[key] = count;
+                destroyedShips[key] = 0;
+            }
+            
             state.stats.totalExpeditions++;
-            const fl = Object.entries(selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
-            rl.push(`<strong>🚀 Flotte ${si+1}:</strong> ${fl || 'Keine Schiffe'}`);
             
-            // Laderaum berechnen
-            let ac = 0;
-            for (const [key, cnt] of Object.entries(selectedShips)) { if (shipDefinitions[key].capacity > 0) ac += cnt * shipDefinitions[key].capacity; }
+            const fleetList = Object.entries(selectedShips)
+                .filter(([_, count]) => count > 0)
+                .map(([key, count]) => `${count}x ${shipDefinitions[key].icon}${shipDefinitions[key].name}`)
+                .join(', ');
+            reportLines.push(`<strong>🚀 Flotte ${si + 1}:</strong> ${fleetList || 'Keine Schiffe'}`);
             
-            // Ressourcenfund
-            let fr = false;
-            if (Math.random() < 0.5) {
-                fr = true;
-                const flv = Math.random();
-                let fa = 0, flb = '';
-                if (flv < 0.6) { fa = 1000000; flb = 'kleinen'; } else if (flv < 0.9) { fa = 5000000; flb = 'mittleren'; } else { fa = 25000000; flb = 'großen'; }
-                if (ac > 0) {
-                    const mpr = Math.floor(ac / 3);
-                    if (fa > mpr) { rl.push(`<span class="warning">⚠️ Laderaum begrenzt! Fund war ${fa.toLocaleString()}, max ${mpr.toLocaleString()} pro Ressource.</span>`); fa = mpr; }
-                    if (fa > 0) {
-                        tmg += fa; tcg += fa; tdg += fa;
-                        state.stats.totalMetalFound += fa; state.stats.totalCrystalFound += fa; state.stats.totalDeuteriumFound += fa;
-                        rl.push(`<span class="gain">✅ Ressourcenfund (${flb}): +${fa.toLocaleString()} je Ressource</span>`);
+            // Berechne Laderaum
+            let availableCapacity = 0;
+            for (const [key, count] of Object.entries(selectedShips)) {
+                if (shipDefinitions[key].capacity > 0) {
+                    availableCapacity += count * shipDefinitions[key].capacity;
+                }
+            }
+            
+            // Würfle das Ereignis: 60% Ressourcen, 30% Kampf, 10% nichts
+            const eventRoll = Math.random() * 100;
+            let eventType = 'nothing';
+            if (eventRoll < 60) {
+                eventType = 'resources';
+            } else if (eventRoll < 90) {
+                eventType = 'combat';
+            } else {
+                eventType = 'nothing';
+            }
+            
+            // Ressourcenfund (60% Chance)
+            if (eventType === 'resources') {
+                const sizeRoll = Math.random();
+                let resourceAmount = 0;
+                let sizeText = '';
+                
+                if (sizeRoll < 0.6) {
+                    resourceAmount = 1000000;
+                    sizeText = 'kleinen';
+                } else if (sizeRoll < 0.9) {
+                    resourceAmount = 5000000;
+                    sizeText = 'mittleren';
+                } else {
+                    resourceAmount = 25000000;
+                    sizeText = 'großen';
+                }
+                
+                if (availableCapacity > 0) {
+                    const maxPerResource = Math.floor(availableCapacity / 3);
+                    if (resourceAmount > maxPerResource) {
+                        reportLines.push(`<span class="warning">⚠️ Laderaum begrenzt! Ein ${sizeText}er Fund (${resourceAmount.toLocaleString()} pro Ressource) wurde entdeckt, aber nur ${maxPerResource.toLocaleString()} pro Ressource konnten mitgenommen werden.</span>`);
+                        resourceAmount = maxPerResource;
                     }
-                } else { rl.push(`<span class="warning">📦 Keine Transporter - Fund nicht mitgenommen!</span>`); }
+                    
+                    if (resourceAmount > 0) {
+                        totalMetalGain += resourceAmount;
+                        totalCrystalGain += resourceAmount;
+                        totalDeuteriumGain += resourceAmount;
+                        state.stats.totalMetalFound += resourceAmount;
+                        state.stats.totalCrystalFound += resourceAmount;
+                        state.stats.totalDeuteriumFound += resourceAmount;
+                        reportLines.push(`<span class="gain">✅ Ressourcenfund (${sizeText}): +${resourceAmount.toLocaleString()} Metall, +${resourceAmount.toLocaleString()} Kristall, +${resourceAmount.toLocaleString()} Deuterium</span>`);
+                    }
+                } else {
+                    reportLines.push(`<span class="warning">📦 Keine Transporter dabei! Ein ${sizeText}er Ressourcenfund wurde entdeckt, konnte aber nicht mitgenommen werden (Laderaum: 0).</span>`);
+                }
             }
             
-            // Piratenkampf
-            let hc = false, pf = {}, prd = 0, tpsd = 0;
-            if (Math.random() < 0.5) {
-                hc = true; state.stats.totalCombats++;
+            // Piratenkampf (30% Chance)
+            if (eventType === 'combat') {
+                state.stats.totalCombats++;
                 if (!isOffline) playCombatSound();
-                let pp = 0;
-                for (const [key, cnt] of Object.entries(selectedShips)) { const s = getUpgradedStats(key); pp += cnt * (s.weapons + s.shields + s.armor); }
-                const pv = 0.5 + Math.random(), ps = pv, ppw = pp * ps;
-                pf = generatePirateFleet(ppw);
-                let plb = ps < 0.75 ? 'schwache' : ps < 1.25 ? 'mittlere' : 'starke';
-                const prr = pp / (pp + ppw), lr = (1 - prr) * 0.8;
-                let tml = 0, tcl = 0, tdl = 0;
-                rl.push(`<span class="loss">⚔️ Piratenkampf (${plb}, ${Math.round(ps*100)}% Stärke)!</span>`);
-                rl.push(`<span class="info">📋 Deine Flotte:</span> ${Object.entries(selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ')}`);
-                for (const [key, cnt] of Object.entries(selectedShips)) {
-                    const ls = Math.floor(cnt * lr * (0.8 + Math.random() * 0.4));
-                    ds[key] = ls; sv[key] = cnt - ls;
-                    if (ls > 0) { state.stats.totalShipsLost += ls; const d = shipDefinitions[key]; tml += ls * d.cost.metal; tcl += ls * d.cost.crystal; tdl += ls * d.cost.deuterium; }
-                }
-                const dl = Object.entries(ds).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
-                if (dl) rl.push(`<span class="loss">💥 Deine Verluste:</span> ${dl}`); else rl.push(`<span class="gain">✨ Keine eigenen Verluste!</span>`);
                 
-                const plr = (1 - prr) * 0.7; const dpf = {};
-                rl.push(`<span class="pirate">☠️ Piraten-Flotte:</span> ${Object.entries(pf).map(([n,c]) => `${c}x ${n}`).join(', ')}`);
-                for (const [pn, pc] of Object.entries(pf)) {
-                    const ls = Math.floor(pc * plr * (0.7 + Math.random() * 0.6));
-                    if (ls > 0) { dpf[pn] = ls; tpsd += ls; const pst = pirateShipTypes.find(p => p.name === pn); if (pst) prd += ls * pst.baseCost; }
+                // Berechne Spielerstärke
+                let playerPower = 0;
+                for (const [key, count] of Object.entries(selectedShips)) {
+                    const stats = getUpgradedStats(key);
+                    playerPower += count * (stats.weapons + stats.shields + stats.armor);
                 }
-                state.stats.totalPirateShipsDestroyed += tpsd;
-                const pdl = Object.entries(dpf).map(([n,c]) => `${c}x ${n}`).join(', ');
-                if (pdl) rl.push(`<span class="pirate">💀 Piraten-Verluste:</span> ${pdl} (${tpsd} Schiffe)`);
                 
-                const ore = (tml + tcl + tdl) * 0.6, pre = prd * 0.6, tre = Math.floor((ore + pre) / 3);
-                tmg += tre; tcg += tre; tdg += tre;
-                rl.push(`<span class="gain">🔧 Bergung:</span> +${tre.toLocaleString()} je Ressource`);
-                rl.push(`<span class="info">   ↳ Eigene: ${Math.floor(ore/3).toLocaleString()} | Piraten: ${Math.floor(pre/3).toLocaleString()}</span>`);
+                // Bestimme Piratenstärke (50-150% der Spielerstärke)
+                const strengthRoll = Math.random();
+                let strengthPercent = 0;
+                let strengthText = '';
+                
+                if (strengthRoll < 0.33) {
+                    strengthPercent = 0.5 + Math.random() * 0.3;
+                    strengthText = 'schwache';
+                } else if (strengthRoll < 0.66) {
+                    strengthPercent = 0.8 + Math.random() * 0.4;
+                    strengthText = 'mittlere';
+                } else {
+                    strengthPercent = 1.2 + Math.random() * 0.8;
+                    strengthText = 'starke';
+                }
+                
+                const piratePower = playerPower * strengthPercent;
+                const pirateFleet = generatePirateFleet(piratePower);
+                
+                reportLines.push(`<span class="loss">⚔️ Piratenangriff (${strengthText} Piratenflotte, ${Math.round(strengthPercent * 100)}% deiner Stärke)!</span>`);
+                reportLines.push(`<span class="info">📋 Deine Flotte:</span> ${Object.entries(selectedShips).filter(([_,c]) => c > 0).map(([k,c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ')}`);
+                
+                // Kampfberechnung
+                const powerRatio = playerPower / (playerPower + piratePower);
+                const lossFactor = (1 - powerRatio) * 0.7;
+                
+                let totalMetalLost = 0, totalCrystalLost = 0, totalDeuteriumLost = 0;
+                let totalPirateShipsDestroyed = 0;
+                let pirateResourcesGained = 0;
+                
+                // Eigene Verluste berechnen
+                for (const [key, count] of Object.entries(selectedShips)) {
+                    const losses = Math.floor(count * lossFactor * (0.7 + Math.random() * 0.6));
+                    destroyedShips[key] = losses;
+                    survivingShips[key] = count - losses;
+                    if (losses > 0) {
+                        state.stats.totalShipsLost += losses;
+                        const def = shipDefinitions[key];
+                        totalMetalLost += losses * def.cost.metal;
+                        totalCrystalLost += losses * def.cost.crystal;
+                        totalDeuteriumLost += losses * def.cost.deuterium;
+                    }
+                }
+                
+                const destroyedList = Object.entries(destroyedShips)
+                    .filter(([_, count]) => count > 0)
+                    .map(([key, count]) => `${count}x ${shipDefinitions[key].icon}${shipDefinitions[key].name}`)
+                    .join(', ');
+                
+                if (destroyedList) {
+                    reportLines.push(`<span class="loss">💥 Deine Verluste:</span> ${destroyedList}`);
+                } else {
+                    reportLines.push(`<span class="gain">✨ Keine eigenen Verluste!</span>`);
+                }
+                
+                // Piratenverluste berechnen
+                const pirateLossFactor = powerRatio * 0.6;
+                const destroyedPirates = {};
+                
+                for (const [pirateName, pirateCount] of Object.entries(pirateFleet)) {
+                    const losses = Math.floor(pirateCount * pirateLossFactor * (0.6 + Math.random() * 0.8));
+                    if (losses > 0) {
+                        destroyedPirates[pirateName] = losses;
+                        totalPirateShipsDestroyed += losses;
+                        const pirateDef = pirateShipTypes.find(p => p.name === pirateName);
+                        if (pirateDef) {
+                            pirateResourcesGained += losses * pirateDef.baseCost;
+                        }
+                    }
+                }
+                
+                state.stats.totalPirateShipsDestroyed += totalPirateShipsDestroyed;
+                
+                const pirateDestroyedList = Object.entries(destroyedPirates)
+                    .map(([name, count]) => `${count}x ${name}`)
+                    .join(', ');
+                
+                if (pirateDestroyedList) {
+                    reportLines.push(`<span class="pirate">💀 Piraten-Verluste:</span> ${pirateDestroyedList} (${totalPirateShipsDestroyed} Schiffe zerstört)`);
+                }
+                
+                reportLines.push(`<span class="pirate">☠️ Ursprüngliche Piraten-Flotte:</span> ${Object.entries(pirateFleet).map(([n,c]) => `${c}x ${n}`).join(', ')}`);
+                
+                // Bergung (60% der zerstörten Werte)
+                const ownSalvage = Math.floor((totalMetalLost + totalCrystalLost + totalDeuteriumLost) * 0.6 / 3);
+                const pirateSalvage = Math.floor(pirateResourcesGained * 0.6 / 3);
+                const totalSalvage = ownSalvage + pirateSalvage;
+                
+                if (totalSalvage > 0) {
+                    totalMetalGain += totalSalvage;
+                    totalCrystalGain += totalSalvage;
+                    totalDeuteriumGain += totalSalvage;
+                    reportLines.push(`<span class="gain">🔧 Bergung (60% der Zerstörungen): +${totalSalvage.toLocaleString()} Metall, +${totalSalvage.toLocaleString()} Kristall, +${totalSalvage.toLocaleString()} Deuterium</span>`);
+                    reportLines.push(`<span class="info">   ↳ Eigene Schiffe: ${ownSalvage.toLocaleString()} | Piraten: ${pirateSalvage.toLocaleString()} pro Ressource</span>`);
+                }
             }
-            if (!fr && !hc) rl.push('<span>🔭 Nichts gefunden - Sektor war leer.</span>');
             
-            state.resources.metal += tmg; state.resources.crystal += tcg; state.resources.deuterium += tdg;
-            for (const [key, cnt] of Object.entries(sv)) state.ships[key].count += cnt;
-            const tsl = Object.values(ds).reduce((a, b) => a + b, 0);
-            state.history.unshift({ time: new Date().toLocaleString(), slot: si+1, report: rl.join('<br>'), metalGain: tmg, crystalGain: tcg, deuteriumGain: tdg, shipsLost: tsl, pirateShipsDestroyed: tpsd, wasOffline: isOffline });
+            // Nichts gefunden (10% Chance)
+            if (eventType === 'nothing') {
+                reportLines.push('<span>🔭 Nichts gefunden - der Sektor war leer.</span>');
+            }
+            
+            // Ressourcen hinzufügen und Schiffe zurückgeben
+            state.resources.metal += totalMetalGain;
+            state.resources.crystal += totalCrystalGain;
+            state.resources.deuterium += totalDeuteriumGain;
+            
+            for (const [key, count] of Object.entries(survivingShips)) {
+                state.ships[key].count += count;
+            }
+            
+            const totalShipsLost = Object.values(destroyedShips).reduce((a, b) => a + b, 0);
+            
+            state.history.unshift({
+                time: new Date().toLocaleString(),
+                slot: si + 1,
+                report: reportLines.join('<br>'),
+                metalGain: totalMetalGain,
+                crystalGain: totalCrystalGain,
+                deuteriumGain: totalDeuteriumGain,
+                shipsLost: totalShipsLost,
+                pirateShipsDestroyed: totalPirateShipsDestroyed || 0,
+                wasOffline: isOffline
+            });
+            
             if (state.history.length > 10) state.history.pop();
-            exp.active = false; exp.selectedShips = { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 };
-            exp.phase = null; exp.startTime = null; exp.returnTime = null;
+            
+            exp.active = false;
+            exp.selectedShips = { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 };
+            exp.phase = null;
+            exp.startTime = null;
+            exp.returnTime = null;
+            
             if (!isOffline) playExpeditionCompleteSound();
             updateDisplay();
         }
@@ -643,25 +815,46 @@
             document.getElementById('statsGrid').innerHTML = `
                 <div class="stat-item"><div class="stat-value">${state.stats.totalExpeditions}</div><div class="stat-label">Expeditionen</div></div>
                 <div class="stat-item"><div class="stat-value">${state.stats.totalCombats}</div><div class="stat-label">Kämpfe</div></div>
-                <div class="stat-item"><div class="stat-value">${(state.stats.totalMetalFound+state.stats.totalCrystalFound+state.stats.totalDeuteriumFound).toLocaleString()}</div><div class="stat-label">Ress. gefunden</div></div>
+                <div class="stat-item"><div class="stat-value">${(state.stats.totalMetalFound + state.stats.totalCrystalFound + state.stats.totalDeuteriumFound).toLocaleString()}</div><div class="stat-label">Ress. gefunden</div></div>
                 <div class="stat-item"><div class="stat-value">${state.stats.totalShipsBuilt}</div><div class="stat-label">Schiffe gebaut</div></div>
                 <div class="stat-item"><div class="stat-value" style="color:#ff4444;">${state.stats.totalShipsLost}</div><div class="stat-label">Schiffe verloren</div></div>
-                <div class="stat-item"><div class="stat-value" style="color:#ff8800;">${state.stats.totalPirateShipsDestroyed||0}</div><div class="stat-label">Piraten zerstört</div></div>
-                <div class="stat-item"><div class="stat-value">🏭${1+(state.upgrades.shipyard||0)} ⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrades</div></div>`;
+                <div class="stat-item"><div class="stat-value" style="color:#ff8800;">${state.stats.totalPirateShipsDestroyed || 0}</div><div class="stat-label">Piraten zerstört</div></div>
+                <div class="stat-item"><div class="stat-value">🏭${1 + (state.upgrades.shipyard || 0)} ⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrades</div></div>`;
         }
 
         function renderHistory() {
             const list = document.getElementById('historyList');
-            if (state.history.length === 0) { list.innerHTML = '<div style="text-align:center;color:#666;">Keine Expeditionen</div>'; return; }
-            list.innerHTML = state.history.map(e => `<div class="history-item"><div style="color:#00b4ff;">${e.time} - Flotte ${e.slot}${e.wasOffline?' <span style="color:#ffaa00;">(Offline)</span>':''}</div>${e.report}<div style="margin-top:5px;font-size:0.9em;"><span class="gain">+${e.metalGain.toLocaleString()} Metall</span> | <span class="gain">+${e.crystalGain.toLocaleString()} Kristall</span> | <span class="gain">+${e.deuteriumGain.toLocaleString()} Deuterium</span>${e.shipsLost>0?` | <span class="loss">-${e.shipsLost} Schiffe</span>`:''}${e.pirateShipsDestroyed>0?` | <span class="pirate">☠️ -${e.pirateShipsDestroyed} Piraten</span>`:''}</div></div>`).join('');
+            if (state.history.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:#666;">Keine Expeditionen</div>';
+                return;
+            }
+            list.innerHTML = state.history.map(e => `
+                <div class="history-item">
+                    <div style="color:#00b4ff;">${e.time} - Flotte ${e.slot}${e.wasOffline ? ' <span style="color:#ffaa00;">(Offline)</span>' : ''}</div>
+                    ${e.report}
+                    <div style="margin-top:5px;font-size:0.9em;">
+                        <span class="gain">+${e.metalGain.toLocaleString()} Metall</span> |
+                        <span class="gain">+${e.crystalGain.toLocaleString()} Kristall</span> |
+                        <span class="gain">+${e.deuteriumGain.toLocaleString()} Deuterium</span>
+                        ${e.shipsLost > 0 ? ` | <span class="loss">-${e.shipsLost} Schiffe</span>` : ''}
+                        ${e.pirateShipsDestroyed > 0 ? ` | <span class="pirate">☠️ -${e.pirateShipsDestroyed} Piraten</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
         }
 
         function createStars() {
             const sc = document.getElementById('stars');
             for (let i = 0; i < 200; i++) {
-                const star = document.createElement('div'); star.className = 'star';
-                const s = Math.random() * 3 + 1;
-                star.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--duration:${Math.random()*3+2}s;--delay:${Math.random()*5}s`;
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+                star.style.setProperty('--delay', Math.random() * 5 + 's');
                 sc.appendChild(star);
             }
         }
