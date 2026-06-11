@@ -707,13 +707,11 @@
     </div>
 
     <script>
-        // Sound Engine
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
         let soundEnabled = true;
 
         function initAudio() { if (!audioCtx) audioCtx = new AudioContext(); }
-
         function playSound(frequency, duration, type = 'sine', volume = 0.3) {
             if (!soundEnabled) return;
             try {
@@ -730,7 +728,6 @@
                 oscillator.stop(audioCtx.currentTime + duration);
             } catch (e) {}
         }
-
         function playBuildSound() { playSound(800, 0.2, 'square', 0.1); }
         function playExpeditionStartSound() {
             playSound(300, 0.5, 'sine', 0.2);
@@ -747,7 +744,6 @@
             setTimeout(() => playSound(80, 0.3, 'sawtooth', 0.15), 200);
             setTimeout(() => playSound(120, 0.2, 'sawtooth', 0.15), 400);
         }
-
         function toggleSound() {
             soundEnabled = !soundEnabled;
             document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
@@ -773,22 +769,13 @@
             buildQueue: [],
             activeBuildTypes: [],
             expeditions: [
-                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0,
-                        schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
-                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0,
-                        schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
-                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0,
-                        schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } }
+                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
+                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } },
+                { active: false, startTime: null, returnTime: null, phase: null, selectedShips: { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 } }
             ],
             stats: {
-                totalExpeditions: 0,
-                totalMetalFound: 0,
-                totalCrystalFound: 0,
-                totalDeuteriumFound: 0,
-                totalShipsBuilt: 0,
-                totalShipsLost: 0,
-                totalPirateShipsDestroyed: 0,
-                totalCombats: 0
+                totalExpeditions: 0, totalMetalFound: 0, totalCrystalFound: 0, totalDeuteriumFound: 0,
+                totalShipsBuilt: 0, totalShipsLost: 0, totalPirateShipsDestroyed: 0, totalCombats: 0
             },
             history: [],
             lastSaveTime: Date.now()
@@ -808,9 +795,7 @@
                     if (!loaded.activeBuildTypes) loaded.activeBuildTypes = [];
                     return loaded;
                 }
-            } catch (e) {
-                console.error('Fehler beim Laden:', e);
-            }
+            } catch (e) { console.error('Fehler beim Laden:', e); }
             return JSON.parse(JSON.stringify(DEFAULT_STATE));
         }
 
@@ -833,9 +818,7 @@
                 saveData.soundEnabled = soundEnabled;
                 localStorage.setItem('ogameExpeditionState', JSON.stringify(saveData));
                 showSaveIndicator();
-            } catch (e) {
-                console.error('Fehler beim Speichern:', e);
-            }
+            } catch (e) { console.error('Fehler beim Speichern:', e); }
         }
 
         function showSaveIndicator() {
@@ -853,114 +836,52 @@
         }
 
         const shipDefinitions = {
-            großerTransporter: {
-                name: 'Großer Transporter',
-                icon: '🚛',
-                capacity: 250000,
-                baseWeapons: 50,
-                baseShields: 100,
-                baseArmor: 200,
-                cost: { metal: 60000, crystal: 30000, deuterium: 15000 },
-                buildTime: 5
-            },
-            schlachtkreuzer: {
-                name: 'Schlachtkreuzer',
-                icon: '🛡️',
-                capacity: 0,
-                baseWeapons: 700,
-                baseShields: 400,
-                baseArmor: 700,
-                cost: { metal: 30000, crystal: 40000, deuterium: 15000 },
-                buildTime: 60
-            },
-            zerstörer: {
-                name: 'Zerstörer',
-                icon: '💥',
-                capacity: 0,
-                baseWeapons: 1000,
-                baseShields: 500,
-                baseArmor: 1000,
-                cost: { metal: 60000, crystal: 50000, deuterium: 15000 },
-                buildTime: 120
-            },
-            schwererJäger: {
-                name: 'Schwerer Jäger',
-                icon: '✈️',
-                capacity: 0,
-                baseWeapons: 150,
-                baseShields: 75,
-                baseArmor: 100,
-                cost: { metal: 10000, crystal: 6000, deuterium: 2000 },
-                buildTime: 10
-            }
+            großerTransporter: { name: 'Großer Transporter', icon: '🚛', capacity: 250000, baseWeapons: 50, baseShields: 100, baseArmor: 200, cost: { metal: 60000, crystal: 30000, deuterium: 15000 }, buildTime: 5 },
+            schlachtkreuzer: { name: 'Schlachtkreuzer', icon: '🛡️', capacity: 0, baseWeapons: 700, baseShields: 400, baseArmor: 700, cost: { metal: 30000, crystal: 40000, deuterium: 15000 }, buildTime: 60 },
+            zerstörer: { name: 'Zerstörer', icon: '💥', capacity: 0, baseWeapons: 1000, baseShields: 500, baseArmor: 1000, cost: { metal: 60000, crystal: 50000, deuterium: 15000 }, buildTime: 120 },
+            schwererJäger: { name: 'Schwerer Jäger', icon: '✈️', capacity: 0, baseWeapons: 150, baseShields: 75, baseArmor: 100, cost: { metal: 10000, crystal: 6000, deuterium: 2000 }, buildTime: 10 }
         };
 
-        function getMaxParallelBuilds() {
-            return 1 + (state.upgrades.shipyard || 0);
-        }
-
+        function getMaxParallelBuilds() { return 1 + (state.upgrades.shipyard || 0); }
         function getUpgradedStats(shipType) {
             const def = shipDefinitions[shipType];
-            const weaponBonus = 1 + (state.upgrades.weapons * 0.1);
-            const shieldBonus = 1 + (state.upgrades.shields * 0.1);
-            const armorBonus = 1 + (state.upgrades.armor * 0.1);
-            return {
-                weapons: Math.floor(def.baseWeapons * weaponBonus),
-                shields: Math.floor(def.baseShields * shieldBonus),
-                armor: Math.floor(def.baseArmor * armorBonus)
-            };
+            const wb = 1 + (state.upgrades.weapons * 0.1);
+            const sb = 1 + (state.upgrades.shields * 0.1);
+            const ab = 1 + (state.upgrades.armor * 0.1);
+            return { weapons: Math.floor(def.baseWeapons * wb), shields: Math.floor(def.baseShields * sb), armor: Math.floor(def.baseArmor * ab) };
         }
-
         function getUpgradeCost(type) {
             const level = state.upgrades[type];
-            let baseCost = { metal: 500000, crystal: 250000, deuterium: 100000 };
-            if (type === 'shipyard') {
-                baseCost = { metal: 2000000, crystal: 1000000, deuterium: 500000 };
-            }
-            const multiplier = Math.pow(2, level);
-            return {
-                metal: Math.floor(baseCost.metal * multiplier),
-                crystal: Math.floor(baseCost.crystal * multiplier),
-                deuterium: Math.floor(baseCost.deuterium * multiplier)
-            };
+            let bc = { metal: 500000, crystal: 250000, deuterium: 100000 };
+            if (type === 'shipyard') bc = { metal: 2000000, crystal: 1000000, deuterium: 500000 };
+            const m = Math.pow(2, level);
+            return { metal: Math.floor(bc.metal * m), crystal: Math.floor(bc.crystal * m), deuterium: Math.floor(bc.deuterium * m) };
         }
-
-        function getMaxShipyardLevel() {
-            return 3;
-        }
+        function getMaxShipyardLevel() { return 3; }
 
         function processOfflineProgress() {
             const now = Date.now();
             const timeDiff = now - state.lastSaveTime;
             if (timeDiff < 1000) return;
-
             while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now) {
                 const completed = state.buildQueue.shift();
                 state.ships[completed.shipType].count++;
                 const stillBuilding = state.buildQueue.some(q => q.shipType === completed.shipType);
-                if (!stillBuilding) {
-                    state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== completed.shipType);
-                }
+                if (!stillBuilding) state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== completed.shipType);
             }
-
             let expeditionsCompleted = 0;
             for (let i = 0; i < state.expeditions.length; i++) {
-                const exp = state.expeditions[i];
-                if (exp.active && exp.returnTime && exp.returnTime <= now) {
+                if (state.expeditions[i].active && state.expeditions[i].returnTime && state.expeditions[i].returnTime <= now) {
                     completeSlotExpedition(i, true);
                     expeditionsCompleted++;
                 }
             }
-
             if (expeditionsCompleted > 0) {
                 const minutes = Math.floor(timeDiff / 60000);
                 const hours = Math.floor(minutes / 60);
-                const timeStr = hours > 0 ?
-                    `${hours}h ${minutes % 60}min` :
-                    `${minutes}min ${Math.floor((timeDiff % 60000) / 1000)}s`;
+                const timeStr = hours > 0 ? `${hours}h ${minutes % 60}min` : `${minutes}min ${Math.floor((timeDiff % 60000) / 1000)}s`;
                 showOfflineIndicator(`✅ ${timeStr} Offline: ${expeditionsCompleted} Expedition(en) abgeschlossen`);
             }
-
             state.lastSaveTime = now;
             saveGameState();
         }
@@ -986,9 +907,7 @@
         }
 
         function canAffordMultiple(cost, count) {
-            return state.resources.metal >= cost.metal * count &&
-                state.resources.crystal >= cost.crystal * count &&
-                state.resources.deuterium >= cost.deuterium * count;
+            return state.resources.metal >= cost.metal * count && state.resources.crystal >= cost.crystal * count && state.resources.deuterium >= cost.deuterium * count;
         }
 
         function deductResources(cost, count = 1) {
@@ -1002,39 +921,31 @@
             const input = document.getElementById(`build_${shipType}`);
             const count = parseInt(input.value) || 0;
             if (count <= 0) { alert('Bitte gib eine gültige Anzahl ein (mindestens 1)!'); return; }
-            const def = shipDefinitions[shipType];
-            if (state.expeditions.some(e => e.active)) {
-                alert('Während Expeditionen können keine Schiffe gebaut werden!');
-                return;
-            }
+            if (state.expeditions.some(e => e.active)) { alert('Während Expeditionen können keine Schiffe gebaut werden!'); return; }
             const maxParallel = getMaxParallelBuilds();
             const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
             if (currentBuildTypes.length >= maxParallel && !currentBuildTypes.includes(shipType)) {
                 alert(`Maximal ${maxParallel} Schiffstypen gleichzeitig! Werfte-Upgrade erhöht die Anzahl.`);
                 return;
             }
-            if (!canAffordMultiple(def.cost, count)) {
+            if (!canAffordMultiple(shipDefinitions[shipType].cost, count)) {
                 alert('Nicht genügend Ressourcen für ' + count + ' Schiffe!');
                 return;
             }
-            deductResources(def.cost, count);
+            deductResources(shipDefinitions[shipType].cost, count);
             state.stats.totalShipsBuilt += count;
             playBuildSound();
             const now = Date.now();
-            const lastEndTime = state.buildQueue.length > 0 ?
-                state.buildQueue[state.buildQueue.length - 1].endTime : now;
+            const lastEndTime = state.buildQueue.length > 0 ? state.buildQueue[state.buildQueue.length - 1].endTime : now;
             for (let i = 0; i < count; i++) {
-                const startTime = lastEndTime + (i * def.buildTime * 1000);
                 state.buildQueue.push({
                     shipType: shipType,
-                    startTime: startTime,
-                    duration: def.buildTime * 1000,
-                    endTime: startTime + def.buildTime * 1000
+                    startTime: lastEndTime + (i * shipDefinitions[shipType].buildTime * 1000),
+                    duration: shipDefinitions[shipType].buildTime * 1000,
+                    endTime: lastEndTime + (i * shipDefinitions[shipType].buildTime * 1000) + shipDefinitions[shipType].buildTime * 1000
                 });
             }
-            if (!state.activeBuildTypes.includes(shipType)) {
-                state.activeBuildTypes.push(shipType);
-            }
+            if (!state.activeBuildTypes.includes(shipType)) state.activeBuildTypes.push(shipType);
             input.value = 1;
             updateDisplay();
             scheduleQueueCheck();
@@ -1042,9 +953,7 @@
 
         function scheduleQueueCheck() {
             if (state.buildQueue.length === 0) return;
-            const now = Date.now();
-            const nextEndTime = state.buildQueue[0].endTime;
-            const delay = Math.max(0, nextEndTime - now);
+            const delay = Math.max(0, state.buildQueue[0].endTime - Date.now());
             setTimeout(() => {
                 processOfflineProgress();
                 if (state.buildQueue.length > 0) {
@@ -1052,8 +961,7 @@
                     while (state.buildQueue.length > 0 && state.buildQueue[0].endTime <= now2) {
                         const completed = state.buildQueue.shift();
                         state.ships[completed.shipType].count++;
-                        const stillBuilding = state.buildQueue.some(q => q.shipType === completed.shipType);
-                        if (!stillBuilding) {
+                        if (!state.buildQueue.some(q => q.shipType === completed.shipType)) {
                             state.activeBuildTypes = state.activeBuildTypes.filter(t => t !== completed.shipType);
                         }
                     }
@@ -1069,10 +977,7 @@
                 return;
             }
             const cost = getUpgradeCost(type);
-            if (!canAffordMultiple(cost, 1)) {
-                alert('Nicht genügend Ressourcen für das Upgrade!');
-                return;
-            }
+            if (!canAffordMultiple(cost, 1)) { alert('Nicht genügend Ressourcen!'); return; }
             deductResources(cost, 1);
             state.upgrades[type]++;
             playBuildSound();
@@ -1094,32 +999,18 @@
                 const isMaxed = upg.type === 'shipyard' && level >= upg.max;
                 const item = document.createElement('div');
                 item.className = 'upgrade-item';
-                item.innerHTML = `
-                    <div class="upgrade-info">
-                        <div class="upgrade-name">${upg.icon} ${upg.name}</div>
-                        <div class="upgrade-level">Level ${level}${upg.max < 99 ? ` (max. ${upg.max})` : ''} - ${upg.desc}</div>
-                        <div class="upgrade-cost">🟤${cost.metal.toLocaleString()} 🟢${cost.crystal.toLocaleString()} 🟣${cost.deuterium.toLocaleString()}</div>
-                    </div>
-                    <button class="upgrade-btn" onclick="upgradeType('${upg.type}')" ${(!canAffordMultiple(cost, 1) || isMaxed) ? 'disabled' : ''}>
-                        ${isMaxed ? 'MAX' : 'Upgrade'}
-                    </button>
-                `;
+                item.innerHTML = `<div class="upgrade-info"><div class="upgrade-name">${upg.icon} ${upg.name}</div><div class="upgrade-level">Level ${level}${upg.max < 99 ? ` (max. ${upg.max})` : ''} - ${upg.desc}</div><div class="upgrade-cost">🟤${cost.metal.toLocaleString()} 🟢${cost.crystal.toLocaleString()} 🟣${cost.deuterium.toLocaleString()}</div></div><button class="upgrade-btn" onclick="upgradeType('${upg.type}')" ${(!canAffordMultiple(cost, 1) || isMaxed) ? 'disabled' : ''}>${isMaxed ? 'MAX' : 'Upgrade'}</button>`;
                 grid.appendChild(item);
             });
         }
 
         function renderShipBuildCards() {
             const grid = document.getElementById('shipBuildGrid');
-            
-            // Prüfe ob Karten bereits existieren
             if (grid.children.length === Object.keys(shipDefinitions).length) {
-                // Nur Anzeigewerte aktualisieren, keine Inputs!
                 const shipKeys = Object.keys(shipDefinitions);
                 const cards = grid.querySelectorAll('.ship-card');
-                
                 shipKeys.forEach((key, index) => {
                     const def = shipDefinitions[key];
-                    const shipState = state.ships[key];
                     const stats = getUpgradedStats(key);
                     const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
                     const isBuilding = inQueue > 0;
@@ -1127,260 +1018,164 @@
                     const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
                     const canBuildMore = currentBuildTypes.length < maxParallel;
                     const isBlocked = !isBuilding && !canBuildMore && currentBuildTypes.length >= maxParallel;
-                    
                     if (cards[index]) {
                         const card = cards[index];
                         card.className = 'ship-card' + (isBuilding ? ' building' : '') + (isBlocked ? ' build-blocked' : '');
-                        
                         const countBadge = card.querySelector('.count-badge');
                         const buildingProgress = card.querySelector('.building-progress');
                         const buildInput = card.querySelector('.build-input');
                         const buildBtn = card.querySelector('.build-btn');
-                        const blockedDiv = card.querySelector('div[style]');
-                        
-                        if (countBadge) countBadge.textContent = shipState.count;
+                        if (countBadge) countBadge.textContent = state.ships[key].count;
                         if (buildingProgress) {
-                            if (isBuilding) {
-                                buildingProgress.textContent = ` (${inQueue} in Bau)`;
-                                buildingProgress.style.display = '';
-                            } else {
-                                buildingProgress.style.display = 'none';
-                            }
+                            if (isBuilding) { buildingProgress.textContent = ` (${inQueue} in Bau)`; buildingProgress.style.display = ''; }
+                            else { buildingProgress.style.display = 'none'; }
                         }
-                        
-                        // Aktualisiere Stats
                         const statsSpans = card.querySelectorAll('.ship-stats span');
                         if (statsSpans.length >= 4) {
                             statsSpans[0].textContent = `⚔️ ${stats.weapons}`;
                             statsSpans[1].textContent = `🛡️ ${stats.shields}`;
                             statsSpans[2].textContent = `❤️ ${stats.armor}`;
                         }
-                        
-                        // Aktualisiere Blocked-Status
                         if (buildInput) buildInput.disabled = isBlocked;
                         if (buildBtn) buildBtn.disabled = isBlocked;
-                        
-                        // Entferne alte Blocked-Meldung
                         const oldBlocked = card.querySelector('div[style*="color:#ff6600"]');
                         if (oldBlocked) oldBlocked.remove();
-                        
-                        // Füge neue Blocked-Meldung hinzu
                         if (isBlocked) {
-                            const blockedMsg = document.createElement('div');
-                            blockedMsg.style.cssText = 'color:#ff6600;font-size:0.7em;';
-                            blockedMsg.textContent = '🚫 Werft ausgelastet';
-                            card.querySelector('.ship-info').appendChild(blockedMsg);
+                            const bm = document.createElement('div');
+                            bm.style.cssText = 'color:#ff6600;font-size:0.7em;';
+                            bm.textContent = '🚫 Werft ausgelastet';
+                            card.querySelector('.ship-info').appendChild(bm);
                         }
                     }
                 });
             } else {
-                // Erstes Rendering: Komplett neu aufbauen
                 grid.innerHTML = '';
                 const maxParallel = getMaxParallelBuilds();
                 const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
                 const canBuildMore = currentBuildTypes.length < maxParallel;
-
                 for (const [key, def] of Object.entries(shipDefinitions)) {
-                    const shipState = state.ships[key];
                     const stats = getUpgradedStats(key);
                     const inQueue = state.buildQueue.filter(q => q.shipType === key).length;
                     const isBuilding = inQueue > 0;
                     const isBlocked = !isBuilding && !canBuildMore && currentBuildTypes.length >= maxParallel;
-
                     const card = document.createElement('div');
                     card.className = 'ship-card' + (isBuilding ? ' building' : '') + (isBlocked ? ' build-blocked' : '');
                     card.setAttribute('data-ship-type', key);
-                    card.innerHTML = `
-                        <div class="ship-icon-large">${def.icon}</div>
-                        <div class="ship-info">
-                            <div class="ship-name">${def.name} <span class="count-badge">${shipState.count}</span><span class="building-progress" style="${isBuilding ? '' : 'display:none'}"> (${inQueue} in Bau)</span></div>
-                            <div class="ship-stats"><span>⚔️ ${stats.weapons}</span><span>🛡️ ${stats.shields}</span><span>❤️ ${stats.armor}</span>${def.capacity > 0 ? `<span>📦 ${def.capacity.toLocaleString()}</span>` : ''}<span>⏱️ ${def.buildTime}s</span></div>
-                            <div class="ship-cost">🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}</div>
-                            ${isBlocked ? '<div style="color:#ff6600;font-size:0.7em;">🚫 Werft ausgelastet</div>' : ''}
-                        </div>
-                        <div class="ship-build-controls">
-                            <input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1" ${isBlocked ? 'disabled' : ''}>
-                            <button class="build-btn" onclick="buildShips('${key}')" ${isBlocked ? 'disabled' : ''}>Bauen</button>
-                        </div>
-                    `;
+                    card.innerHTML = `<div class="ship-icon-large">${def.icon}</div><div class="ship-info"><div class="ship-name">${def.name} <span class="count-badge">${state.ships[key].count}</span><span class="building-progress" style="${isBuilding ? '' : 'display:none'}"> (${inQueue} in Bau)</span></div><div class="ship-stats"><span>⚔️ ${stats.weapons}</span><span>🛡️ ${stats.shields}</span><span>❤️ ${stats.armor}</span>${def.capacity > 0 ? `<span>📦 ${def.capacity.toLocaleString()}</span>` : ''}<span>⏱️ ${def.buildTime}s</span></div><div class="ship-cost">🟤${def.cost.metal.toLocaleString()} 🟢${def.cost.crystal.toLocaleString()} 🟣${def.cost.deuterium.toLocaleString()}</div>${isBlocked ? '<div style="color:#ff6600;font-size:0.7em;">🚫 Werft ausgelastet</div>' : ''}</div><div class="ship-build-controls"><input type="number" id="build_${key}" class="build-input" min="1" max="100" value="1" ${isBlocked ? 'disabled' : ''}><button class="build-btn" onclick="buildShips('${key}')" ${isBlocked ? 'disabled' : ''}>Bauen</button></div>`;
                     grid.appendChild(card);
                 }
             }
-
-            // Update Panel-Titel
             const maxParallel = getMaxParallelBuilds();
             const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
             const titleEl = document.getElementById('shipBuildTitle');
-            if (titleEl) {
-                const span = titleEl.querySelector('span');
-                if (span) span.textContent = `(Parallel: ${currentBuildTypes.length}/${maxParallel} Typen)`;
-            }
+            if (titleEl) { const span = titleEl.querySelector('span'); if (span) span.textContent = `(Parallel: ${currentBuildTypes.length}/${maxParallel} Typen)`; }
         }
 
         function renderBuildQueue() {
             const queueDiv = document.getElementById('buildQueue');
             const queueItems = document.getElementById('queueItems');
-            if (state.buildQueue.length === 0) {
-                queueDiv.classList.remove('active');
-                return;
-            }
+            if (state.buildQueue.length === 0) { queueDiv.classList.remove('active'); return; }
             queueDiv.classList.add('active');
             const maxParallel = getMaxParallelBuilds();
             const currentBuildTypes = [...new Set(state.buildQueue.map(q => q.shipType))];
-            let queueHTML = '';
-            if (currentBuildTypes.length > 1) {
-                queueHTML += `<div class="queue-parallel-info">⚡ ${currentBuildTypes.length}/${maxParallel} Schiffstypen in Parallel-Bau</div>`;
-            }
+            let qh = '';
+            if (currentBuildTypes.length > 1) qh += `<div class="queue-parallel-info">⚡ ${currentBuildTypes.length}/${maxParallel} Schiffstypen in Parallel-Bau</div>`;
             const now = Date.now();
-            const displayQueue = state.buildQueue.slice(0, 5);
-            queueHTML += displayQueue.map((item, index) => {
+            qh += state.buildQueue.slice(0, 5).map((item, i) => {
                 const def = shipDefinitions[item.shipType];
-                const remaining = Math.max(0, item.endTime - now);
-                const seconds = Math.ceil(remaining / 1000);
-                return `<div class="queue-item"><span>${index + 1}. ${def.icon} ${def.name}</span><span>${seconds > 0 ? seconds + 's' : 'Fertig!'}</span></div>`;
+                const s = Math.ceil(Math.max(0, item.endTime - now) / 1000);
+                return `<div class="queue-item"><span>${i + 1}. ${def.icon} ${def.name}</span><span>${s > 0 ? s + 's' : 'Fertig!'}</span></div>`;
             }).join('');
-            if (state.buildQueue.length > 5) queueHTML += `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
-            
-            // NUR die Queue aktualisieren!
-            queueItems.innerHTML = queueHTML;
-            
-            if (state.buildQueue.length > 0) {
-                setTimeout(() => { if (state.buildQueue.length > 0) renderBuildQueue(); }, 1000);
-            }
+            if (state.buildQueue.length > 5) qh += `<div class="queue-item">... und ${state.buildQueue.length - 5} weitere</div>`;
+            queueItems.innerHTML = qh;
+            if (state.buildQueue.length > 0) setTimeout(() => { if (state.buildQueue.length > 0) renderBuildQueue(); }, 1000);
         }
 
         function renderFleetSlots() {
             const slots = document.getElementById('fleetSlots');
-            
-            // Prüfe ob Slots bereits existieren
             if (slots.children.length === 3) {
-                // Nur Timer und aktive Slots aktualisieren
-                for (let index = 0; index < 3; index++) {
-                    const exp = state.expeditions[index];
-                    const slot = slots.children[index];
-                    
+                for (let i = 0; i < 3; i++) {
+                    const exp = state.expeditions[i];
+                    const slot = slots.children[i];
                     if (exp.active && !slot.classList.contains('active')) {
-                        // Slot wurde aktiv - neu rendern
                         slot.className = 'fleet-slot active';
-                        const remaining = exp.returnTime - Date.now();
-                        const minutes = Math.floor(Math.max(0, remaining) / 60000);
-                        const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
-                        const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
-                        const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
-                        slot.innerHTML = `
-                            <div class="fleet-slot-title">🚀 Flotte ${index + 1} - ${phaseNames[exp.phase]}</div>
-                            <div class="fleet-timer">⏳ ${minutes}:${seconds.toString().padStart(2, '0')}</div>
-                            <div style="font-size:0.8em;color:#999;">${shipList || 'Keine Schiffe'}</div>
-                        `;
+                        const rem = exp.returnTime - Date.now();
+                        const min = Math.floor(Math.max(0, rem) / 60000);
+                        const sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                        const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                        const sl = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i + 1} - ${pn[exp.phase]}</div><div class="fleet-timer">⏳ ${min}:${sec.toString().padStart(2, '0')}</div><div style="font-size:0.8em;color:#999;">${sl || 'Keine Schiffe'}</div>`;
                     } else if (!exp.active && slot.classList.contains('active')) {
-                        // Slot wurde inaktiv - neu rendern mit Selektor
                         slot.className = 'fleet-slot';
-                        slot.innerHTML = `
-                            <div class="fleet-slot-title">🚀 Flotte ${index + 1}</div>
-                            <div class="ship-selector-mini" id="slotSelector${index}"></div>
-                            <div class="fleet-timer">Bereit</div>
-                            <button class="btn-small" onclick="startSlotExpedition(${index})">Starten</button>
-                        `;
-                        fillSlotSelector(index);
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i + 1}</div><div class="ship-selector-mini" id="slotSelector${i}"></div><div class="fleet-timer">Bereit</div><button class="btn-small" onclick="startSlotExpedition(${i})">Starten</button>`;
+                        fillSlotSelector(i);
                     } else if (exp.active && slot.classList.contains('active')) {
-                        // Aktiven Slot updaten (nur Timer)
-                        const remaining = exp.returnTime - Date.now();
-                        const minutes = Math.floor(Math.max(0, remaining) / 60000);
-                        const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
-                        const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
-                        const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
-                        
-                        const titleEl = slot.querySelector('.fleet-slot-title');
-                        const timerEl = slot.querySelector('.fleet-timer');
-                        const shipsEl = slot.querySelector('div:last-child');
-                        if (titleEl) titleEl.textContent = `🚀 Flotte ${index + 1} - ${phaseNames[exp.phase]}`;
-                        if (timerEl) timerEl.textContent = `⏳ ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                        if (shipsEl) shipsEl.textContent = shipList || 'Keine Schiffe';
+                        const rem = exp.returnTime - Date.now();
+                        const min = Math.floor(Math.max(0, rem) / 60000);
+                        const sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                        const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                        const sl = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                        const tEl = slot.querySelector('.fleet-slot-title');
+                        const tiEl = slot.querySelector('.fleet-timer');
+                        const sEl = slot.querySelector('div:last-child');
+                        if (tEl) tEl.textContent = `🚀 Flotte ${i + 1} - ${pn[exp.phase]}`;
+                        if (tiEl) tiEl.textContent = `⏳ ${min}:${sec.toString().padStart(2, '0')}`;
+                        if (sEl) sEl.textContent = sl || 'Keine Schiffe';
                     }
-                    // Inaktive Slots mit Selektoren nicht anfassen!
                 }
             } else {
-                // Erstes Rendering: Alle Slots neu aufbauen
                 slots.innerHTML = '';
-                for (let index = 0; index < 3; index++) {
-                    const exp = state.expeditions[index];
+                for (let i = 0; i < 3; i++) {
+                    const exp = state.expeditions[i];
                     const slot = document.createElement('div');
                     slot.className = 'fleet-slot' + (exp.active ? ' active' : '');
-                    
                     if (exp.active) {
-                        const remaining = exp.returnTime - Date.now();
-                        const minutes = Math.floor(Math.max(0, remaining) / 60000);
-                        const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
-                        const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
-                        const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
-                        slot.innerHTML = `
-                            <div class="fleet-slot-title">🚀 Flotte ${index + 1} - ${phaseNames[exp.phase]}</div>
-                            <div class="fleet-timer">⏳ ${minutes}:${seconds.toString().padStart(2, '0')}</div>
-                            <div style="font-size:0.8em;color:#999;">${shipList || 'Keine Schiffe'}</div>
-                        `;
+                        const rem = exp.returnTime - Date.now();
+                        const min = Math.floor(Math.max(0, rem) / 60000);
+                        const sec = Math.floor((Math.max(0, rem) % 60000) / 1000);
+                        const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                        const sl = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i + 1} - ${pn[exp.phase]}</div><div class="fleet-timer">⏳ ${min}:${sec.toString().padStart(2, '0')}</div><div style="font-size:0.8em;color:#999;">${sl || 'Keine Schiffe'}</div>`;
                     } else {
-                        slot.innerHTML = `
-                            <div class="fleet-slot-title">🚀 Flotte ${index + 1}</div>
-                            <div class="ship-selector-mini" id="slotSelector${index}"></div>
-                            <div class="fleet-timer">Bereit</div>
-                            <button class="btn-small" onclick="startSlotExpedition(${index})">Starten</button>
-                        `;
+                        slot.innerHTML = `<div class="fleet-slot-title">🚀 Flotte ${i + 1}</div><div class="ship-selector-mini" id="slotSelector${i}"></div><div class="fleet-timer">Bereit</div><button class="btn-small" onclick="startSlotExpedition(${i})">Starten</button>`;
                     }
                     slots.appendChild(slot);
                 }
-                
-                // Befülle alle inaktiven Slot-Selektoren
-                for (let index = 0; index < 3; index++) {
-                    if (!state.expeditions[index].active) {
-                        fillSlotSelector(index);
-                    }
-                }
+                for (let i = 0; i < 3; i++) { if (!state.expeditions[i].active) fillSlotSelector(i); }
             }
-            
             updateSlotAvailability();
         }
 
         function fillSlotSelector(slotIndex) {
             const selectorDiv = document.getElementById(`slotSelector${slotIndex}`);
             if (!selectorDiv) return;
-            
-            // Speichere aktuelle Werte
             const savedValues = {};
             for (const key of Object.keys(shipDefinitions)) {
                 const existingInput = document.getElementById(`slot${slotIndex}_${key}`);
-                if (existingInput) {
-                    savedValues[key] = existingInput.value;
+                if (existingInput) savedValues[key] = existingInput.value;
+            }
+            const shipCounts = {};
+            for (const key of Object.keys(shipDefinitions)) shipCounts[key] = state.ships[key].count;
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) shipCounts[key] -= count;
                 }
             }
-            
-            selectorDiv.innerHTML = '';
-            
-            for (const [key, def] of Object.entries(shipDefinitions)) {
-                const shipCount = state.ships[key];
-                let availableShips = shipCount;
-                
-                // Berechne verfügbare Schiffe (andere inaktive Slots + aktive Expeditionen)
-                for (let i = 0; i < 3; i++) {
-                    if (i !== slotIndex && !state.expeditions[i].active) {
+            for (let i = 0; i < 3; i++) {
+                if (i !== slotIndex && !state.expeditions[i].active) {
+                    for (const key of Object.keys(shipDefinitions)) {
                         const otherInput = document.getElementById(`slot${i}_${key}`);
-                        if (otherInput) availableShips -= (parseInt(otherInput.value) || 0);
+                        if (otherInput) shipCounts[key] -= (parseInt(otherInput.value) || 0);
                     }
                 }
-                for (let i = 0; i < 3; i++) {
-                    if (i !== slotIndex && state.expeditions[i].active) {
-                        availableShips -= (state.expeditions[i].selectedShips[key] || 0);
-                    }
-                }
-                
-                availableShips = Math.max(0, availableShips);
+            }
+            selectorDiv.innerHTML = '';
+            for (const [key, def] of Object.entries(shipDefinitions)) {
+                const available = Math.max(0, shipCounts[key]);
                 const inputValue = savedValues[key] || '0';
-                
                 const item = document.createElement('div');
                 item.className = 'ship-select-item-mini';
-                item.innerHTML = `
-                    <span>${def.icon} ${def.name} (${availableShips} verfügbar)</span>
-                    <input type="number" id="slot${slotIndex}_${key}" min="0" max="${availableShips}" value="${inputValue}" onchange="updateSlotAvailability()">
-                `;
+                item.innerHTML = `<span>${def.icon} ${def.name} (${available} verfügbar)</span><input type="number" id="slot${slotIndex}_${key}" min="0" max="${available}" value="${inputValue}" onchange="updateSlotAvailability()">`;
                 selectorDiv.appendChild(item);
             }
         }
@@ -1388,30 +1183,15 @@
         function updateSlotAvailability() {
             const shipCounts = {};
             for (const key of Object.keys(shipDefinitions)) shipCounts[key] = state.ships[key].count;
-            
-            const selectedInSlots = {};
-            for (const key of Object.keys(shipDefinitions)) selectedInSlots[key] = 0;
-            
-            // Zähle ausgewählte Schiffe in inaktiven Slots
-            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
-                if (!state.expeditions[slotIndex].active) {
-                    for (const key of Object.keys(shipDefinitions)) {
-                        const input = document.getElementById(`slot${slotIndex}_${key}`);
-                        if (input) selectedInSlots[key] += (parseInt(input.value) || 0);
-                    }
+            const shipsInActive = {};
+            for (const key of Object.keys(shipDefinitions)) shipsInActive[key] = 0;
+            for (let i = 0; i < 3; i++) {
+                if (state.expeditions[i].active) {
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) shipsInActive[key] += count;
                 }
             }
-            
-            // Zähle Schiffe in aktiven Expeditionen
-            for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
-                if (state.expeditions[slotIndex].active) {
-                    for (const [key, count] of Object.entries(state.expeditions[slotIndex].selectedShips)) {
-                        selectedInSlots[key] += count;
-                    }
-                }
-            }
-            
-            // Aktualisiere Anzeigen
+            const availableTotal = {};
+            for (const key of Object.keys(shipDefinitions)) availableTotal[key] = Math.max(0, shipCounts[key] - shipsInActive[key]);
             for (let slotIndex = 0; slotIndex < 3; slotIndex++) {
                 if (!state.expeditions[slotIndex].active) {
                     for (const key of Object.keys(shipDefinitions)) {
@@ -1419,8 +1199,14 @@
                         const label = input?.parentElement?.querySelector('span');
                         if (input && label) {
                             const currentValue = parseInt(input.value) || 0;
-                            const usedInOtherSlots = selectedInSlots[key] - currentValue;
-                            const available = Math.max(0, shipCounts[key] - usedInOtherSlots);
+                            let selectedInOthers = 0;
+                            for (let i = 0; i < 3; i++) {
+                                if (i !== slotIndex && !state.expeditions[i].active) {
+                                    const oi = document.getElementById(`slot${i}_${key}`);
+                                    if (oi) selectedInOthers += (parseInt(oi.value) || 0);
+                                }
+                            }
+                            const available = Math.max(0, availableTotal[key] - selectedInOthers);
                             input.max = available;
                             if (currentValue > available) input.value = available;
                             label.textContent = `${shipDefinitions[key].icon} ${shipDefinitions[key].name} (${available} verfügbar)`;
@@ -1446,36 +1232,26 @@
             if (state.buildQueue.length > 0) { alert('Warte bis alle Bauaufträge abgeschlossen sind!'); return; }
             const { selected, total } = getSlotShips(slotIndex);
             if (total === 0) { alert('Wähle mindestens ein Schiff für Flotte ' + (slotIndex + 1) + '!'); return; }
-            
             const shipUsage = {};
             for (const key of Object.keys(shipDefinitions)) shipUsage[key] = 0;
-            
             for (let i = 0; i < 3; i++) {
                 if (i !== slotIndex && state.expeditions[i].active) {
-                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) {
-                        shipUsage[key] = (shipUsage[key] || 0) + count;
-                    }
+                    for (const [key, count] of Object.entries(state.expeditions[i].selectedShips)) shipUsage[key] = (shipUsage[key] || 0) + count;
                 }
             }
             for (let i = 0; i < 3; i++) {
                 if (i !== slotIndex && !state.expeditions[i].active) {
                     const otherShips = getSlotShips(i);
-                    for (const [key, count] of Object.entries(otherShips.selected)) {
-                        shipUsage[key] = (shipUsage[key] || 0) + count;
-                    }
+                    for (const [key, count] of Object.entries(otherShips.selected)) shipUsage[key] = (shipUsage[key] || 0) + count;
                 }
             }
-            
             for (const [key, count] of Object.entries(selected)) {
-                const totalNeeded = (shipUsage[key] || 0) + count;
-                if (state.ships[key].count < totalNeeded) {
-                    alert(`Nicht genügend ${shipDefinitions[key].name} verfügbar! (${state.ships[key].count} vorhanden, ${totalNeeded} benötigt)`);
+                if (state.ships[key].count < (shipUsage[key] || 0) + count) {
+                    alert(`Nicht genügend ${shipDefinitions[key].name} verfügbar! (${state.ships[key].count} vorhanden, ${(shipUsage[key] || 0) + count} benötigt)`);
                     return;
                 }
             }
-            
             for (const [key, count] of Object.entries(selected)) state.ships[key].count -= count;
-            
             const now = Date.now();
             const exp = state.expeditions[slotIndex];
             exp.active = true;
@@ -1483,7 +1259,6 @@
             exp.startTime = now;
             exp.phase = 'outbound';
             exp.returnTime = now + (10 + 30 + 10) * 60 * 1000;
-            
             playExpeditionStartSound();
             updateDisplay();
             scheduleExpeditionCheck(slotIndex);
@@ -1499,307 +1274,175 @@
             if (elapsed < 10 * 60 * 1000) exp.phase = 'outbound';
             else if (elapsed < 40 * 60 * 1000) exp.phase = 'holding';
             else exp.phase = 'return';
-            
-            // Nur Timer aktualisieren
             const slot = document.querySelectorAll('.fleet-slot')[slotIndex];
             if (slot && exp.active) {
-                const minutes = Math.floor(Math.max(0, remaining) / 60000);
-                const seconds = Math.floor((Math.max(0, remaining) % 60000) / 1000);
-                const phaseNames = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
-                const shipList = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
-                const titleEl = slot.querySelector('.fleet-slot-title');
-                const timerEl = slot.querySelector('.fleet-timer');
-                const shipsEl = slot.querySelector('div:last-child');
-                if (titleEl) titleEl.textContent = `🚀 Flotte ${slotIndex + 1} - ${phaseNames[exp.phase]}`;
-                if (timerEl) timerEl.textContent = `⏳ ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                if (shipsEl) shipsEl.textContent = shipList || 'Keine Schiffe';
+                const min = Math.floor(Math.max(0, remaining) / 60000);
+                const sec = Math.floor((Math.max(0, remaining) % 60000) / 1000);
+                const pn = { outbound: 'Hinflug', holding: 'Expedition', return: 'Rückflug' };
+                const sl = Object.entries(exp.selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ');
+                const tEl = slot.querySelector('.fleet-slot-title');
+                const tiEl = slot.querySelector('.fleet-timer');
+                const sEl = slot.querySelector('div:last-child');
+                if (tEl) tEl.textContent = `🚀 Flotte ${slotIndex + 1} - ${pn[exp.phase]}`;
+                if (tiEl) tiEl.textContent = `⏳ ${min}:${sec.toString().padStart(2, '0')}`;
+                if (sEl) sEl.textContent = sl || 'Keine Schiffe';
             }
-            
-            const checkDelay = Math.min(remaining, 1000);
-            setTimeout(() => scheduleExpeditionCheck(slotIndex), checkDelay);
+            setTimeout(() => scheduleExpeditionCheck(slotIndex), Math.min(remaining, 1000));
         }
 
         function generatePirateFleet(playerPower) {
-            const pirateFleet = {};
-            let remainingPower = playerPower;
-            let totalPirateShips = 0;
-            while (remainingPower > 1000 && totalPirateShips < 50) {
-                const shipType = pirateShipTypes[Math.floor(Math.random() * pirateShipTypes.length)];
-                const shipPower = shipType.baseCost;
-                const maxShips = Math.floor(remainingPower / shipPower);
-                const count = Math.max(1, Math.floor(Math.random() * maxShips * 0.3));
-                if (count > 0) {
-                    pirateFleet[shipType.name] = (pirateFleet[shipType.name] || 0) + count;
-                    remainingPower -= count * shipPower;
-                    totalPirateShips += count;
-                } else break;
+            const pf = {};
+            let rp = playerPower;
+            let ts = 0;
+            while (rp > 1000 && ts < 50) {
+                const st = pirateShipTypes[Math.floor(Math.random() * pirateShipTypes.length)];
+                const sp = st.baseCost;
+                const ms = Math.floor(rp / sp);
+                const c = Math.max(1, Math.floor(Math.random() * ms * 0.3));
+                if (c > 0) { pf[st.name] = (pf[st.name] || 0) + c; rp -= c * sp; ts += c; } else break;
             }
-            return pirateFleet;
+            return pf;
         }
 
         function completeSlotExpedition(slotIndex, isOffline = false) {
             const exp = state.expeditions[slotIndex];
             const { selectedShips } = exp;
             const reportLines = [];
-            let totalMetalGain = 0;
-            let totalCrystalGain = 0;
-            let totalDeuteriumGain = 0;
-            const survivingShips = {};
-            const destroyedShips = {};
-
-            for (const [key, count] of Object.entries(selectedShips)) {
-                survivingShips[key] = count;
-                destroyedShips[key] = 0;
-            }
-
+            let tmg = 0, tcg = 0, tdg = 0;
+            const survivingShips = {}, destroyedShips = {};
+            for (const [key, count] of Object.entries(selectedShips)) { survivingShips[key] = count; destroyedShips[key] = 0; }
             state.stats.totalExpeditions++;
-            const fleetList = Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
-            reportLines.push(`<strong>🚀 Flotte ${slotIndex + 1}:</strong> ${fleetList || 'Keine Schiffe'}`);
-
-            // Berechne verfügbaren Laderaum
+            const fl = Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
+            reportLines.push(`<strong>🚀 Flotte ${slotIndex + 1}:</strong> ${fl || 'Keine Schiffe'}`);
             let availableCapacity = 0;
-            for (const [key, count] of Object.entries(selectedShips)) {
-                if (shipDefinitions[key].capacity > 0) {
-                    availableCapacity += count * shipDefinitions[key].capacity;
-                }
-            }
-
-            // Ressourcenfund - begrenzt durch Laderaum
+            for (const [key, count] of Object.entries(selectedShips)) { if (shipDefinitions[key].capacity > 0) availableCapacity += count * shipDefinitions[key].capacity; }
             let foundResources = false;
             if (Math.random() < 0.5) {
                 foundResources = true;
-                const fundLevel = Math.random();
-                let fundAmount = 0;
-                let fundLabel = '';
-                if (fundLevel < 0.6) { fundAmount = 1000000;
-                    fundLabel = 'kleinen'; } else if (fundLevel < 0.9) { fundAmount = 5000000;
-                    fundLabel = 'mittleren'; } else { fundAmount = 25000000;
-                    fundLabel = 'großen'; }
-
+                const flv = Math.random();
+                let fa = 0, flb = '';
+                if (flv < 0.6) { fa = 1000000; flb = 'kleinen'; } else if (flv < 0.9) { fa = 5000000; flb = 'mittleren'; } else { fa = 25000000; flb = 'großen'; }
                 if (availableCapacity > 0) {
-                    const maxPerResource = Math.floor(availableCapacity / 3);
-                    const originalFund = fundAmount;
-                    if (fundAmount > maxPerResource) {
-                        fundAmount = maxPerResource;
-                        reportLines.push(
-                            `<span class="warning">⚠️ Laderaum begrenzt! Fund war ${originalFund.toLocaleString()}, aber nur ${availableCapacity.toLocaleString()} Kapazität (${maxPerResource.toLocaleString()} pro Ressource).</span>`);
+                    const mpr = Math.floor(availableCapacity / 3);
+                    const ofa = fa;
+                    if (fa > mpr) { fa = mpr; reportLines.push(`<span class="warning">⚠️ Laderaum begrenzt! Fund war ${ofa.toLocaleString()}, aber nur ${availableCapacity.toLocaleString()} Kapazität (${mpr.toLocaleString()} pro Ressource).</span>`); }
+                    if (fa > 0) {
+                        tmg += fa; tcg += fa; tdg += fa;
+                        state.stats.totalMetalFound += fa; state.stats.totalCrystalFound += fa; state.stats.totalDeuteriumFound += fa;
+                        reportLines.push(`<span class="gain">✅ Ressourcenfund (${flb}): +${fa.toLocaleString()} Metall, +${fa.toLocaleString()} Kristall, +${fa.toLocaleString()} Deuterium</span>`);
                     }
-                    if (fundAmount > 0) {
-                        totalMetalGain += fundAmount;
-                        totalCrystalGain += fundAmount;
-                        totalDeuteriumGain += fundAmount;
-                        state.stats.totalMetalFound += fundAmount;
-                        state.stats.totalCrystalFound += fundAmount;
-                        state.stats.totalDeuteriumFound += fundAmount;
-                        reportLines.push(
-                            `<span class="gain">✅ Ressourcenfund (${fundLabel}): +${fundAmount.toLocaleString()} Metall, +${fundAmount.toLocaleString()} Kristall, +${fundAmount.toLocaleString()} Deuterium</span>`);
-                    }
-                } else {
-                    reportLines.push(
-                        `<span class="warning">📦 Keine Transporter dabei - Ressourcenfund konnte nicht mitgenommen werden! (Laderaum: 0)</span>`);
-                }
+                } else { reportLines.push(`<span class="warning">📦 Keine Transporter dabei - Ressourcenfund konnte nicht mitgenommen werden! (Laderaum: 0)</span>`); }
             }
-
-            // Piratenkampf - Bergung unabhängig vom Laderaum
-            let hadCombat = false;
-            let pirateFleet = {};
-            let pirateResourcesDestroyed = 0;
-
+            let hadCombat = false, pirateFleet = {}, prd = 0;
             if (Math.random() < 0.5) {
                 hadCombat = true;
                 state.stats.totalCombats++;
                 if (!isOffline) playCombatSound();
-
-                let playerPower = 0;
+                let pp = 0;
+                for (const [key, count] of Object.entries(selectedShips)) { const stats = getUpgradedStats(key); pp += count * (stats.weapons + stats.shields + stats.armor); }
+                const pv = 0.5 + Math.random();
+                const ps = pv, ppw = pp * ps;
+                pirateFleet = generatePirateFleet(ppw);
+                let plb = '';
+                if (ps < 0.75) plb = 'schwache'; else if (ps < 1.25) plb = 'mittlere'; else plb = 'starke';
+                const prr = pp / (pp + ppw);
+                const lr = (1 - prr) * 0.8;
+                let tml = 0, tcl = 0, tdl = 0;
+                reportLines.push(`<span class="loss">⚔️ Piratenkampf (${plb} Piraten, ${Math.round(ps * 100)}% deiner Stärke)!</span>`);
+                reportLines.push(`<span class="info">📋 Deine Flotte:</span> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ')}`);
                 for (const [key, count] of Object.entries(selectedShips)) {
-                    const stats = getUpgradedStats(key);
-                    playerPower += count * (stats.weapons + stats.shields + stats.armor);
-                }
-
-                const pirateVariation = 0.5 + Math.random();
-                const pirateStrength = pirateVariation;
-                const piratePower = playerPower * pirateStrength;
-                pirateFleet = generatePirateFleet(piratePower);
-
-                let pirateLabel = '';
-                if (pirateStrength < 0.75) pirateLabel = 'schwache';
-                else if (pirateStrength < 1.25) pirateLabel = 'mittlere';
-                else pirateLabel = 'starke';
-
-                const powerRatio = playerPower / (playerPower + piratePower);
-                const lossRate = (1 - powerRatio) * 0.8;
-
-                let totalOwnLossesMetal = 0;
-                let totalOwnLossesCrystal = 0;
-                let totalOwnLossesDeuterium = 0;
-
-                reportLines.push(
-                    `<span class="loss">⚔️ Piratenkampf (${pirateLabel} Piraten, ${Math.round(pirateStrength * 100)}% deiner Stärke)!</span>`);
-                reportLines.push(
-                    `<span class="info">📋 Deine Flotte:</span> ${Object.entries(selectedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}`).join(' ')}`);
-
-                for (const [key, count] of Object.entries(selectedShips)) {
-                    const losses = Math.floor(count * lossRate * (0.8 + Math.random() * 0.4));
-                    destroyedShips[key] = losses;
-                    survivingShips[key] = count - losses;
+                    const losses = Math.floor(count * lr * (0.8 + Math.random() * 0.4));
+                    destroyedShips[key] = losses; survivingShips[key] = count - losses;
                     if (losses > 0) {
                         state.stats.totalShipsLost += losses;
                         const def = shipDefinitions[key];
-                        totalOwnLossesMetal += losses * def.cost.metal;
-                        totalOwnLossesCrystal += losses * def.cost.crystal;
-                        totalOwnLossesDeuterium += losses * def.cost.deuterium;
+                        tml += losses * def.cost.metal; tcl += losses * def.cost.crystal; tdl += losses * def.cost.deuterium;
                     }
                 }
-
-                const destroyedList = Object.entries(destroyedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
-                if (destroyedList) {
-                    reportLines.push(`<span class="loss">💥 Deine Verluste:</span> ${destroyedList}`);
-                } else {
-                    reportLines.push(`<span class="gain">✨ Keine eigenen Verluste!</span>`);
-                }
-
-                const pirateLossRate = (1 - powerRatio) * 0.7;
-                const destroyedPirateFleet = {};
-                let totalPirateShipsDestroyed = 0;
-
-                reportLines.push(
-                    `<span class="pirate">☠️ Piraten-Flotte:</span> ${Object.entries(pirateFleet).map(([name, count]) => `${count}x ${name}`).join(', ')}`);
-
-                for (const [pirateName, pirateCount] of Object.entries(pirateFleet)) {
-                    const losses = Math.floor(pirateCount * pirateLossRate * (0.7 + Math.random() * 0.6));
+                const dl = Object.entries(destroyedShips).filter(([_, c]) => c > 0).map(([k, c]) => `${c}x ${shipDefinitions[k].icon}${shipDefinitions[k].name}`).join(', ');
+                if (dl) reportLines.push(`<span class="loss">💥 Deine Verluste:</span> ${dl}`);
+                else reportLines.push(`<span class="gain">✨ Keine eigenen Verluste!</span>`);
+                const plr = (1 - prr) * 0.7;
+                const dpf = {};
+                let tpsd = 0;
+                reportLines.push(`<span class="pirate">☠️ Piraten-Flotte:</span> ${Object.entries(pirateFleet).map(([n, c]) => `${c}x ${n}`).join(', ')}`);
+                for (const [pn, pc] of Object.entries(pirateFleet)) {
+                    const losses = Math.floor(pc * plr * (0.7 + Math.random() * 0.6));
                     if (losses > 0) {
-                        destroyedPirateFleet[pirateName] = losses;
-                        totalPirateShipsDestroyed += losses;
-                        const pirateShip = pirateShipTypes.find(p => p.name === pirateName);
-                        if (pirateShip) pirateResourcesDestroyed += losses * pirateShip.baseCost;
+                        dpf[pn] = losses; tpsd += losses;
+                        const pst = pirateShipTypes.find(p => p.name === pn);
+                        if (pst) prd += losses * pst.baseCost;
                     }
                 }
-
-                state.stats.totalPirateShipsDestroyed += totalPirateShipsDestroyed;
-
-                const pirateDestroyedList = Object.entries(destroyedPirateFleet).map(([name, count]) => `${count}x ${name}`).join(', ');
-                if (pirateDestroyedList) {
-                    reportLines.push(
-                        `<span class="pirate">💀 Piraten-Verluste:</span> ${pirateDestroyedList} (${totalPirateShipsDestroyed} Schiffe zerstört)`);
-                }
-
-                const ownRecovery = (totalOwnLossesMetal + totalOwnLossesCrystal + totalOwnLossesDeuterium) * 0.6;
-                const pirateRecovery = pirateResourcesDestroyed * 0.6;
-                const totalRecovery = Math.floor((ownRecovery + pirateRecovery) / 3);
-
-                totalMetalGain += totalRecovery;
-                totalCrystalGain += totalRecovery;
-                totalDeuteriumGain += totalRecovery;
-
-                reportLines.push(
-                    `<span class="gain">🔧 Bergung (automatisch):</span> +${totalRecovery.toLocaleString()} je Ressource`);
-                reportLines.push(
-                    `<span class="info">   ↳ Eigene Schiffe: ${Math.floor(ownRecovery / 3).toLocaleString()} | Piraten: ${Math.floor(pirateRecovery / 3).toLocaleString()} (60% der Zerstörungen)</span>`);
+                state.stats.totalPirateShipsDestroyed += tpsd;
+                const pdl = Object.entries(dpf).map(([n, c]) => `${c}x ${n}`).join(', ');
+                if (pdl) reportLines.push(`<span class="pirate">💀 Piraten-Verluste:</span> ${pdl} (${tpsd} Schiffe zerstört)`);
+                const or = (tml + tcl + tdl) * 0.6;
+                const pr = prd * 0.6;
+                const tr = Math.floor((or + pr) / 3);
+                tmg += tr; tcg += tr; tdg += tr;
+                reportLines.push(`<span class="gain">🔧 Bergung (automatisch):</span> +${tr.toLocaleString()} je Ressource`);
+                reportLines.push(`<span class="info">   ↳ Eigene Schiffe: ${Math.floor(or / 3).toLocaleString()} | Piraten: ${Math.floor(pr / 3).toLocaleString()} (60% der Zerstörungen)</span>`);
             }
-
-            if (!foundResources && !hadCombat) {
-                reportLines.push('<span>🔭 Nichts gefunden - der Sektor war leer.</span>');
-            }
-
-            state.resources.metal += totalMetalGain;
-            state.resources.crystal += totalCrystalGain;
-            state.resources.deuterium += totalDeuteriumGain;
-
-            for (const [key, count] of Object.entries(survivingShips)) {
-                state.ships[key].count += count;
-            }
-
-            const totalShipsLost = Object.values(destroyedShips).reduce((a, b) => a + b, 0);
-
-            state.history.unshift({
-                time: new Date().toLocaleString(),
-                slot: slotIndex + 1,
-                report: reportLines.join('<br>'),
-                metalGain: totalMetalGain,
-                crystalGain: totalCrystalGain,
-                deuteriumGain: totalDeuteriumGain,
-                shipsLost: totalShipsLost,
-                pirateShipsDestroyed: totalPirateShipsDestroyed || 0,
-                wasOffline: isOffline
-            });
+            if (!foundResources && !hadCombat) reportLines.push('<span>🔭 Nichts gefunden - der Sektor war leer.</span>');
+            state.resources.metal += tmg; state.resources.crystal += tcg; state.resources.deuterium += tdg;
+            for (const [key, count] of Object.entries(survivingShips)) state.ships[key].count += count;
+            const tsl = Object.values(destroyedShips).reduce((a, b) => a + b, 0);
+            state.history.unshift({ time: new Date().toLocaleString(), slot: slotIndex + 1, report: reportLines.join('<br>'), metalGain: tmg, crystalGain: tcg, deuteriumGain: tdg, shipsLost: tsl, pirateShipsDestroyed: tpsd || 0, wasOffline: isOffline });
             if (state.history.length > 10) state.history.pop();
-
             exp.active = false;
             exp.selectedShips = { großerTransporter: 0, schlachtkreuzer: 0, zerstörer: 0, schwererJäger: 0 };
-            exp.phase = null;
-            exp.startTime = null;
-            exp.returnTime = null;
-
+            exp.phase = null; exp.startTime = null; exp.returnTime = null;
             if (!isOffline) playExpeditionCompleteSound();
             updateDisplay();
         }
 
         function renderStats() {
-            const grid = document.getElementById('statsGrid');
-            grid.innerHTML = `
+            document.getElementById('statsGrid').innerHTML = `
                 <div class="stat-item"><div class="stat-value">${state.stats.totalExpeditions}</div><div class="stat-label">Expeditionen</div></div>
                 <div class="stat-item"><div class="stat-value">${state.stats.totalCombats}</div><div class="stat-label">Kämpfe</div></div>
                 <div class="stat-item"><div class="stat-value">${(state.stats.totalMetalFound + state.stats.totalCrystalFound + state.stats.totalDeuteriumFound).toLocaleString()}</div><div class="stat-label">Ress. gefunden</div></div>
                 <div class="stat-item"><div class="stat-value">${state.stats.totalShipsBuilt}</div><div class="stat-label">Schiffe gebaut</div></div>
                 <div class="stat-item"><div class="stat-value" style="color:#ff4444;">${state.stats.totalShipsLost}</div><div class="stat-label">Schiffe verloren</div></div>
                 <div class="stat-item"><div class="stat-value" style="color:#ff8800;">${state.stats.totalPirateShipsDestroyed || 0}</div><div class="stat-label">Piraten zerstört</div></div>
-                <div class="stat-item"><div class="stat-value">🏭${1 + (state.upgrades.shipyard || 0)} ⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrade-Level</div></div>
-            `;
+                <div class="stat-item"><div class="stat-value">🏭${1 + (state.upgrades.shipyard || 0)} ⚔️${state.upgrades.weapons} 🛡️${state.upgrades.shields} ❤️${state.upgrades.armor}</div><div class="stat-label">Upgrade-Level</div></div>`;
         }
 
         function renderHistory() {
             const list = document.getElementById('historyList');
-            if (state.history.length === 0) {
-                list.innerHTML = '<div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div>';
-                return;
-            }
-            list.innerHTML = state.history.map((entry, i) => `
-                <div class="history-item">
-                    <div style="color:#00b4ff;margin-bottom:5px;">${entry.time} - Flotte ${entry.slot}${entry.wasOffline ? ' <span style="color:#ffaa00;">(Offline)</span>' : ''}</div>
-                    ${entry.report}
-                    <div style="margin-top:5px;font-size:0.9em;">
-                        <span class="gain">+${entry.metalGain.toLocaleString()} Metall</span> | 
-                        <span class="gain">+${entry.crystalGain.toLocaleString()} Kristall</span> | 
-                        <span class="gain">+${entry.deuteriumGain.toLocaleString()} Deuterium</span>
-                        ${entry.shipsLost > 0 ? ` | <span class="loss">-${entry.shipsLost} Schiffe</span>` : ''}
-                        ${entry.pirateShipsDestroyed > 0 ? ` | <span class="pirate">☠️ -${entry.pirateShipsDestroyed} Piraten</span>` : ''}
-                    </div>
-                </div>
-            `).join('');
+            if (state.history.length === 0) { list.innerHTML = '<div style="text-align:center;color:#666;">Noch keine Expeditionen durchgeführt</div>'; return; }
+            list.innerHTML = state.history.map(e => `<div class="history-item"><div style="color:#00b4ff;margin-bottom:5px;">${e.time} - Flotte ${e.slot}${e.wasOffline ? ' <span style="color:#ffaa00;">(Offline)</span>' : ''}</div>${e.report}<div style="margin-top:5px;font-size:0.9em;"><span class="gain">+${e.metalGain.toLocaleString()} Metall</span> | <span class="gain">+${e.crystalGain.toLocaleString()} Kristall</span> | <span class="gain">+${e.deuteriumGain.toLocaleString()} Deuterium</span>${e.shipsLost > 0 ? ` | <span class="loss">-${e.shipsLost} Schiffe</span>` : ''}${e.pirateShipsDestroyed > 0 ? ` | <span class="pirate">☠️ -${e.pirateShipsDestroyed} Piraten</span>` : ''}</div></div>`).join('');
         }
 
         function createStars() {
-            const starsContainer = document.getElementById('stars');
+            const sc = document.getElementById('stars');
             for (let i = 0; i < 200; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
                 const size = Math.random() * 3 + 1;
-                star.style.width = size + 'px';
-                star.style.height = size + 'px';
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
+                star.style.width = size + 'px'; star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%'; star.style.top = Math.random() * 100 + '%';
                 star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
                 star.style.setProperty('--delay', Math.random() * 5 + 's');
-                starsContainer.appendChild(star);
+                sc.appendChild(star);
             }
         }
 
-        // Initialisierung
         createStars();
         processOfflineProgress();
         if (state.buildQueue.length > 0) scheduleQueueCheck();
-        state.expeditions.forEach((exp, index) => { if (exp.active) scheduleExpeditionCheck(index); });
+        state.expeditions.forEach((exp, i) => { if (exp.active) scheduleExpeditionCheck(i); });
         document.querySelector('.sound-toggle').textContent = soundEnabled ? '🔊 Sound' : '🔇 Stumm';
         updateDisplay();
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 processOfflineProgress();
                 if (state.buildQueue.length > 0) scheduleQueueCheck();
-                state.expeditions.forEach((exp, index) => { if (exp.active) scheduleExpeditionCheck(index); });
+                state.expeditions.forEach((exp, i) => { if (exp.active) scheduleExpeditionCheck(i); });
                 updateDisplay();
             }
         });
-        console.log('🚀 Spiel bereit! Alle Inputs bleiben erhalten - auch auf dem Handy!');
+        console.log('🚀 Spiel bereit! Korrekte Schiff-Verteilung auf 3 Slots!');
     </script>
 </body>
 </html>
