@@ -453,8 +453,7 @@
         ships: { "Großer Transporter":2, "Leichter Jäger":5, "Schlachtschiff":1, "Schlachtkreuzer":0, "Zerstörer":0 },
         productionQueue: [], expeditions: [null,null,null], eventLogs: [],
         sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 },
-        activeBoosts: {},
-        lastUpdate: Date.now()
+        activeBoosts: {}
     };
     let selectedZiele = { 0:"asteroid", 1:"asteroid", 2:"asteroid" };
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
@@ -463,12 +462,13 @@
     // Sound & Vibration
     let soundEnabled = false;
     let audioCtx = null;
-    let isFirstLoad = true; // NEU: Verhindert Sound beim ersten Laden
+    let isFirstLoad = true;
     
     function initAudio() { if(audioCtx) return; try { const AudioContext = window.AudioContext || window.webkitAudioContext; audioCtx = new AudioContext(); } catch(e) {} }
     function playBeep() { if(!soundEnabled || !audioCtx) return; try { if(audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); osc.stop(audioCtx.currentTime + 0.15); } catch(e) {} }
-    function enableSound() { if(soundEnabled) return; initAudio(); soundEnabled = true; playBeep(); document.removeEventListener("click", enableSound); document.removeEventListener("touchstart", enableSound); addLog("🔊 Sound & Vibration aktiviert!"); }
-    document.addEventListener("click", enableSound); document.addEventListener("touchstart", enableSound);
+    function enableSound() { if(soundEnabled) return; initAudio(); soundEnabled = true; playBeep(); addLog("🔊 Sound & Vibration aktiviert!"); }
+    document.addEventListener("click", enableSound); 
+    document.addEventListener("touchstart", enableSound);
     function playExpeditionFinishSound() { 
         if(!isFirstLoad && soundEnabled) { 
             playBeep(); 
@@ -494,78 +494,65 @@
     function addLog(text){ gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text}); if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); renderLogs(); saveGame();}
     
     function saveGame(){ 
-        gameState.lastUpdate = Date.now();
         localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState)); 
     }
     
-    // Offline Catch-Up - OHNE SOUND BEIM LADEN
-    function catchUpAfterOffline(suppressSound = false) {
+    // Offline Catch-Up - basierend auf absoluten Zeiten (kein elapsed mehr nötig)
+    function processOfflineEvents() {
         let now = Date.now();
-        let last = gameState.lastUpdate || now;
+        let changed = false;
         
-        if (last > now) {
-            gameState.lastUpdate = now;
-            saveGame();
-            return;
-        }
-        
-        let elapsed = now - last;
-        if (elapsed < 1000) return;
-        elapsed = Math.min(elapsed, 7 * 24 * 3600 * 1000);
-        
-        // Produktions-Queue fortschreiben
-        let queue = gameState.productionQueue;
-        let i = 0;
-        while(i < queue.length) {
-            let item = queue[i];
-            let newFinish = item.finishTimestamp + elapsed;
-            if(newFinish <= now) {
+        // 1. Produktions-Queue abarbeiten
+        for(let i = 0; i < gameState.productionQueue.length; i++) {
+            let item = gameState.productionQueue[i];
+            if(now >= item.finishTimestamp) {
                 gameState.ships[item.shipType] += item.amount;
-                queue.splice(i, 1);
-                if(!suppressSound) addLog(`🏭 ${item.amount}x ${item.shipType} wurden während deiner Abwesenheit fertig gebaut!`);
-            } else { 
-                item.finishTimestamp = newFinish; 
-                i++; 
+                gameState.productionQueue.splice(i, 1);
+                i--;
+                changed = true;
+                addLog(`🏭 ${item.amount}x ${item.shipType} wurde fertig gebaut!`);
             }
         }
         
-        // Expeditionen fortschreiben
+        // 2. Expeditionen abarbeiten
         for(let i = 0; i < gameState.expeditions.length; i++) {
             let exp = gameState.expeditions[i];
             if(!exp) continue;
             
-            exp.hinEnde += elapsed;
-            exp.halteEnde += elapsed;
-            exp.rückEnde += elapsed;
+            if(exp.phase === "hinflug" && now >= exp.hinEnde) {
+                exp.phase = "halten";
+                changed = true;
+                addLog(`🚀 Expedition Slot ${i+1} hat das Ziel erreicht.`);
+            }
             
-            if(exp.rückEnde <= now) {
-                let res = processExpedition(i, exp.fleetObj, exp.zielId, exp.kommandeurId, suppressSound);
+            if(exp.phase === "halten" && now >= exp.halteEnde) {
+                exp.phase = "rückflug";
+                changed = true;
+                addLog(`🔄 Expedition Slot ${i+1} beginnt Rückflug.`);
+            }
+            
+            if(exp.phase === "rückflug" && now >= exp.rückEnde) {
+                let res = processExpedition(i, exp.fleetObj, exp.zielId, exp.kommandeurId, false);
                 for(let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
                 gameState.expeditions[i] = null;
-                if(!suppressSound) addLog(`🪐 Expedition von Slot ${i+1} wurde während deiner Abwesenheit abgeschlossen!`);
-                if(!suppressSound) playExpeditionFinishSound();
-            } 
-            else if(exp.halteEnde <= now && exp.phase === "halten") {
-                exp.phase = "rückflug";
-                if(!suppressSound) addLog(`🚀 Expedition Slot ${i+1} befindet sich nun im Rückflug.`);
-            }
-            else if(exp.hinEnde <= now && exp.phase === "hinflug") {
-                exp.phase = "halten";
-                if(!suppressSound) addLog(`🛸 Expedition Slot ${i+1} hat das Ziel erreicht und verweilt.`);
+                changed = true;
+                addLog(`🪐 Expedition Slot ${i+1} wurde abgeschlossen!`);
+                playExpeditionFinishSound();
             }
         }
         
+        // 3. Boosts ablaufen lassen
         for(let [bid, expiry] of Object.entries(gameState.activeBoosts)) {
-            if(expiry <= now) delete gameState.activeBoosts[bid];
+            if(expiry <= now) {
+                delete gameState.activeBoosts[bid];
+                changed = true;
+            }
         }
         
-        for(let zone in gameState.sectorCooldowns) { 
-            let cd = gameState.sectorCooldowns[zone]; 
-            if(cd > 0) gameState.sectorCooldowns[zone] = Math.max(0, cd - elapsed); 
+        if(changed) {
+            saveGame();
+            renderAll();
         }
-        
-        gameState.lastUpdate = now;
-        saveGame();
     }
     
     function processExpedition(slot, fleet, zielId, kommId, suppressSound = false){
@@ -832,19 +819,16 @@
         saveGame(); renderAll(); return true; 
     }
     
-    // RESET-FUNKTION KORRIGIERT
     function resetGame(){ 
         if(confirm("ALLE Daten zurücksetzen?")){ 
             localStorage.removeItem("ExpeditionGameSaveDM");
-            // Kompletten Spielstand zurücksetzen
             gameState = {
                 resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:350 },
                 tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 },
                 ships: { "Großer Transporter":2, "Leichter Jäger":5, "Schlachtschiff":1, "Schlachtkreuzer":0, "Zerstörer":0 },
                 productionQueue: [], expeditions: [null,null,null], eventLogs: [],
                 sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 },
-                activeBoosts: {},
-                lastUpdate: Date.now()
+                activeBoosts: {}
             };
             selectedZiele = { 0:"asteroid", 1:"asteroid", 2:"asteroid" };
             selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
@@ -865,45 +849,46 @@
     
     document.querySelectorAll(".tab-btn").forEach(btn=>{ btn.onclick=()=>{ let tabId=btn.dataset.tab; document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active-pane")); document.getElementById(tabId+"Pane").classList.add("active-pane"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }; });
     
-    // Fokus-Events mit suppressSound=true beim ersten Mal
+    // Bei Fokus und Visibility-Change alle Events nachholen
     window.addEventListener("focus", () => {
-        catchUpAfterOffline(false);
+        processOfflineEvents();
         renderAll();
     });
     
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden) {
-            catchUpAfterOffline(false);
+            processOfflineEvents();
             renderAll();
         }
     });
     
+    // Vor dem Schließen speichern
     window.addEventListener("beforeunload", () => {
-        gameState.lastUpdate = Date.now();
-        localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState));
+        saveGame();
     });
     
-    function loadGameAndCatchUp(){
+    function loadGame(){
         let s = localStorage.getItem("ExpeditionGameSaveDM");
         if(s){
             let d = JSON.parse(s);
             gameState = d;
             if(!gameState.activeBoosts) gameState.activeBoosts = {};
-            if(!gameState.lastUpdate) gameState.lastUpdate = Date.now();
             if(gameState.resources.darkmatter === undefined) gameState.resources.darkmatter = 350;
-            // Beim ersten Laden KEINEN Sound abspielen!
-            catchUpAfterOffline(true);
         }
         isFirstLoad = false;
+        // Wichtig: Erst nach dem Laden alle Events abarbeiten
+        processOfflineEvents();
         renderAll();
     }
     
-    loadGameAndCatchUp();
+    loadGame();
     
-    setInterval(()=>{ 
-        let changed = false;
+    // Reguläres Interval für Echtzeit-Updates (jede Sekunde)
+    setInterval(() => {
         let now = Date.now();
+        let changed = false;
         
+        // Produktion prüfen
         for(let i=0;i<gameState.productionQueue.length;i++) {
             if(now >= gameState.productionQueue[i].finishTimestamp){
                 let it = gameState.productionQueue[i];
@@ -914,6 +899,7 @@
             }
         }
         
+        // Expeditionen prüfen
         for(let i=0;i<4;i++){
             let e = gameState.expeditions[i];
             if(e){
@@ -934,7 +920,13 @@
             }
         }
         
-        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp <= now){ delete gameState.activeBoosts[bid]; changed=true; }
+        // Boosts ablaufen lassen
+        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) {
+            if(exp <= now){ 
+                delete gameState.activeBoosts[bid]; 
+                changed=true; 
+            }
+        }
         
         if(changed){ 
             saveGame(); 
