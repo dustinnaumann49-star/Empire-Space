@@ -409,6 +409,66 @@
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
     let pendingCooldownReset = null;
 
+    // ==================== SOUND & VIBRATION ====================
+    let finishSound = null;
+    let soundEnabled = false;
+    
+    // Erzeugt einen kurzen Ping-Ton über Web Audio API (funktioniert ohne externe Datei)
+    function createBeepSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return null;
+            const audioCtx = new AudioContext();
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.3;
+            gainNode.connect(audioCtx.destination);
+            
+            // Funktion, die einen kurzen Beep abspielt (muss nach User-Interaction gestartet werden)
+            return () => {
+                if (!soundEnabled) return;
+                // AudioContext muss resumed sein
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume().then(() => playBeep(audioCtx, gainNode));
+                } else {
+                    playBeep(audioCtx, gainNode);
+                }
+            };
+        } catch(e) { console.warn("Audio nicht unterstützt", e); return null; }
+    }
+    
+    function playBeep(audioCtx, gainNode) {
+        try {
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            osc.connect(gainNode);
+            osc.start();
+            osc.stop(now + 0.2);
+        } catch(e) { console.warn("Beep fehlgeschlagen"); }
+    }
+    
+    let playBeepFn = null;
+    
+    function enableSoundOnFirstClick() {
+        if (soundEnabled) return;
+        if (!playBeepFn) playBeepFn = createBeepSound();
+        soundEnabled = true;
+        // Test-Ton abspielen, um User-Interaction zu bestätigen
+        if (playBeepFn) playBeepFn();
+        document.removeEventListener("click", enableSoundOnFirstClick);
+        document.removeEventListener("touchstart", enableSoundOnFirstClick);
+        addLog("🔊 Sound & Vibration aktiviert!");
+    }
+    document.addEventListener("click", enableSoundOnFirstClick);
+    document.addEventListener("touchstart", enableSoundOnFirstClick);
+    
+    function playExpeditionFinishSound() {
+        if (!soundEnabled) return;
+        if (playBeepFn) playBeepFn();
+        if (navigator.vibrate) navigator.vibrate(200);
+    }
+
     // Helper
     function isBoostActive(id) { return gameState.activeBoosts[id] && gameState.activeBoosts[id] > Date.now(); }
     function getTotalCargoMult() { return isBoostActive("lade")?2.0:1.0; }
@@ -467,13 +527,19 @@
         } else { addLog(`SLOT ${slot+1}: ⚠️ Laderaum zu klein! Keine Beute.`); return { newShips:fleet, resourcesGained:0 }; }
     }
 
+    // ---------- UPDATED finishExpedition mit SOUND ----------
     function finishExpedition(slot){
-        let exp=gameState.expeditions[slot];
-        if(!exp) return;
-        let res=processExpedition(slot, exp.fleetObj, exp.zielId, exp.kommandeurId);
-        for(let [t,c] of Object.entries(res.newShips)) gameState.ships[t]=(gameState.ships[t]||0)+c;
-        gameState.expeditions[slot]=null;
-        saveGame(); renderAll();
+        let exp = gameState.expeditions[slot];
+        if (!exp) return;
+        let res = processExpedition(slot, exp.fleetObj, exp.zielId, exp.kommandeurId);
+        for (let [t, c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
+        gameState.expeditions[slot] = null;
+        
+        // SOUND & VIBRATION bei Expeditionsende
+        playExpeditionFinishSound();
+        
+        saveGame();
+        renderAll();
     }
 
     function startExpedition(slot, shipsSel, zielId, kommId){
@@ -567,7 +633,6 @@
         let fleetHtml=""; for(let t of shipKeys) fleetHtml+=`<div class="fleet-stat"><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}</div>`;
         document.getElementById("fleetStatus").innerHTML=fleetHtml;
         
-        // Schiffsbau mit Kostenanzeige pro Schiff
         let shipyardHtml=""; 
         for(let t of shipKeys){ 
             let cost = shipsData[t].cost;
@@ -580,7 +645,6 @@
         document.getElementById("shipyardContainer").innerHTML=shipyardHtml;
         document.querySelectorAll(".build-ship-btn").forEach(btn=>btn.onclick=()=>{ let s=btn.dataset.ship; let am=parseInt(document.getElementById(`num_${s.replace(/ /g,'')}`).value||1); if(am>0) addToProduction(s,am); });
         
-        // Shop
         let activeHtml="<strong>🔥 Aktive Boosts:</strong><br>"; let has=false; let now=Date.now();
         for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp>now){ has=true; activeHtml+=`<div class="boost-active">✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-now)/60000)} min</div>`; } else delete gameState.activeBoosts[bid];
         if(!has) activeHtml+="<div>❌ Keine aktiven Boosts</div>";
@@ -589,7 +653,6 @@
         document.getElementById("shopContainer").innerHTML=shopHtml;
         document.querySelectorAll("[data-boost]").forEach(btn=>btn.onclick=()=>activateBoost(btn.dataset.boost));
         
-        // SEKTOREN mit Cooldown-Timer
         let sektorHtml=""; 
         for(let [id,z] of Object.entries(expeditionZiele)) {
             let cdEnd = gameState.sectorCooldowns[id] || 0;
@@ -604,7 +667,6 @@
         document.getElementById("sektorExplainer").innerHTML=sektorHtml;
         document.querySelectorAll("[data-sektor]").forEach(el=>el.onclick=()=>{ let id=el.dataset.sektor; for(let i=0;i<3;i++) selectedZiele[i]=id; renderAll(); });
         
-        // Expedition slots
         let slotsDiv=""; let slotCount=getExtraSlot()?4:3;
         for(let i=0;i<slotCount;i++){
             let e=gameState.expeditions[i];
