@@ -308,6 +308,14 @@
             align-items: center;
             gap: 6px;
         }
+        .warning-banner {
+            background: #ffaa33cc;
+            color: #1a1a2e;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -454,7 +462,8 @@
         productionQueue: [], expeditions: [null,null,null], eventLogs: [],
         sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 },
         activeBoosts: {}, tempExtraSlot: false,
-        lastUpdate: Date.now()
+        lastUpdate: Date.now(),
+        lastSave: Date.now()
     };
     let selectedZiele = { 0:"asteroid", 1:"asteroid", 2:"asteroid" };
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
@@ -485,17 +494,34 @@
 
     function addDarkMatter(amt){ gameState.resources.darkmatter+=amt; addLog(`✨ +${amt} Dunkle Materie!`); saveGame(); renderAll(); }
     function addLog(text){ gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text}); if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); renderLogs(); saveGame();}
+    
     function saveGame(){ 
-        gameState.lastUpdate = Date.now(); 
+        let now = Date.now();
+        gameState.lastUpdate = now;
+        gameState.lastSave = now;
         localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState)); 
     }
     
-    // Offline Catch-Up - KORRIGIERT
+    // Offline Catch-Up - ROBUSTE Version
     function catchUpAfterOffline() {
         let now = Date.now();
         let last = gameState.lastUpdate || now;
-        let elapsed = Math.max(0, Math.min(now - last, 7 * 24 * 3600 * 1000)); // KEINE negativen Zeiten mehr!
-        if(elapsed <= 0) return;
+        
+        // WICHTIG: Nur wenn last in der Vergangenheit liegt
+        if (last > now) {
+            // Fallback: Systemzeit wurde zurückgesetzt
+            gameState.lastUpdate = now;
+            saveGame();
+            return;
+        }
+        
+        let elapsed = now - last;
+        if (elapsed < 1000) return; // Nichts zu tun
+        
+        // Maximal 7 Tage Offline-Zeit
+        elapsed = Math.min(elapsed, 7 * 24 * 3600 * 1000);
+        
+        console.log(`Catch-up: ${Math.floor(elapsed/1000)} Sekunden vergangen`);
         
         // Produktions-Queue fortschreiben
         let queue = gameState.productionQueue;
@@ -677,7 +703,19 @@
         saveGame(); renderAll();
     }
 
+    // Globale Variable für letztes Rendering
+    let lastRenderTime = 0;
+    
     function renderAll(){
+        // Nur wenn nötig oder alle 100ms
+        let now = Date.now();
+        if (now - lastRenderTime < 50 && document.hasFocus()) {
+            // Schnelles Update nur für Timer
+            updateTimersOnly();
+            return;
+        }
+        lastRenderTime = now;
+        
         document.getElementById("metal").innerText=gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText=gameState.resources.crystal.toLocaleString();
         document.getElementById("deuterium").innerText=gameState.resources.deuterium.toLocaleString();
@@ -712,8 +750,8 @@
         document.getElementById("shipyardContainer").innerHTML=shipyardHtml;
         document.querySelectorAll(".build-ship-btn").forEach(btn=>btn.onclick=()=>{ let s=btn.dataset.ship; let am=parseInt(document.getElementById(`num_${s.replace(/ /g,'')}`).value||1); if(am>0) addToProduction(s,am); });
         
-        let activeHtml="<strong>🔥 Aktive Boosts:</strong><br>"; let has=false; let now=Date.now();
-        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp>now){ has=true; activeHtml+=`<div>✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-now)/60000)} min</div>`; } else delete gameState.activeBoosts[bid];
+        let activeHtml="<strong>🔥 Aktive Boosts:</strong><br>"; let has=false; let nowTime=Date.now();
+        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp>nowTime){ has=true; activeHtml+=`<div>✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-nowTime)/60000)} min</div>`; } else delete gameState.activeBoosts[bid];
         if(!has) activeHtml+="<div>❌ Keine aktiven Boosts</div>";
         document.getElementById("activeBoostsDisplay").innerHTML=activeHtml;
         let shopHtml=""; for(let [id,b] of Object.entries(shopBoosts)) shopHtml+=`<div class="shop-item"><span><b>${b.name}</b><br><small>💰 ${b.costDM} DM</small></span><button class="shop" data-boost="${id}" ${isBoostActive(id)?"disabled":""}>Kaufen</button></div>`;
@@ -740,7 +778,9 @@
                 else if(e.phase==="halten") remain=(e.halteEnde-nowTime)/1000; 
                 else remain=(e.rückEnde-nowTime)/1000;
                 if(remain<0) remain=0;
-                slotsDiv+=`<div class="expedition-fleet"><b>🚀 Flotte ${i+1}</b> — ${e.phase} <span class="timer">${Math.floor(remain/60)}:${Math.floor(remain%60).toString().padStart(2,'0')}</span><br><small>🎯 ${expeditionZiele[e.zielId]?.name} | 👨‍✈️ ${kommandeurBonuses[e.kommandeurId]?.name}<br>📦 ${Object.entries(e.fleetObj).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}</small></div>`;
+                let minutes = Math.floor(remain/60);
+                let seconds = Math.floor(remain%60);
+                slotsDiv+=`<div class="expedition-fleet"><b>🚀 Flotte ${i+1}</b> — ${e.phase} <span class="timer">${minutes}:${seconds.toString().padStart(2,'0')}</span><br><small>🎯 ${expeditionZiele[e.zielId]?.name} | 👨‍✈️ ${kommandeurBonuses[e.kommandeurId]?.name}<br>📦 ${Object.entries(e.fleetObj).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}</small></div>`;
             } else {
                 let shipsSelect=""; for(let t of shipKeys) shipsSelect+=`<div class="exp-input-group"><label>${t} (max ${gameState.ships[t]}):</label><input type="number" id="exp_slot${i}_${t.replace(/ /g,'')}" min="0" max="${gameState.ships[t]}" value="0" step="1"></div>`;
                 let kommHtml=""; for(let [kid,k] of Object.entries(kommandeurBonuses)){ let dmAfterDiscount = Math.floor(k.costDM * getCommanderDiscount()); 
@@ -752,6 +792,27 @@
         document.querySelectorAll(".commander-chip").forEach(el=>el.onclick=()=>{ let s=parseInt(el.dataset.slot); let k=el.dataset.komm; selectedKommandeur[s]=k; renderAll(); });
         document.querySelectorAll(".start-expedition-btn").forEach(btn=>btn.onclick=()=>{ let s=parseInt(btn.dataset.slot); let sel={}; for(let t of shipKeys){ let val=parseInt(document.getElementById(`exp_slot${s}_${t.replace(/ /g,'')}`)?.value||0); if(val>0) sel[t]=val; } startExpedition(s, sel, selectedZiele[s], selectedKommandeur[s]); });
         updateQueueDisplay(); updateSectorCooldownDisplays();
+    }
+    
+    function updateTimersOnly() {
+        // Nur Timer in der UI aktualisieren ohne komplettes Re-Rendering
+        let nowTime = Date.now();
+        for(let i=0;i<4;i++){
+            let e = gameState.expeditions[i];
+            if(e){
+                let remain=0;
+                if(e.phase==="hinflug") remain=(e.hinEnde-nowTime)/1000;
+                else if(e.phase==="halten") remain=(e.halteEnde-nowTime)/1000;
+                else remain=(e.rückEnde-nowTime)/1000;
+                if(remain<0) remain=0;
+                let minutes = Math.floor(remain/60);
+                let seconds = Math.floor(remain%60);
+                let timerSpan = document.querySelector(`#expeditionSlots .expedition-fleet:nth-child(${i+1}) .timer`);
+                if(timerSpan) timerSpan.innerText = `${minutes}:${seconds.toString().padStart(2,'0')}`;
+            }
+        }
+        updateQueueDisplay();
+        updateSectorCooldownDisplays();
     }
     
     function updateQueueDisplay(){ 
@@ -801,13 +862,26 @@
     
     document.querySelectorAll(".tab-btn").forEach(btn=>{ btn.onclick=()=>{ let tabId=btn.dataset.tab; document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active-pane")); document.getElementById(tabId+"Pane").classList.add("active-pane"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }; });
     
-    // NEU: Tab-Fokus-Event für zuverlässiges Catch-up
+    // NEU: Bei Fokus immer Catch-up durchführen
     window.addEventListener("focus", () => {
-        let now = Date.now();
-        if (now - gameState.lastUpdate > 5000) {
+        let beforeUpdate = Date.now();
+        catchUpAfterOffline();
+        renderAll();
+        console.log(`Focus: ${(Date.now() - beforeUpdate)/1000}s Catch-up durchgeführt`);
+    });
+    
+    // Auch bei Visibility Change (Tab-Wechsel)
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
             catchUpAfterOffline();
             renderAll();
         }
+    });
+    
+    // Vor dem Schließen speichern
+    window.addEventListener("beforeunload", () => {
+        gameState.lastUpdate = Date.now();
+        localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState));
     });
     
     function loadGameAndCatchUp(){
@@ -817,7 +891,9 @@
             gameState = d;
             if(!gameState.activeBoosts) gameState.activeBoosts = {};
             if(!gameState.lastUpdate) gameState.lastUpdate = Date.now();
+            if(!gameState.lastSave) gameState.lastSave = Date.now();
             if(gameState.resources.darkmatter === undefined) gameState.resources.darkmatter = 350;
+            // Wichtig: Direkt beim Laden den Catch-up durchführen
             catchUpAfterOffline();
         }
         renderAll();
@@ -825,9 +901,11 @@
     
     loadGameAndCatchUp();
     
+    // Interval für reguläre Updates (jede Sekunde reicht)
     setInterval(()=>{ 
         let changed = false;
         let now = Date.now();
+        
         // Produktion prüfen
         for(let i=0;i<gameState.productionQueue.length;i++) {
             if(now >= gameState.productionQueue[i].finishTimestamp){
@@ -838,6 +916,7 @@
                 addLog(`🏭 ${it.amount}x ${it.shipType} fertig gebaut!`);
             }
         }
+        
         // Expeditionen prüfen
         for(let i=0;i<4;i++){
             let e = gameState.expeditions[i];
@@ -858,30 +937,18 @@
                 }
             }
         }
+        
         // Boosts ablaufen lassen
         for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp <= now){ delete gameState.activeBoosts[bid]; changed=true; }
         
-        if(changed){ saveGame(); renderAll(); }
-        else { 
-            updateQueueDisplay(); 
-            updateSectorCooldownDisplays(); 
-            // Timer in der Expedition UI live aktualisieren (ohne komplettes rerender)
-            let nowTime = Date.now();
-            for(let i=0;i<4;i++){
-                let e = gameState.expeditions[i];
-                if(e){
-                    let remain=0;
-                    if(e.phase==="hinflug") remain=(e.hinEnde-nowTime)/1000;
-                    else if(e.phase==="halten") remain=(e.halteEnde-nowTime)/1000;
-                    else remain=(e.rückEnde-nowTime)/1000;
-                    if(remain<0) remain=0;
-                    let timerSpan = document.querySelector(`#expeditionSlots .expedition-fleet:first-child .timer`);
-                    // Vereinfacht: Einfach komplett rendern, ist nicht teuer
-                    renderAll();
-                }
-            }
+        if(changed){ 
+            saveGame(); 
+            renderAll(); 
+        } else { 
+            // Nur Timer aktualisieren
+            updateTimersOnly(); 
         }
-    }, 500);
+    }, 1000);
 </script>
 </body>
 </html>
