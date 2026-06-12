@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Expedition Commander - DM für Forschung & Kommandeur</title>
+    <title>Expedition Commander - DM Forschung & Offline-Progression</title>
     <style>
         * {
             box-sizing: border-box;
@@ -259,6 +259,14 @@
             color: #c084fc;
             font-weight: bold;
         }
+        .offline-badge {
+            background: #2a4b2a;
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            margin-left: 12px;
+        }
     </style>
 </head>
 <body>
@@ -290,14 +298,14 @@
             <div class="upgrade-item"><div>⚙️ Werft Upgrade (mehr Slots) Lv.<span id="werftLevel">0</span>/4</div><div><span id="werftCostDisplay"></span> <button id="upgradeWerftBtn">🏭 DM Upgrade</button></div></div>
             <div class="badge-info">🏭 Aktive Bauschienen: <span id="activeSlots">0</span> / <span id="maxSlots">1</span></div>
             <hr>
-            <div class="badge-info">✨ Jede Forschungsstufe kostet Dunkle Materie – langfristige Motivation! Kommandeure kosten ebenfalls DM pro Einsatz.</div>
+            <div class="badge-info">✨ Jede Forschungsstufe kostet Dunkle Materie – langfristige Motivation! Kommandeure kosten ebenfalls DM pro Einsatz. <span class="offline-badge">⏱️ Offline-Progression aktiv</span></div>
         </div>
 
         <div id="shopPane" class="tab-pane">
             <h3>🛒 Dunkle Materie Shop – 1h Boosts</h3>
             <div id="activeBoostsDisplay"></div>
             <div id="shopContainer"></div>
-            <div class="badge-info" style="margin-top: 12px;">✨ <strong>Wirkungen:</strong> Ressourcen-Boost (+50% Beute) | Temp-Boost (-50% Expeditionsdauer) | Kampf-Boost (+50% Kampfstärke) | Lade-Boost (x2 Laderaum) | Glücks-Boost (+30% auf bessere Ereignisse) | Alien-Kontakt (zus. DM) | Sofort-Produktion (baut alle Schiffe sofort) | Piraten-Schild (Verluste -70%) | Kristall-Segen (x2 Kristall) | Doppel-Expedition (+1 Expeditionsslot) | Cooldown-Reset | Kommandeur-Rabatt | Werft-Wunder | Mystery-Box</div>
+            <div class="badge-info" style="margin-top: 12px;">✨ <strong>Wirkungen:</strong> Ressourcen-Boost (+50% Beute) | Temp-Boost (-50% Expeditionsdauer) | Kampf-Boost (+50% Kampfstärke) | Lade-Boost (x2 Laderaum) | Glücks-Boost (+30% auf bessere Ereignisse) | Alien-Kontakt (zus. DM) | Sofort-Produktion | Piraten-Schild | Kristall-Segen | Doppel-Expedition | Cooldown-Reset | Kommandeur-Rabatt | Werft-Wunder | Mystery-Box</div>
         </div>
 
         <div id="flottePane" class="tab-pane">
@@ -327,7 +335,7 @@
             <h3>🪐 Expeditionen – Sektoren & Risiken (Kommandeur kostet DM!)</h3>
             <div class="ziel-grid" id="sektorExplainer"></div>
             <div id="expeditionSlots"></div>
-            <div class="badge-info">🚀 Kommandeure kosten Dunkle Materie pro Einsatz (Rabatt-Boost möglich). Forschung ebenfalls DM.</div>
+            <div class="badge-info">🚀 Kommandeure kosten Dunkle Materie pro Einsatz (Rabatt-Boost möglich). Forschung ebenfalls DM. Timer laufen offline weiter!</div>
         </div>
     </div>
     
@@ -337,7 +345,7 @@
             <div id="eventLog" style="max-height: 240px; overflow-y: auto; margin-top: 8px;"></div>
         </div>
     </div>
-    <footer>✨ Forschung & Kommandeure kosten Dunkle Materie – sammle DM in Expeditionen!</footer>
+    <footer>✨ Forschung & Kommandeure kosten Dunkle Materie – sammle DM in Expeditionen! <strong>Offline-Progression:</strong> Schiffe bauen, Expeditionen & Boosts laufen auch im Hintergrund weiter.</footer>
 </div>
 
 <script>
@@ -364,7 +372,6 @@
         "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: getCooldownByRisk("mittel"), darkMatterChance: 0.15, darkMatterAmount: [150,800] }
     };
 
-    // Kommandeure kosten DM pro Einsatz!
     const kommandeurBonuses = {
         "keiner": { name: "❌ Kein Kommandeur", attackBonus:0, defenseBonus:0, lootBonus:0, speedBonus:0, costDM:0 },
         "admiral": { name: "⚔️ Admiral", attackBonus:0.3, defenseBonus:0, lootBonus:0, speedBonus:0, costDM:25 },
@@ -396,54 +403,51 @@
         ships: { "Großer Transporter":2, "Leichter Jäger":5, "Schlachtschiff":1, "Schlachtkreuzer":0, "Zerstörer":0 },
         productionQueue: [], expeditions: [null,null,null], eventLogs: [],
         sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 },
-        activeBoosts: {}, tempExtraSlot: false
+        activeBoosts: {}, tempExtraSlot: false,
+        lastUpdate: Date.now()
     };
     let selectedZiele = { 0:"asteroid", 1:"asteroid", 2:"asteroid" };
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
     let pendingCooldownReset = null;
 
-    // Sound (wie gehabt)
-    let finishSound = null;
+    // Sound & Vibration
     let soundEnabled = false;
-    function createBeepSound() {
+    let audioCtx = null;
+    function initAudio() {
+        if(audioCtx) return;
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return null;
-            const audioCtx = new AudioContext();
-            const gainNode = audioCtx.createGain();
-            gainNode.gain.value = 0.3;
-            gainNode.connect(audioCtx.destination);
-            return () => {
-                if (!soundEnabled) return;
-                if (audioCtx.state === 'suspended') audioCtx.resume().then(() => playBeep(audioCtx, gainNode));
-                else playBeep(audioCtx, gainNode);
-            };
-        } catch(e) { return null; }
-    }
-    function playBeep(audioCtx, gainNode) {
-        try {
-            const osc = audioCtx.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = 880;
-            osc.connect(gainNode);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
+            audioCtx = new AudioContext();
         } catch(e) {}
     }
-    let playBeepFn = null;
-    function enableSoundOnFirstClick() {
-        if (soundEnabled) return;
-        if (!playBeepFn) playBeepFn = createBeepSound();
-        soundEnabled = true;
-        if (playBeepFn) playBeepFn();
-        document.removeEventListener("click", enableSoundOnFirstClick);
-        document.removeEventListener("touchstart", enableSoundOnFirstClick);
-        addLog("🔊 Sound aktiviert!");
+    function playBeep() {
+        if(!soundEnabled || !audioCtx) return;
+        try {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = 0.2;
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        } catch(e) {}
     }
-    document.addEventListener("click", enableSoundOnFirstClick);
-    document.addEventListener("touchstart", enableSoundOnFirstClick);
-    function playExpeditionFinishSound() { if (soundEnabled && playBeepFn) playBeepFn(); if (navigator.vibrate) navigator.vibrate(200); }
+    function enableSound() {
+        if(soundEnabled) return;
+        initAudio();
+        soundEnabled = true;
+        playBeep();
+        document.removeEventListener("click", enableSound);
+        document.removeEventListener("touchstart", enableSound);
+        addLog("🔊 Sound & Vibration aktiviert!");
+    }
+    document.addEventListener("click", enableSound);
+    document.addEventListener("touchstart", enableSound);
+    function playExpeditionFinishSound() { if(soundEnabled) { playBeep(); if(navigator.vibrate) navigator.vibrate(200); } }
 
+    // Helper
     function isBoostActive(id) { return gameState.activeBoosts[id] && gameState.activeBoosts[id] > Date.now(); }
     function getTotalCargoMult() { return isBoostActive("lade")?2.0:1.0; }
     function getLootMult() { let m=1+(gameState.tech.bonusFund*0.08); if(isBoostActive("ressourcen")) m*=1.5; return m; }
@@ -460,21 +464,79 @@
 
     function addDarkMatter(amt){ gameState.resources.darkmatter+=amt; addLog(`✨ +${amt} Dunkle Materie!`); saveGame(); renderAll(); }
     function addLog(text){ gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text}); if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); renderLogs(); saveGame();}
-    function saveGame(){ localStorage.setItem("ExpeditionGameSaveDM",JSON.stringify(gameState)); }
-    function loadGame(){ let s=localStorage.getItem("ExpeditionGameSaveDM"); if(s){ let d=JSON.parse(s); gameState=d; if(!gameState.activeBoosts) gameState.activeBoosts={}; if(gameState.resources.darkmatter===undefined) gameState.resources.darkmatter=350; } renderAll(); }
-
-    function fightSimulation(myShips, enemyPowerPercent, attackBonus=0, defenseBonus=0){
-        let comb= getCombatBonus();
-        let totalPower=(ships,atk,def)=>{ let sum=0; for(let [t,c] of Object.entries(ships)) if(c>0){ let d=shipsData[t]; sum+=c*(d.weapon*(1+gameState.tech.waffen*0.15+atk+comb) + d.shield*(1+gameState.tech.schild*0.15+def+comb) + d.armor*(1+gameState.tech.panzer*0.15+def)); } return sum; };
-        let myP=totalPower(myShips,attackBonus,defenseBonus);
-        let enemyP=myP*(enemyPowerPercent/100);
-        let lossFactor=Math.min(0.95, (enemyP/myP)*0.8);
-        if(getPirateShield()) lossFactor*=0.3;
-        let newShips={}, scrap=0;
-        for(let [t,c] of Object.entries(myShips)){ let lost=Math.floor(c*lossFactor); newShips[t]=c-lost; let cost=shipsData[t].cost; scrap+=lost*(cost.metal+cost.crystal+cost.deuterium);}
-        return { newShips, scrap: Math.floor(scrap*0.5) };
+    function saveGame(){ gameState.lastUpdate = Date.now(); localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState)); }
+    
+    // ========== OFFLINE CATCH-UP ==========
+    function catchUpAfterOffline() {
+        let now = Date.now();
+        let last = gameState.lastUpdate || now;
+        let elapsed = Math.min(now - last, 7 * 24 * 3600 * 1000); // max 7 Tage
+        if(elapsed <= 0) return;
+        
+        // 1. Schiffsproduktion nachholen
+        let queue = gameState.productionQueue;
+        let i = 0;
+        while(i < queue.length) {
+            let item = queue[i];
+            let newFinish = item.finishTimestamp + elapsed;
+            if(newFinish <= now) {
+                gameState.ships[item.shipType] += item.amount;
+                queue.splice(i, 1);
+                addLog(`🏭 ${item.amount}x ${item.shipType} wurden während deiner Abwesenheit fertig gebaut!`);
+            } else {
+                item.finishTimestamp = newFinish;
+                i++;
+            }
+        }
+        
+        // 2. Expeditionen nachholen (nur fertigstellen, keine neuen starten)
+        let expeditionsChanged = false;
+        for(let i = 0; i < gameState.expeditions.length; i++) {
+            let exp = gameState.expeditions[i];
+            if(!exp) continue;
+            
+            // Zeit vorlaufen lassen
+            exp.hinEnde += elapsed;
+            exp.halteEnde += elapsed;
+            exp.rückEnde += elapsed;
+            
+            // Prüfen ob komplett vorbei
+            if(exp.rückEnde <= now) {
+                // Expedition auswerten
+                let res = processExpedition(i, exp.fleetObj, exp.zielId, exp.kommandeurId);
+                for(let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
+                gameState.expeditions[i] = null;
+                expeditionsChanged = true;
+                addLog(`🪐 Expedition von Slot ${i+1} wurde während deiner Abwesenheit abgeschlossen!`);
+                playExpeditionFinishSound();
+            } else if(exp.halteEnde <= now && exp.phase === "halten") {
+                exp.phase = "rückflug";
+                expeditionsChanged = true;
+            } else if(exp.hinEnde <= now && exp.phase === "hinflug") {
+                exp.phase = "halten";
+                expeditionsChanged = true;
+            }
+        }
+        
+        // 3. Boosts ablaufen lassen
+        for(let [bid, expiry] of Object.entries(gameState.activeBoosts)) {
+            if(expiry <= now) delete gameState.activeBoosts[bid];
+        }
+        
+        // 4. Cooldowns aktualisieren (vorlaufen lassen, aber nicht unter 0)
+        for(let zone in gameState.sectorCooldowns) {
+            let cd = gameState.sectorCooldowns[zone];
+            if(cd > 0) {
+                let newCd = cd - elapsed;
+                gameState.sectorCooldowns[zone] = Math.max(0, newCd);
+            }
+        }
+        
+        gameState.lastUpdate = now;
+        if(expeditionsChanged || queue.length !== gameState.productionQueue.length) saveGame();
     }
-
+    
+    // Expeditions-Logik (exakt gleich wie vorher, aber als Funktion extrahiert)
     function processExpedition(slot, fleet, zielId, kommId){
         let ziel=expeditionZiele[zielId], komm=kommandeurBonuses[kommId];
         let lootMult=getLootMult(), crystalBless=getCrystalBless(), luck=getLuckBonus();
@@ -500,12 +562,24 @@
             return { newShips:fleet, resourcesGained:metal+crystal+deut };
         } else { addLog(`SLOT ${slot+1}: ⚠️ Laderaum zu klein! Keine Beute.`); return { newShips:fleet, resourcesGained:0 }; }
     }
+    
+    function fightSimulation(myShips, enemyPowerPercent, attackBonus=0, defenseBonus=0){
+        let comb= getCombatBonus();
+        let totalPower=(ships,atk,def)=>{ let sum=0; for(let [t,c] of Object.entries(ships)) if(c>0){ let d=shipsData[t]; sum+=c*(d.weapon*(1+gameState.tech.waffen*0.15+atk+comb) + d.shield*(1+gameState.tech.schild*0.15+def+comb) + d.armor*(1+gameState.tech.panzer*0.15+def)); } return sum; };
+        let myP=totalPower(myShips,attackBonus,defenseBonus);
+        let enemyP=myP*(enemyPowerPercent/100);
+        let lossFactor=Math.min(0.95, (enemyP/myP)*0.8);
+        if(getPirateShield()) lossFactor*=0.3;
+        let newShips={}, scrap=0;
+        for(let [t,c] of Object.entries(myShips)){ let lost=Math.floor(c*lossFactor); newShips[t]=c-lost; let cost=shipsData[t].cost; scrap+=lost*(cost.metal+cost.crystal+cost.deuterium);}
+        return { newShips, scrap: Math.floor(scrap*0.5) };
+    }
 
     function finishExpedition(slot){
         let exp = gameState.expeditions[slot];
-        if (!exp) return;
+        if(!exp) return;
         let res = processExpedition(slot, exp.fleetObj, exp.zielId, exp.kommandeurId);
-        for (let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
+        for(let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
         gameState.expeditions[slot] = null;
         playExpeditionFinishSound();
         saveGame(); renderAll();
@@ -520,7 +594,6 @@
         let fleet={};
         for(let t of shipKeys){ let val=shipsSel[t]||0; if(val>gameState.ships[t]){ alert(`Nicht genug ${t}`); return false; } if(val>0) fleet[t]=val; }
         if(Object.keys(fleet).length===0){ alert("Wähle Schiffe!"); return false; }
-        
         let kommData = kommandeurBonuses[kommId];
         let commanderDM = Math.floor(kommData.costDM * getCommanderDiscount());
         if(kommId !== "keiner" && gameState.resources.darkmatter < commanderDM){
@@ -540,13 +613,8 @@
         saveGame(); renderAll(); return true;
     }
 
-    // Forschung mit DM-Kosten (teuer, langfristig)
     const techDMCost = (type, level) => {
-        let base = 0;
-        if(type === "werftLevel") base = 50;
-        else if(type === "bonusFund") base = 40;
-        else if(type === "speed") base = 45;
-        else base = 30;
+        let base = (type === "werftLevel") ? 50 : (type === "bonusFund") ? 40 : (type === "speed") ? 45 : 30;
         return Math.floor(base * Math.pow(1.8, level));
     };
 
@@ -559,9 +627,7 @@
             gameState.tech[type]++;
             addLog(`🔬 ${type.toUpperCase()} auf Stufe ${gameState.tech[type]} verbessert für ${dmCost} DM!`);
             saveGame(); renderAll();
-        } else {
-            alert(`❌ Nicht genug Dunkle Materie! Benötigt: ${dmCost} DM`);
-        }
+        } else alert(`❌ Nicht genug Dunkle Materie! Benötigt: ${dmCost} DM`);
     }
 
     function addToProduction(ship, amount){
@@ -576,6 +642,7 @@
         saveGame(); renderAll();
     }
 
+    // Render-Funktion (wie gehabt, aber gekürzt für Länge - bleibt funktional)
     function renderAll(){
         document.getElementById("metal").innerText=gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText=gameState.resources.crystal.toLocaleString();
@@ -647,10 +714,46 @@
         updateQueueDisplay(); updateSectorCooldownDisplays();
     }
     
-    function updateQueueDisplay(){ let qDiv=document.getElementById("productionQueueDisplay"); if(!qDiv) return; if(gameState.productionQueue.length===0){ qDiv.innerHTML="<small>📦 Keine Schiffe in Produktion</small>"; return; } let html="<strong>🏭 Aktive Bauaufträge:</strong><br>"; for(let it of gameState.productionQueue){ let rem=Math.max(0,(it.finishTimestamp-Date.now())/1000); html+=`<div class="queue-item">🔨 ${it.amount}x ${it.shipType} — ${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}</div>`; } qDiv.innerHTML=html; }
-    function updateSectorCooldownDisplays() { for(let [zoneId] of Object.entries(expeditionZiele)) { let cdEnd=gameState.sectorCooldowns[zoneId]||0, rem=Math.max(0,cdEnd-Date.now()), el=document.getElementById(`cd_${zoneId}`); if(el) el.innerHTML=rem<=0?"✅ Bereit":`⏳ ${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000)}`; } }
-    function renderLogs(){ let logDiv=document.getElementById("eventLog"); if(!logDiv) return; logDiv.innerHTML=""; for(let log of gameState.eventLogs) logDiv.innerHTML+=`<div class="log-entry">🕒 ${log.timestamp} — ${log.text}</div>`; }
-    function activateBoost(boostId){ let b=shopBoosts[boostId]; if(gameState.resources.darkmatter<b.costDM){ addLog(`❌ Nicht genug DM für ${b.name}`); return false; } if(b.effect.oneTime){ gameState.resources.darkmatter-=b.costDM; if(boostId==="sofort"){ let sum=0; for(let it of gameState.productionQueue){ gameState.ships[it.shipType]+=it.amount; sum+=it.amount; } gameState.productionQueue=[]; addLog(`🔧 Sofortproduktion: ${sum} Schiffe gebaut!`); } if(boostId==="cooldownReset"){ pendingCooldownReset=true; addLog(`🔄 Cooldown-Reset aktiv!`); } saveGame(); renderAll(); return true; } gameState.resources.darkmatter-=b.costDM; gameState.activeBoosts[boostId]=Date.now()+3600000; addLog(`🛒 ${b.name} aktiviert (1h)!`); saveGame(); renderAll(); return true; }
+    function updateQueueDisplay(){ 
+        let qDiv=document.getElementById("productionQueueDisplay"); 
+        if(!qDiv) return; 
+        if(gameState.productionQueue.length===0){ qDiv.innerHTML="<small>📦 Keine Schiffe in Produktion</small>"; return; } 
+        let html="<strong>🏭 Aktive Bauaufträge:</strong><br>"; 
+        for(let it of gameState.productionQueue){ 
+            let rem=Math.max(0,(it.finishTimestamp-Date.now())/1000); 
+            html+=`<div class="queue-item">🔨 ${it.amount}x ${it.shipType} — ${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}</div>`; 
+        } qDiv.innerHTML=html; 
+    }
+    
+    function updateSectorCooldownDisplays() { 
+        for(let [zoneId] of Object.entries(expeditionZiele)) { 
+            let cdEnd=gameState.sectorCooldowns[zoneId]||0, rem=Math.max(0,cdEnd-Date.now()), el=document.getElementById(`cd_${zoneId}`); 
+            if(el) el.innerHTML=rem<=0?"✅ Bereit":`⏳ ${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000)}`; 
+        } 
+    }
+    
+    function renderLogs(){ 
+        let logDiv=document.getElementById("eventLog"); 
+        if(!logDiv) return; 
+        logDiv.innerHTML=""; 
+        for(let log of gameState.eventLogs) logDiv.innerHTML+=`<div class="log-entry">🕒 ${log.timestamp} — ${log.text}</div>`; 
+    }
+    
+    function activateBoost(boostId){ 
+        let b=shopBoosts[boostId]; 
+        if(gameState.resources.darkmatter<b.costDM){ addLog(`❌ Nicht genug DM für ${b.name}`); return false; } 
+        if(b.effect.oneTime){ 
+            gameState.resources.darkmatter-=b.costDM; 
+            if(boostId==="sofort"){ let sum=0; for(let it of gameState.productionQueue){ gameState.ships[it.shipType]+=it.amount; sum+=it.amount; } gameState.productionQueue=[]; addLog(`🔧 Sofortproduktion: ${sum} Schiffe gebaut!`); } 
+            if(boostId==="cooldownReset"){ pendingCooldownReset=true; addLog(`🔄 Cooldown-Reset aktiv!`); } 
+            saveGame(); renderAll(); return true; 
+        } 
+        gameState.resources.darkmatter-=b.costDM; 
+        gameState.activeBoosts[boostId]=Date.now()+3600000; 
+        addLog(`🛒 ${b.name} aktiviert (1h)!`); 
+        saveGame(); renderAll(); return true; 
+    }
+    
     function resetGame(){ if(confirm("ALLE Daten zurücksetzen?")){ localStorage.removeItem("ExpeditionGameSaveDM"); location.reload(); } }
     
     document.getElementById("upgradeWerftBtn").onclick=()=>upgradeTechDM("werftLevel",4);
@@ -663,9 +766,51 @@
     
     document.querySelectorAll(".tab-btn").forEach(btn=>{ btn.onclick=()=>{ let tabId=btn.dataset.tab; document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active-pane")); document.getElementById(tabId+"Pane").classList.add("active-pane"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }; });
     
-    loadGame(); setInterval(()=>{ let c=false; for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp<Date.now()){ delete gameState.activeBoosts[bid]; c=true; } if(c){ saveGame(); renderAll(); } else updateSectorCooldownDisplays(); },1000);
-    setInterval(()=>{ let changed=false; let now=Date.now(); for(let i=0;i<gameState.productionQueue.length;i++) if(now>=gameState.productionQueue[i].finishTimestamp){ let it=gameState.productionQueue[i]; gameState.ships[it.shipType]+=it.amount; gameState.productionQueue.splice(i,1); changed=true; i--; } if(changed){ saveGame(); renderAll(); } },500);
-    setInterval(()=>{ let need=false; let now=Date.now(); for(let i=0;i<4;i++){ let e=gameState.expeditions[i]; if(e){ if(e.phase==="hinflug" && now>=e.hinEnde){ e.phase="halten"; need=true; } else if(e.phase==="halten" && now>=e.halteEnde){ e.phase="rückflug"; need=true; } else if(e.phase==="rückflug" && now>=e.rückEnde){ finishExpedition(i); need=true; } } } if(need) renderAll(); else{ updateQueueDisplay(); updateSectorCooldownDisplays(); } },500);
+    // Initialisierung mit Offline-CatchUp
+    function loadGameAndCatchUp(){
+        let s = localStorage.getItem("ExpeditionGameSaveDM");
+        if(s){
+            let d = JSON.parse(s);
+            gameState = d;
+            if(!gameState.activeBoosts) gameState.activeBoosts = {};
+            if(!gameState.lastUpdate) gameState.lastUpdate = Date.now();
+            if(gameState.resources.darkmatter === undefined) gameState.resources.darkmatter = 350;
+            catchUpAfterOffline();
+        }
+        renderAll();
+    }
+    
+    loadGameAndCatchUp();
+    
+    // Timer für Live-Updates (alle 0.5 Sekunden)
+    setInterval(()=>{ 
+        let changed = false;
+        let now = Date.now();
+        // Produktion
+        for(let i=0;i<gameState.productionQueue.length;i++) {
+            if(now >= gameState.productionQueue[i].finishTimestamp){
+                let it = gameState.productionQueue[i];
+                gameState.ships[it.shipType] += it.amount;
+                gameState.productionQueue.splice(i,1);
+                changed = true;
+                i--;
+                addLog(`🏭 ${it.amount}x ${it.shipType} fertig gebaut!`);
+            }
+        }
+        // Expeditionen
+        for(let i=0;i<4;i++){
+            let e = gameState.expeditions[i];
+            if(e){
+                if(e.phase === "hinflug" && now >= e.hinEnde){ e.phase = "halten"; changed=true; }
+                else if(e.phase === "halten" && now >= e.halteEnde){ e.phase = "rückflug"; changed=true; }
+                else if(e.phase === "rückflug" && now >= e.rückEnde){ finishExpedition(i); changed=true; }
+            }
+        }
+        // Boosts ablaufen
+        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp <= now){ delete gameState.activeBoosts[bid]; changed=true; }
+        if(changed){ saveGame(); renderAll(); }
+        else { updateQueueDisplay(); updateSectorCooldownDisplays(); }
+    }, 500);
 </script>
 </body>
 </html>
