@@ -412,14 +412,31 @@
         if(risk === "niedrig") return 20 * 60 * 1000;
         if(risk === "mittel") return 15 * 60 * 1000;
         if(risk === "hoch") return 10 * 60 * 1000;
+        if(risk === "extrem") return 25 * 60 * 1000;
         return 15 * 60 * 1000;
     };
 
+    // DM-Gewinne jetzt stark reduziert: zwischen 1 und 18 Basisspanne, selten etwas höher mit Glück
+    function getBaseDarkMatterAmount(zoneId, luckBonus = 0) {
+        let baseMin = 1, baseMax = 12;
+        if (zoneId === "anomalie") { baseMin = 3; baseMax = 18; }
+        else if (zoneId === "ruinen") { baseMin = 2; baseMax = 14; }
+        else if (zoneId === "asteroid") { baseMin = 1; baseMax = 10; }
+        else if (zoneId === "piraten") { baseMin = 1; baseMax = 9; }
+        let amount = Math.floor(Math.random() * (baseMax - baseMin + 1) + baseMin);
+        // Glücksboost erhöht um max. 30% (selten mehr als 20% effekt)
+        if (luckBonus > 0) {
+            let bonus = Math.floor(amount * (luckBonus * 0.6));
+            amount += Math.min(bonus, 5);
+        }
+        return Math.min(amount, 22); // Hardcap: nie mehr als 22 DM pro Fund
+    }
+
     const expeditionZiele = {
-        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03, cooldownMs: getCooldownByRisk("niedrig"), darkMatterChance: 0.08, darkMatterAmount: [100,500] },
-        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15, cooldownMs: getCooldownByRisk("hoch"), darkMatterChance: 0.05, darkMatterAmount: [50,300] },
-        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25, cooldownMs: getCooldownByRisk("extrem"), darkMatterChance: 0.25, darkMatterAmount: [300,1500] },
-        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: getCooldownByRisk("mittel"), darkMatterChance: 0.15, darkMatterAmount: [150,800] }
+        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03, cooldownMs: getCooldownByRisk("niedrig"), darkMatterChance: 0.12, darkMatterAmount: [1,10] },
+        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15, cooldownMs: getCooldownByRisk("hoch"), darkMatterChance: 0.08, darkMatterAmount: [1,9] },
+        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25, cooldownMs: getCooldownByRisk("extrem"), darkMatterChance: 0.18, darkMatterAmount: [3,18] },
+        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: getCooldownByRisk("mittel"), darkMatterChance: 0.15, darkMatterAmount: [2,14] }
     };
 
     const kommandeurBonuses = {
@@ -473,7 +490,14 @@
     function getAlienDM() { return isBoostActive("alien"); }
     function getMystery() { return isBoostActive("mystery"); }
 
-    function addDarkMatter(amt){ gameState.resources.darkmatter+=amt; addLog(`✨ +${amt} Dunkle Materie!`); saveGame(); renderAll(); }
+    function addDarkMatter(amt){ 
+        if(amt>0) {
+            gameState.resources.darkmatter += amt; 
+            addLog(`✨ +${amt} Dunkle Materie!`); 
+        }
+        saveGame(); renderAll(); 
+    }
+    
     function addLog(text){ gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text}); if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); renderLogs(); saveGame();}
     
     function saveGame(){ 
@@ -485,7 +509,6 @@
         let now = Date.now();
         let changed = false;
         
-        // 1. Produktions-Queue abarbeiten
         for(let i = 0; i < gameState.productionQueue.length; i++) {
             let item = gameState.productionQueue[i];
             if(now >= item.finishTimestamp) {
@@ -497,23 +520,19 @@
             }
         }
         
-        // 2. Expeditionen abarbeiten
         for(let i = 0; i < gameState.expeditions.length; i++) {
             let exp = gameState.expeditions[i];
             if(!exp) continue;
-            
             if(exp.phase === "hinflug" && now >= exp.hinEnde) {
                 exp.phase = "halten";
                 changed = true;
                 addLog(`🚀 Expedition Slot ${i+1} hat das Ziel erreicht.`);
             }
-            
             if(exp.phase === "halten" && now >= exp.halteEnde) {
                 exp.phase = "rückflug";
                 changed = true;
                 addLog(`🔄 Expedition Slot ${i+1} beginnt Rückflug.`);
             }
-            
             if(exp.phase === "rückflug" && now >= exp.rückEnde) {
                 let res = processExpedition(i, exp.fleetObj, exp.zielId, exp.kommandeurId);
                 for(let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
@@ -523,7 +542,6 @@
             }
         }
         
-        // 3. Boosts ablaufen lassen
         for(let [bid, expiry] of Object.entries(gameState.activeBoosts)) {
             if(expiry <= now) {
                 delete gameState.activeBoosts[bid];
@@ -560,9 +578,22 @@
         if(totalCargo>=metal+crystal+deut){
             gameState.resources.metal+=metal; gameState.resources.crystal+=crystal; gameState.resources.deuterium+=deut;
             addLog(`SLOT ${slot+1}: 💰 Fund: +${metal.toLocaleString()} M / ${crystal.toLocaleString()} K / ${deut.toLocaleString()} D`);
-            if(getMystery()){ let dm=Math.floor(Math.random()*100)+20; addDarkMatter(dm); addLog(`🎁 Mystery +${dm} DM`);}
-            if(Math.random()<ziel.darkMatterChance+luck*0.2){ let dm=Math.floor(Math.random()*(ziel.darkMatterAmount[1]-ziel.darkMatterAmount[0])+ziel.darkMatterAmount[0]); addDarkMatter(dm);}
-            if(getAlienDM()){ let ad=Math.floor(Math.random()*30)+5; addDarkMatter(ad);}
+            
+            // DM-Fund: jetzt stark reduziert
+            let dmAmount = 0;
+            if(Math.random()<ziel.darkMatterChance+luck*0.2){
+                dmAmount = getBaseDarkMatterAmount(zielId, luck);
+                addDarkMatter(dmAmount);
+            }
+            if(getAlienDM() && Math.random()<0.4){ 
+                let extraDM = Math.floor(Math.random() * 5) + 1; 
+                addDarkMatter(extraDM); 
+            }
+            if(getMystery() && Math.random()<0.3){ 
+                let mysteryDM = Math.floor(Math.random() * 6) + 2; 
+                addDarkMatter(mysteryDM); 
+                addLog(`🎁 Mystery +${mysteryDM} DM`);
+            }
             return { newShips:fleet, resourcesGained:metal+crystal+deut };
         } else { 
             addLog(`SLOT ${slot+1}: ⚠️ Laderaum zu klein! Keine Beute.`); 
@@ -830,7 +861,6 @@
     
     document.querySelectorAll(".tab-btn").forEach(btn=>{ btn.onclick=()=>{ let tabId=btn.dataset.tab; document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active-pane")); document.getElementById(tabId+"Pane").classList.add("active-pane"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }; });
     
-    // Bei Fokus und Visibility-Change alle Events nachholen
     window.addEventListener("focus", () => {
         processOfflineEvents();
         renderAll();
@@ -843,7 +873,6 @@
         }
     });
     
-    // Vor dem Schließen speichern
     window.addEventListener("beforeunload", () => {
         saveGame();
     });
@@ -862,12 +891,10 @@
     
     loadGame();
     
-    // Reguläres Interval für Echtzeit-Updates (jede Sekunde)
     setInterval(() => {
         let now = Date.now();
         let changed = false;
         
-        // Produktion prüfen
         for(let i=0;i<gameState.productionQueue.length;i++) {
             if(now >= gameState.productionQueue[i].finishTimestamp){
                 let it = gameState.productionQueue[i];
@@ -878,7 +905,6 @@
             }
         }
         
-        // Expeditionen prüfen
         for(let i=0;i<4;i++){
             let e = gameState.expeditions[i];
             if(e){
@@ -899,7 +925,6 @@
             }
         }
         
-        // Boosts ablaufen lassen
         for(let [bid,exp] of Object.entries(gameState.activeBoosts)) {
             if(exp <= now){ 
                 delete gameState.activeBoosts[bid]; 
