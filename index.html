@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Expedition Commander - OGame Expeditions Modul mit Shop & Boosts</title>
+    <title>Expedition Commander - DM für Forschung & Kommandeur</title>
     <style>
         * {
             box-sizing: border-box;
@@ -28,7 +28,6 @@
             box-shadow: 0 20px 35px rgba(0,0,0,0.6);
         }
 
-        /* Feste Ressourcenleiste */
         .resources-bar {
             background: #0b1120e6;
             border-radius: 60px;
@@ -67,7 +66,6 @@
         }
         .reset-btn:active { transform: scale(0.96);}
 
-        /* TAB-NAVIGATION */
         .tab-nav {
             display: flex;
             flex-wrap: wrap;
@@ -105,7 +103,6 @@
         .tab-pane { display: none; }
         .tab-pane.active-pane { display: block; }
 
-        /* Elemente */
         .upgrade-item, .shop-item, .ship-item, .expedition-fleet, .boost-active {
             background: #0f172a;
             margin: 12px 0;
@@ -258,11 +255,14 @@
             border-radius: 30px;
             margin-left: 8px;
         }
+        .dm-cost {
+            color: #c084fc;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 <div class="game-container">
-    <!-- Feste Ressourcenleiste immer oben -->
     <div class="resources-bar">
         <div class="resource"><span>🪨 METALL:</span> <span id="metal" class="metal">0</span></div>
         <div class="resource"><span>💎 KRISTALL:</span> <span id="crystal" class="crystal">0</span></div>
@@ -271,39 +271,35 @@
         <div class="reset-btn" id="resetGameBtn">⚠️ RESETT</div>
     </div>
 
-    <!-- TABS -->
     <div class="tab-nav">
-        <button class="tab-btn" data-tab="forschung">🔬 FORSCHUNG</button>
+        <button class="tab-btn" data-tab="forschung">🔬 FORSCHUNG (DM)</button>
         <button class="tab-btn" data-tab="shop">🛒 SHOP & BOOSTS</button>
         <button class="tab-btn" data-tab="flotte">📦 FLOTTE</button>
         <button class="tab-btn" data-tab="schiffbau">🏭 SCHIFFBAU</button>
-        <button class="tab-btn" data-tab="expedition" class="active">🪐 EXPEDITION</button>
+        <button class="tab-btn" data-tab="expedition">🪐 EXPEDITION</button>
     </div>
 
     <div class="tab-content">
-        <!-- FORSCHUNG -->
-        <div id="forschungPane" class="tab-pane">
-            <h3>📡 Technologien (max. Stufe 5 / Werft max.4)</h3>
-            <div class="upgrade-item"><div>🔫 Waffentechnik (+15% Angriff) Lv.<span id="waffenLvl">0</span>/5</div><div><span id="waffenCost"></span> <button id="upgradeWaffenBtn">+</button></div></div>
-            <div class="upgrade-item"><div>🛡️ Schildtechnik (+15% Schild) Lv.<span id="schildLvl">0</span>/5</div><div><span id="schildCost"></span> <button id="upgradeSchildBtn">+</button></div></div>
-            <div class="upgrade-item"><div>🧱 Panzerungstechnik (+15% HP) Lv.<span id="panzerLvl">0</span>/5</div><div><span id="panzerCost"></span> <button id="upgradePanzerBtn">+</button></div></div>
-            <div class="upgrade-item"><div>💰 Expeditions-Bonus (+8% Fund) Lv.<span id="bonusFundLvl">0</span>/5</div><div><span id="bonusCost"></span> <button id="upgradeBonusBtn">+</button></div></div>
-            <div class="upgrade-item"><div>🚀 Expeditions-Dauer (-8% Zeit) Lv.<span id="speedLvl">0</span>/5</div><div><span id="speedCost"></span> <button id="upgradeSpeedBtn">+</button></div></div>
-            <div class="upgrade-item"><div>⚙️ Werft Upgrade (mehr Slots) Lv.<span id="werftLevel">0</span>/4</div><div><span id="werftCostDisplay"></span> <button id="upgradeWerftBtn">⬆️ Upgrade</button></div></div>
+        <div id="forschungPane" class="tab-pane active-pane">
+            <h3>📡 Dunkle-Materie-Forschung (teuer, langfristig)</h3>
+            <div class="upgrade-item"><div>🔫 Waffentechnik (+15% Angriff) Lv.<span id="waffenLvl">0</span>/5</div><div><span id="waffenCost"></span> <button id="upgradeWaffenBtn">🔬 DM Upgrade</button></div></div>
+            <div class="upgrade-item"><div>🛡️ Schildtechnik (+15% Schild) Lv.<span id="schildLvl">0</span>/5</div><div><span id="schildCost"></span> <button id="upgradeSchildBtn">🔬 DM Upgrade</button></div></div>
+            <div class="upgrade-item"><div>🧱 Panzerungstechnik (+15% HP) Lv.<span id="panzerLvl">0</span>/5</div><div><span id="panzerCost"></span> <button id="upgradePanzerBtn">🔬 DM Upgrade</button></div></div>
+            <div class="upgrade-item"><div>💰 Expeditions-Bonus (+8% Fund) Lv.<span id="bonusFundLvl">0</span>/5</div><div><span id="bonusCost"></span> <button id="upgradeBonusBtn">🔬 DM Upgrade</button></div></div>
+            <div class="upgrade-item"><div>🚀 Expeditions-Dauer (-8% Zeit) Lv.<span id="speedLvl">0</span>/5</div><div><span id="speedCost"></span> <button id="upgradeSpeedBtn">🔬 DM Upgrade</button></div></div>
+            <div class="upgrade-item"><div>⚙️ Werft Upgrade (mehr Slots) Lv.<span id="werftLevel">0</span>/4</div><div><span id="werftCostDisplay"></span> <button id="upgradeWerftBtn">🏭 DM Upgrade</button></div></div>
             <div class="badge-info">🏭 Aktive Bauschienen: <span id="activeSlots">0</span> / <span id="maxSlots">1</span></div>
             <hr>
-            <div class="badge-info">⚡ Aktive Boosts beeinflussen auch die Forschung (Kommandeur-Rabatt, Werft-Boost)</div>
+            <div class="badge-info">✨ Jede Forschungsstufe kostet Dunkle Materie – langfristige Motivation! Kommandeure kosten ebenfalls DM pro Einsatz.</div>
         </div>
 
-        <!-- SHOP -->
         <div id="shopPane" class="tab-pane">
             <h3>🛒 Dunkle Materie Shop – 1h Boosts</h3>
             <div id="activeBoostsDisplay"></div>
             <div id="shopContainer"></div>
-            <div class="badge-info" style="margin-top: 12px;">✨ <strong>Wirkungen:</strong> Ressourcen-Boost (+50% Beute) | Temp-Boost (-50% Expeditionsdauer) | Kampf-Boost (+50% Kampfstärke) | Lade-Boost (x2 Laderaum) | Glücks-Boost (+30% auf bessere Ereignisse) | Alien-Kontakt (zus. DM) | Sofort-Produktion (baut alle Schiffe sofort) | Piraten-Schild (Verluste -70%) | Kristall-Segen (x2 Kristall) | Doppel-Expedition (+1 Expeditionsslot) | Cooldown-Reset (reset Sektor) | Kommandeur-Rabatt (-50% Commander Kosten) | Werft-Wunder (-50% Bauzeit) | Mystery-Box (zufällige DM + Bonus bei Funden)</div>
+            <div class="badge-info" style="margin-top: 12px;">✨ <strong>Wirkungen:</strong> Ressourcen-Boost (+50% Beute) | Temp-Boost (-50% Expeditionsdauer) | Kampf-Boost (+50% Kampfstärke) | Lade-Boost (x2 Laderaum) | Glücks-Boost (+30% auf bessere Ereignisse) | Alien-Kontakt (zus. DM) | Sofort-Produktion (baut alle Schiffe sofort) | Piraten-Schild (Verluste -70%) | Kristall-Segen (x2 Kristall) | Doppel-Expedition (+1 Expeditionsslot) | Cooldown-Reset | Kommandeur-Rabatt | Werft-Wunder | Mystery-Box</div>
         </div>
 
-        <!-- FLOTTE -->
         <div id="flottePane" class="tab-pane">
             <h3>📦 Meine Flotte</h3>
             <div id="fleetStatus" class="fleet-stat-grid"></div>
@@ -311,7 +307,6 @@
             <div><strong>💡 Tipp:</strong> Große Transporter erhöhen Laderaum – wichtig für Ressourcenfunde!</div>
         </div>
 
-        <!-- SCHIFFBAU mit Kostenanzeige -->
         <div id="schiffbauPane" class="tab-pane">
             <h3>🏭 Werft – Schiffestats & Bauaufträge</h3>
             <table class="ship-detail-table">
@@ -328,26 +323,24 @@
             <div id="productionQueueDisplay"></div>
         </div>
 
-        <!-- EXPEDITION mit Sektor-COOLDOWN TIMERN -->
-        <div id="expeditionPane" class="tab-pane active-pane">
-            <h3>🪐 Expeditionen – Sektoren & Risiken (Live Cooldown)</h3>
+        <div id="expeditionPane" class="tab-pane">
+            <h3>🪐 Expeditionen – Sektoren & Risiken (Kommandeur kostet DM!)</h3>
             <div class="ziel-grid" id="sektorExplainer"></div>
             <div id="expeditionSlots"></div>
-            <div class="badge-info">🚀 Cooldowns: Niedriges Risiko = 20min | Mittel = 15min | Hoch = 10min | Extrem = 15min. Timer live!</div>
+            <div class="badge-info">🚀 Kommandeure kosten Dunkle Materie pro Einsatz (Rabatt-Boost möglich). Forschung ebenfalls DM.</div>
         </div>
     </div>
-    <!-- LOG -->
+    
     <div style="margin-top: 28px;">
         <div style="background: #0a1020; border-radius: 28px; padding: 12px 18px;">
             <div><strong>📜 LETZTE 12 EXPEDITIONEN</strong></div>
             <div id="eventLog" style="max-height: 240px; overflow-y: auto; margin-top: 8px;"></div>
         </div>
     </div>
-    <footer>✨ Dunkle Materie selten in Asteroiden, häufiger in Anomalien & Ruinen | Boosts wirken 1 Stunde | Cooldown-Timer aktualisieren sich live</footer>
+    <footer>✨ Forschung & Kommandeure kosten Dunkle Materie – sammle DM in Expeditionen!</footer>
 </div>
 
 <script>
-    // ==================== DATEN ====================
     const shipsData = {
         "Großer Transporter": { weapon: 50, shield: 800, armor: 1600, cargo: 15000000, buildTime: 2, cost: { metal: 800000, crystal: 500000, deuterium: 300000 } },
         "Leichter Jäger":    { weapon: 150, shield: 300, armor: 500, cargo: 0, buildTime: 2, cost: { metal: 200000, crystal: 100000, deuterium: 0 } },
@@ -357,29 +350,29 @@
     };
     const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer"];
 
-    // COOLDOWN WERTE nach Risiko
     const getCooldownByRisk = (risk) => {
         if(risk === "niedrig") return 20 * 60 * 1000;
         if(risk === "mittel") return 15 * 60 * 1000;
         if(risk === "hoch") return 10 * 60 * 1000;
-        if(risk === "extrem") return 15 * 60 * 1000;
         return 15 * 60 * 1000;
     };
 
     const expeditionZiele = {
-        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", belohnung: "Metall/Kristall/Deut", beschreibung: "Sichere Funde, geringe Kampfgefahr", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03, cooldownMs: getCooldownByRisk("niedrig"), darkMatterChance: 0.08, darkMatterAmount: [100,500] },
-        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", belohnung: "Gute Beute, aber hoher Verlust", beschreibung: "Piratenangriffe wahrscheinlich, aber fette Ausbeute", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15, cooldownMs: getCooldownByRisk("hoch"), darkMatterChance: 0.05, darkMatterAmount: [50,300] },
-        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", belohnung: "Riesige Schätze & DM", beschreibung: "Hohe Risiken, aber legendäre Beute möglich", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25, cooldownMs: getCooldownByRisk("extrem"), darkMatterChance: 0.25, darkMatterAmount: [300,1500] },
-        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", belohnung: "Kristall & Dunkle Materie", beschreibung: "Alte Zivilisation, hohe DM Chance", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: getCooldownByRisk("mittel"), darkMatterChance: 0.15, darkMatterAmount: [150,800] }
+        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03, cooldownMs: getCooldownByRisk("niedrig"), darkMatterChance: 0.08, darkMatterAmount: [100,500] },
+        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15, cooldownMs: getCooldownByRisk("hoch"), darkMatterChance: 0.05, darkMatterAmount: [50,300] },
+        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25, cooldownMs: getCooldownByRisk("extrem"), darkMatterChance: 0.25, darkMatterAmount: [300,1500] },
+        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: getCooldownByRisk("mittel"), darkMatterChance: 0.15, darkMatterAmount: [150,800] }
     };
 
+    // Kommandeure kosten DM pro Einsatz!
     const kommandeurBonuses = {
-        "keiner": { name: "❌ Kein Kommandeur", attackBonus:0, defenseBonus:0, lootBonus:0, speedBonus:0, cost:0 },
-        "admiral": { name: "⚔️ Admiral", attackBonus:0.3, defenseBonus:0, lootBonus:0, speedBonus:0, cost:2000000 },
-        "defensiv": { name: "🛡️ Defensivstratege", attackBonus:0, defenseBonus:0.4, lootBonus:0, speedBonus:0, cost:1500000 },
-        "händler": { name: "💰 Händler", attackBonus:0, defenseBonus:0, lootBonus:0.5, speedBonus:0, cost:2500000 },
-        "pionier": { name: "🚀 Pionier", attackBonus:0, defenseBonus:0, lootBonus:0, speedBonus:0.2, cost:1800000 }
+        "keiner": { name: "❌ Kein Kommandeur", attackBonus:0, defenseBonus:0, lootBonus:0, speedBonus:0, costDM:0 },
+        "admiral": { name: "⚔️ Admiral", attackBonus:0.3, defenseBonus:0, lootBonus:0, speedBonus:0, costDM:25 },
+        "defensiv": { name: "🛡️ Defensivstratege", attackBonus:0, defenseBonus:0.4, lootBonus:0, speedBonus:0, costDM:20 },
+        "händler": { name: "💰 Händler", attackBonus:0, defenseBonus:0, lootBonus:0.5, speedBonus:0, costDM:35 },
+        "pionier": { name: "🚀 Pionier", attackBonus:0, defenseBonus:0, lootBonus:0, speedBonus:0.2, costDM:30 }
     };
+    
     const shopBoosts = {
         "ressourcen": { name:"📈 Ressourcen-Boost", costDM:12, effect:{ type:"lootMult", value:1.5, duration:3600000 } },
         "temp": { name:"⚡ Temp-Boost", costDM:10, effect:{ type:"speedMult", value:0.5, duration:3600000 } },
@@ -398,7 +391,7 @@
     };
 
     let gameState = {
-        resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:500 },
+        resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:350 },
         tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 },
         ships: { "Großer Transporter":2, "Leichter Jäger":5, "Schlachtschiff":1, "Schlachtkreuzer":0, "Zerstörer":0 },
         productionQueue: [], expeditions: [null,null,null], eventLogs: [],
@@ -409,11 +402,9 @@
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
     let pendingCooldownReset = null;
 
-    // ==================== SOUND & VIBRATION ====================
+    // Sound (wie gehabt)
     let finishSound = null;
     let soundEnabled = false;
-    
-    // Erzeugt einen kurzen Ping-Ton über Web Audio API (funktioniert ohne externe Datei)
     function createBeepSound() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -422,54 +413,37 @@
             const gainNode = audioCtx.createGain();
             gainNode.gain.value = 0.3;
             gainNode.connect(audioCtx.destination);
-            
-            // Funktion, die einen kurzen Beep abspielt (muss nach User-Interaction gestartet werden)
             return () => {
                 if (!soundEnabled) return;
-                // AudioContext muss resumed sein
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume().then(() => playBeep(audioCtx, gainNode));
-                } else {
-                    playBeep(audioCtx, gainNode);
-                }
+                if (audioCtx.state === 'suspended') audioCtx.resume().then(() => playBeep(audioCtx, gainNode));
+                else playBeep(audioCtx, gainNode);
             };
-        } catch(e) { console.warn("Audio nicht unterstützt", e); return null; }
+        } catch(e) { return null; }
     }
-    
     function playBeep(audioCtx, gainNode) {
         try {
-            const now = audioCtx.currentTime;
             const osc = audioCtx.createOscillator();
             osc.type = 'sine';
             osc.frequency.value = 880;
             osc.connect(gainNode);
             osc.start();
-            osc.stop(now + 0.2);
-        } catch(e) { console.warn("Beep fehlgeschlagen"); }
+            osc.stop(audioCtx.currentTime + 0.2);
+        } catch(e) {}
     }
-    
     let playBeepFn = null;
-    
     function enableSoundOnFirstClick() {
         if (soundEnabled) return;
         if (!playBeepFn) playBeepFn = createBeepSound();
         soundEnabled = true;
-        // Test-Ton abspielen, um User-Interaction zu bestätigen
         if (playBeepFn) playBeepFn();
         document.removeEventListener("click", enableSoundOnFirstClick);
         document.removeEventListener("touchstart", enableSoundOnFirstClick);
-        addLog("🔊 Sound & Vibration aktiviert!");
+        addLog("🔊 Sound aktiviert!");
     }
     document.addEventListener("click", enableSoundOnFirstClick);
     document.addEventListener("touchstart", enableSoundOnFirstClick);
-    
-    function playExpeditionFinishSound() {
-        if (!soundEnabled) return;
-        if (playBeepFn) playBeepFn();
-        if (navigator.vibrate) navigator.vibrate(200);
-    }
+    function playExpeditionFinishSound() { if (soundEnabled && playBeepFn) playBeepFn(); if (navigator.vibrate) navigator.vibrate(200); }
 
-    // Helper
     function isBoostActive(id) { return gameState.activeBoosts[id] && gameState.activeBoosts[id] > Date.now(); }
     function getTotalCargoMult() { return isBoostActive("lade")?2.0:1.0; }
     function getLootMult() { let m=1+(gameState.tech.bonusFund*0.08); if(isBoostActive("ressourcen")) m*=1.5; return m; }
@@ -486,8 +460,8 @@
 
     function addDarkMatter(amt){ gameState.resources.darkmatter+=amt; addLog(`✨ +${amt} Dunkle Materie!`); saveGame(); renderAll(); }
     function addLog(text){ gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text}); if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); renderLogs(); saveGame();}
-    function saveGame(){ localStorage.setItem("ExpeditionGameSave",JSON.stringify(gameState)); }
-    function loadGame(){ let s=localStorage.getItem("ExpeditionGameSave"); if(s){ let d=JSON.parse(s); gameState=d; if(!gameState.activeBoosts) gameState.activeBoosts={}; if(gameState.resources.darkmatter===undefined) gameState.resources.darkmatter=500; } renderAll(); }
+    function saveGame(){ localStorage.setItem("ExpeditionGameSaveDM",JSON.stringify(gameState)); }
+    function loadGame(){ let s=localStorage.getItem("ExpeditionGameSaveDM"); if(s){ let d=JSON.parse(s); gameState=d; if(!gameState.activeBoosts) gameState.activeBoosts={}; if(gameState.resources.darkmatter===undefined) gameState.resources.darkmatter=350; } renderAll(); }
 
     function fightSimulation(myShips, enemyPowerPercent, attackBonus=0, defenseBonus=0){
         let comb= getCombatBonus();
@@ -527,40 +501,67 @@
         } else { addLog(`SLOT ${slot+1}: ⚠️ Laderaum zu klein! Keine Beute.`); return { newShips:fleet, resourcesGained:0 }; }
     }
 
-    // ---------- UPDATED finishExpedition mit SOUND ----------
     function finishExpedition(slot){
         let exp = gameState.expeditions[slot];
         if (!exp) return;
         let res = processExpedition(slot, exp.fleetObj, exp.zielId, exp.kommandeurId);
-        for (let [t, c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
+        for (let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
         gameState.expeditions[slot] = null;
-        
-        // SOUND & VIBRATION bei Expeditionsende
         playExpeditionFinishSound();
-        
-        saveGame();
-        renderAll();
+        saveGame(); renderAll();
     }
 
     function startExpedition(slot, shipsSel, zielId, kommId){
         if(gameState.expeditions[slot]){ alert("Expedition läuft!"); return false; }
         let now=Date.now();
         let cd=gameState.sectorCooldowns[zielId];
-        if(cd>now && !pendingCooldownReset){ alert(`Sektor im Cooldown! Noch ${Math.ceil((cd-now)/1000)} Sekunden warten.`); return false; }
+        if(cd>now && !pendingCooldownReset){ alert(`Sektor im Cooldown! Noch ${Math.ceil((cd-now)/1000)} Sekunden.`); return false; }
         if(pendingCooldownReset && cd>now){ gameState.sectorCooldowns[zielId]=0; pendingCooldownReset=false; addLog(`Cooldown reset!`); }
         let fleet={};
         for(let t of shipKeys){ let val=shipsSel[t]||0; if(val>gameState.ships[t]){ alert(`Nicht genug ${t}`); return false; } if(val>0) fleet[t]=val; }
         if(Object.keys(fleet).length===0){ alert("Wähle Schiffe!"); return false; }
-        let costK=Math.floor(kommandeurBonuses[kommId].cost*getCommanderDiscount());
-        if(kommId!=="keiner" && (gameState.resources.metal<costK||gameState.resources.crystal<costK||gameState.resources.deuterium<costK/2)){ alert("Ressourcen für Kommandeur"); return false; }
-        if(kommId!=="keiner"){ gameState.resources.metal-=costK; gameState.resources.crystal-=costK; gameState.resources.deuterium-=Math.floor(costK/2); }
-        for(let t of shipKeys) gameState.ships[t]-=(fleet[t]||0);
-        let speed=getSpeedMult() - kommandeurBonuses[kommId].speedBonus;
-        let flight=Math.floor(5*60*1000*Math.max(0.2,speed)), hold=Math.floor(10*60*1000*Math.max(0.2,speed));
+        
+        let kommData = kommandeurBonuses[kommId];
+        let commanderDM = Math.floor(kommData.costDM * getCommanderDiscount());
+        if(kommId !== "keiner" && gameState.resources.darkmatter < commanderDM){
+            alert(`Nicht genug Dunkle Materie für ${kommData.name} (kostet ${commanderDM} DM!)`);
+            return false;
+        }
+        if(kommId !== "keiner"){
+            gameState.resources.darkmatter -= commanderDM;
+            addLog(`👨‍✈️ ${kommData.name} engagiert für ${commanderDM} DM.`);
+        }
+        for(let t of shipKeys) gameState.ships[t] -= (fleet[t]||0);
+        let speed = getSpeedMult() - kommData.speedBonus;
+        let flight = Math.floor(5*60*1000*Math.max(0.2,speed)), hold = Math.floor(10*60*1000*Math.max(0.2,speed));
         let start=Date.now();
         gameState.expeditions[slot]={ fleetObj:fleet, phase:"hinflug", startTime:start, zielId, kommandeurId:kommId, hinEnde:start+flight, halteEnde:start+flight+hold, rückEnde:start+flight+hold+flight };
         gameState.sectorCooldowns[zielId]=start+expeditionZiele[zielId].cooldownMs;
         saveGame(); renderAll(); return true;
+    }
+
+    // Forschung mit DM-Kosten (teuer, langfristig)
+    const techDMCost = (type, level) => {
+        let base = 0;
+        if(type === "werftLevel") base = 50;
+        else if(type === "bonusFund") base = 40;
+        else if(type === "speed") base = 45;
+        else base = 30;
+        return Math.floor(base * Math.pow(1.8, level));
+    };
+
+    function upgradeTechDM(type, maxLvl){
+        let cur = gameState.tech[type];
+        if(cur >= maxLvl) return;
+        let dmCost = techDMCost(type, cur);
+        if(gameState.resources.darkmatter >= dmCost){
+            gameState.resources.darkmatter -= dmCost;
+            gameState.tech[type]++;
+            addLog(`🔬 ${type.toUpperCase()} auf Stufe ${gameState.tech[type]} verbessert für ${dmCost} DM!`);
+            saveGame(); renderAll();
+        } else {
+            alert(`❌ Nicht genug Dunkle Materie! Benötigt: ${dmCost} DM`);
+        }
     }
 
     function addToProduction(ship, amount){
@@ -573,40 +574,6 @@
         let buildTime=shipsData[ship].buildTime*amount*getBuildSpeedMult();
         gameState.productionQueue.push({ shipType:ship, amount, finishTimestamp:Date.now()+(buildTime*1000) });
         saveGame(); renderAll();
-    }
-
-    function upgradeTech(type, maxLvl){
-        let cur=gameState.tech[type];
-        if(cur>=maxLvl) return;
-        let cost;
-        if(type==="werftLevel") cost={ metal:3000000*(cur+1), crystal:2000000*(cur+1), deuterium:1000000*(cur+1) };
-        else if(type==="bonusFund") cost={ metal:1000000*(cur+1), crystal:700000*(cur+1), deuterium:400000*(cur+1) };
-        else if(type==="speed") cost={ metal:1200000*(cur+1), crystal:800000*(cur+1), deuterium:500000*(cur+1) };
-        else cost={ metal:800000*(cur+1), crystal:500000*(cur+1), deuterium:250000*(cur+1) };
-        if(gameState.resources.metal>=cost.metal && gameState.resources.crystal>=cost.crystal && gameState.resources.deuterium>=cost.deuterium){
-            gameState.resources.metal-=cost.metal; gameState.resources.crystal-=cost.crystal; gameState.resources.deuterium-=cost.deuterium;
-            gameState.tech[type]++; saveGame(); renderAll();
-        } else alert("Ressourcen fehlen");
-    }
-
-    function updateSectorCooldownDisplays() {
-        const now = Date.now();
-        for(let [zoneId, ziel] of Object.entries(expeditionZiele)) {
-            const cdEnd = gameState.sectorCooldowns[zoneId] || 0;
-            const remaining = Math.max(0, cdEnd - now);
-            const cdElement = document.getElementById(`cd_${zoneId}`);
-            if(cdElement) {
-                if(remaining <= 0) {
-                    cdElement.innerHTML = "✅ Bereit";
-                    cdElement.style.color = "#88ff88";
-                } else {
-                    let minutes = Math.floor(remaining / 60000);
-                    let seconds = Math.floor((remaining % 60000) / 1000);
-                    cdElement.innerHTML = `⏳ Cooldown: ${minutes}:${seconds.toString().padStart(2,'0')}`;
-                    cdElement.style.color = "#ffaa88";
-                }
-            }
-        }
     }
 
     function renderAll(){
@@ -623,30 +590,29 @@
         let maxSlots=Math.min(4, gameState.tech.werftLevel+1)+(getExtraSlot()?1:0);
         document.getElementById("maxSlots").innerText=maxSlots;
         document.getElementById("activeSlots").innerText=gameState.productionQueue.length;
-        let upCost=(type,lvl)=>{ if(type==="werftLevel") return{metal:3000000*(lvl+1),crystal:2000000*(lvl+1),deuterium:1000000*(lvl+1)}; if(type==="bonusFund") return{metal:1000000*(lvl+1),crystal:700000*(lvl+1),deuterium:400000*(lvl+1)}; if(type==="speed")return{metal:1200000*(lvl+1),crystal:800000*(lvl+1),deuterium:500000*(lvl+1)}; return{metal:800000*(lvl+1),crystal:500000*(lvl+1),deuterium:250000*(lvl+1)}; };
-        document.getElementById("waffenCost").innerHTML=`${upCost("waffen",gameState.tech.waffen).metal.toLocaleString()}/${upCost("waffen",gameState.tech.waffen).crystal.toLocaleString()}/${upCost("waffen",gameState.tech.waffen).deuterium.toLocaleString()}`;
-        document.getElementById("schildCost").innerHTML=`${upCost("schild",gameState.tech.schild).metal.toLocaleString()}/${upCost("schild",gameState.tech.schild).crystal.toLocaleString()}/${upCost("schild",gameState.tech.schild).deuterium.toLocaleString()}`;
-        document.getElementById("panzerCost").innerHTML=`${upCost("panzer",gameState.tech.panzer).metal.toLocaleString()}/${upCost("panzer",gameState.tech.panzer).crystal.toLocaleString()}/${upCost("panzer",gameState.tech.panzer).deuterium.toLocaleString()}`;
-        document.getElementById("bonusCost").innerHTML=`${upCost("bonusFund",gameState.tech.bonusFund).metal.toLocaleString()}/${upCost("bonusFund",gameState.tech.bonusFund).crystal.toLocaleString()}/${upCost("bonusFund",gameState.tech.bonusFund).deuterium.toLocaleString()}`;
-        document.getElementById("speedCost").innerHTML=`${upCost("speed",gameState.tech.speed).metal.toLocaleString()}/${upCost("speed",gameState.tech.speed).crystal.toLocaleString()}/${upCost("speed",gameState.tech.speed).deuterium.toLocaleString()}`;
-        document.getElementById("werftCostDisplay").innerHTML=`${upCost("werftLevel",gameState.tech.werftLevel).metal.toLocaleString()}/${upCost("werftLevel",gameState.tech.werftLevel).crystal.toLocaleString()}/${upCost("werftLevel",gameState.tech.werftLevel).deuterium.toLocaleString()}`;
-        let fleetHtml=""; for(let t of shipKeys) fleetHtml+=`<div class="fleet-stat"><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}</div>`;
+        
+        const displayCost = (type, lvl) => { let d = techDMCost(type, lvl); return `<span class="dm-cost">🌌 ${d} DM</span>`; };
+        document.getElementById("waffenCost").innerHTML = displayCost("waffen", gameState.tech.waffen);
+        document.getElementById("schildCost").innerHTML = displayCost("schild", gameState.tech.schild);
+        document.getElementById("panzerCost").innerHTML = displayCost("panzer", gameState.tech.panzer);
+        document.getElementById("bonusCost").innerHTML = displayCost("bonusFund", gameState.tech.bonusFund);
+        document.getElementById("speedCost").innerHTML = displayCost("speed", gameState.tech.speed);
+        document.getElementById("werftCostDisplay").innerHTML = displayCost("werftLevel", gameState.tech.werftLevel);
+        
+        let fleetHtml=""; for(let t of shipKeys) fleetHtml+=`<div><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}</div>`;
         document.getElementById("fleetStatus").innerHTML=fleetHtml;
         
         let shipyardHtml=""; 
         for(let t of shipKeys){ 
             let cost = shipsData[t].cost;
-            let costText = `${cost.metal.toLocaleString()} / ${cost.crystal.toLocaleString()} / ${cost.deuterium.toLocaleString()}`;
-            shipyardHtml+=`<div class="ship-item">
-                <span><b>${t}</b> <span class="ship-cost">💰 ${costText}</span> <span style="font-size:0.7rem;">⚡ ${shipsData[t].buildTime}s</span></span>
-                <div><input type="number" id="num_${t.replace(/ /g,'')}" min="1" value="1" style="width:70px"><button class="build-ship-btn" data-ship="${t}">🚧 Bauen</button></div>
-            </div>`; 
+            shipyardHtml+=`<div class="ship-item"><span><b>${t}</b> <span class="ship-cost">💰 ${cost.metal.toLocaleString()}/${cost.crystal.toLocaleString()}/${cost.deuterium.toLocaleString()}</span></span>
+                <div><input type="number" id="num_${t.replace(/ /g,'')}" min="1" value="1" style="width:70px"><button class="build-ship-btn" data-ship="${t}">🚧 Bauen</button></div></div>`; 
         }
         document.getElementById("shipyardContainer").innerHTML=shipyardHtml;
         document.querySelectorAll(".build-ship-btn").forEach(btn=>btn.onclick=()=>{ let s=btn.dataset.ship; let am=parseInt(document.getElementById(`num_${s.replace(/ /g,'')}`).value||1); if(am>0) addToProduction(s,am); });
         
         let activeHtml="<strong>🔥 Aktive Boosts:</strong><br>"; let has=false; let now=Date.now();
-        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp>now){ has=true; activeHtml+=`<div class="boost-active">✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-now)/60000)} min</div>`; } else delete gameState.activeBoosts[bid];
+        for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp>now){ has=true; activeHtml+=`<div>✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-now)/60000)} min</div>`; } else delete gameState.activeBoosts[bid];
         if(!has) activeHtml+="<div>❌ Keine aktiven Boosts</div>";
         document.getElementById("activeBoostsDisplay").innerHTML=activeHtml;
         let shopHtml=""; for(let [id,b] of Object.entries(shopBoosts)) shopHtml+=`<div class="shop-item"><span><b>${b.name}</b><br><small>💰 ${b.costDM} DM</small></span><button class="shop" data-boost="${id}" ${isBoostActive(id)?"disabled":""}>Kaufen</button></div>`;
@@ -657,12 +623,8 @@
         for(let [id,z] of Object.entries(expeditionZiele)) {
             let cdEnd = gameState.sectorCooldowns[id] || 0;
             let remaining = Math.max(0, cdEnd - Date.now());
-            let timerText = (remaining <= 0) ? "✅ Bereit" : `⏳ ${Math.floor(remaining/60000)}:${Math.floor((remaining%60000)/1000).toString().padStart(2,'0')}`;
-            sektorHtml+=`<div class="ziel-card ${selectedZiele[0]===id?'selected':''}" data-sektor="${id}">
-                <b>${z.name}</b><br><span class="risk-${z.risk}">⚠️ Risiko: ${z.risk}</span><br>
-                <small>📦 ${z.belohnung}<br>${z.beschreibung}</small><br>
-                <div class="cooldown-timer" id="cd_${id}">${timerText}</div>
-            </div>`;
+            let timerText = (remaining <= 0) ? "✅ Bereit" : `⏳ ${Math.floor(remaining/60000)}:${Math.floor((remaining%60000)/1000)}`;
+            sektorHtml+=`<div class="ziel-card ${selectedZiele[0]===id?'selected':''}" data-sektor="${id}"><b>${z.name}</b><br><span class="risk-${z.risk}">⚠️ Risiko: ${z.risk}</span><br><div class="cooldown-timer" id="cd_${id}">${timerText}</div></div>`;
         }
         document.getElementById("sektorExplainer").innerHTML=sektorHtml;
         document.querySelectorAll("[data-sektor]").forEach(el=>el.onclick=()=>{ let id=el.dataset.sektor; for(let i=0;i<3;i++) selectedZiele[i]=id; renderAll(); });
@@ -672,40 +634,38 @@
             let e=gameState.expeditions[i];
             if(e){
                 let remain=0; if(e.phase==="hinflug") remain=(e.hinEnde-now)/1000; else if(e.phase==="halten") remain=(e.halteEnde-now)/1000; else remain=(e.rückEnde-now)/1000;
-                slotsDiv+=`<div class="expedition-fleet"><b>🚀 Flotte ${i+1}</b> — ${e.phase} <span class="timer">${Math.floor(remain/60)}:${Math.floor(remain%60).toString().padStart(2,'0')}</span><br><small>🎯 ${expeditionZiele[e.zielId]?.name} | 👨‍✈️ ${kommandeurBonuses[e.kommandeurId]?.name}<br>📦 ${Object.entries(e.fleetObj).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}</small></div>`;
+                slotsDiv+=`<div class="expedition-fleet"><b>🚀 Flotte ${i+1}</b> — ${e.phase} <span class="timer">${Math.floor(remain/60)}:${Math.floor(remain%60)}</span><br><small>🎯 ${expeditionZiele[e.zielId]?.name} | 👨‍✈️ ${kommandeurBonuses[e.kommandeurId]?.name}<br>📦 ${Object.entries(e.fleetObj).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}</small></div>`;
             } else {
                 let shipsSelect=""; for(let t of shipKeys) shipsSelect+=`<div class="exp-input-group"><label>${t} (max ${gameState.ships[t]}):</label><input type="number" id="exp_slot${i}_${t.replace(/ /g,'')}" min="0" max="${gameState.ships[t]}" value="0" step="1"></div>`;
-                let kommHtml=""; for(let [kid,k] of Object.entries(kommandeurBonuses)) kommHtml+=`<span class="commander-chip ${selectedKommandeur[i]===kid?'selected':''}" data-komm="${kid}" data-slot="${i}">${k.name} ${k.cost>0?`(${Math.floor(k.cost*getCommanderDiscount()).toLocaleString()})`:""}</span>`;
+                let kommHtml=""; for(let [kid,k] of Object.entries(kommandeurBonuses)){ let dmAfterDiscount = Math.floor(k.costDM * getCommanderDiscount()); kommHtml+=`<span class="commander-chip ${selectedKommandeur[i]===kid?'selected':''}" data-komm="${kid}" data-slot="${i}">${k.name} ${k.costDM>0?`(${dmAfterDiscount} DM)`:""}</span>`; }
                 slotsDiv+=`<div class="expedition-fleet"><b>🆓 Flotte ${i+1}</b> — Bereit<div class="commander-group">${kommHtml}</div><div>${shipsSelect}</div><button class="start-expedition-btn" data-slot="${i}">🚀 Expedition starten</button></div>`;
             }
         }
         document.getElementById("expeditionSlots").innerHTML=slotsDiv;
         document.querySelectorAll(".commander-chip").forEach(el=>el.onclick=()=>{ let s=parseInt(el.dataset.slot); let k=el.dataset.komm; selectedKommandeur[s]=k; renderAll(); });
         document.querySelectorAll(".start-expedition-btn").forEach(btn=>btn.onclick=()=>{ let s=parseInt(btn.dataset.slot); let sel={}; for(let t of shipKeys){ let val=parseInt(document.getElementById(`exp_slot${s}_${t.replace(/ /g,'')}`)?.value||0); if(val>0) sel[t]=val; } startExpedition(s, sel, selectedZiele[s], selectedKommandeur[s]); });
-        updateQueueDisplay(); updateTimers();
-        updateSectorCooldownDisplays();
+        updateQueueDisplay(); updateSectorCooldownDisplays();
     }
     
     function updateQueueDisplay(){ let qDiv=document.getElementById("productionQueueDisplay"); if(!qDiv) return; if(gameState.productionQueue.length===0){ qDiv.innerHTML="<small>📦 Keine Schiffe in Produktion</small>"; return; } let html="<strong>🏭 Aktive Bauaufträge:</strong><br>"; for(let it of gameState.productionQueue){ let rem=Math.max(0,(it.finishTimestamp-Date.now())/1000); html+=`<div class="queue-item">🔨 ${it.amount}x ${it.shipType} — ${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}</div>`; } qDiv.innerHTML=html; }
-    function updateTimers(){ for(let i=0;i<4;i++){ let e=gameState.expeditions[i]; if(e){ let now=Date.now(),rem=0; if(e.phase==="hinflug") rem=(e.hinEnde-now)/1000; else if(e.phase==="halten") rem=(e.halteEnde-now)/1000; else rem=(e.rückEnde-now)/1000; let span=document.getElementById(`exp_timer_${i}`); if(span) span.innerText=`${Math.floor(rem/60)}:${Math.floor(rem%60).toString().padStart(2,'0')}`; } } }
-    function productionInterval(){ let changed=false; let now=Date.now(); for(let i=0;i<gameState.productionQueue.length;i++) if(now>=gameState.productionQueue[i].finishTimestamp){ let it=gameState.productionQueue[i]; gameState.ships[it.shipType]+=it.amount; gameState.productionQueue.splice(i,1); changed=true; i--; } if(changed){ saveGame(); renderAll(); } setTimeout(productionInterval,500); }
-    function expeditionTimerLoop(){ let need=false; let now=Date.now(); for(let i=0;i<4;i++){ let e=gameState.expeditions[i]; if(e){ if(e.phase==="hinflug" && now>=e.hinEnde){ e.phase="halten"; need=true; } else if(e.phase==="halten" && now>=e.halteEnde){ e.phase="rückflug"; need=true; } else if(e.phase==="rückflug" && now>=e.rückEnde){ finishExpedition(i); need=true; } } } if(need) renderAll(); else{ updateTimers(); updateQueueDisplay(); updateSectorCooldownDisplays(); } requestAnimationFrame(()=>setTimeout(expeditionTimerLoop,500)); }
+    function updateSectorCooldownDisplays() { for(let [zoneId] of Object.entries(expeditionZiele)) { let cdEnd=gameState.sectorCooldowns[zoneId]||0, rem=Math.max(0,cdEnd-Date.now()), el=document.getElementById(`cd_${zoneId}`); if(el) el.innerHTML=rem<=0?"✅ Bereit":`⏳ ${Math.floor(rem/60000)}:${Math.floor((rem%60000)/1000)}`; } }
     function renderLogs(){ let logDiv=document.getElementById("eventLog"); if(!logDiv) return; logDiv.innerHTML=""; for(let log of gameState.eventLogs) logDiv.innerHTML+=`<div class="log-entry">🕒 ${log.timestamp} — ${log.text}</div>`; }
-    function activateBoost(boostId){ let b=shopBoosts[boostId]; if(gameState.resources.darkmatter<b.costDM){ addLog(`❌ Nicht genug DM für ${b.name}`); return false; } if(b.effect.oneTime){ gameState.resources.darkmatter-=b.costDM; if(boostId==="sofort"){ let sum=0; for(let it of gameState.productionQueue){ gameState.ships[it.shipType]+=it.amount; sum+=it.amount; } gameState.productionQueue=[]; addLog(`🔧 Sofortproduktion: ${sum} Schiffe gebaut!`); } if(boostId==="cooldownReset"){ pendingCooldownReset=true; addLog(`🔄 Cooldown-Reset gekauft! Klick auf einen Sektor im Cooldown (via Expedition) um zurückzusetzen.`); } saveGame(); renderAll(); return true; } gameState.resources.darkmatter-=b.costDM; gameState.activeBoosts[boostId]=Date.now()+3600000; addLog(`🛒 ${b.name} aktiviert (1h)!`); saveGame(); renderAll(); return true; }
-    function resetGame(){ if(confirm("ALLE Daten zurücksetzen?")){ localStorage.removeItem("ExpeditionGameSave"); location.reload(); } }
+    function activateBoost(boostId){ let b=shopBoosts[boostId]; if(gameState.resources.darkmatter<b.costDM){ addLog(`❌ Nicht genug DM für ${b.name}`); return false; } if(b.effect.oneTime){ gameState.resources.darkmatter-=b.costDM; if(boostId==="sofort"){ let sum=0; for(let it of gameState.productionQueue){ gameState.ships[it.shipType]+=it.amount; sum+=it.amount; } gameState.productionQueue=[]; addLog(`🔧 Sofortproduktion: ${sum} Schiffe gebaut!`); } if(boostId==="cooldownReset"){ pendingCooldownReset=true; addLog(`🔄 Cooldown-Reset aktiv!`); } saveGame(); renderAll(); return true; } gameState.resources.darkmatter-=b.costDM; gameState.activeBoosts[boostId]=Date.now()+3600000; addLog(`🛒 ${b.name} aktiviert (1h)!`); saveGame(); renderAll(); return true; }
+    function resetGame(){ if(confirm("ALLE Daten zurücksetzen?")){ localStorage.removeItem("ExpeditionGameSaveDM"); location.reload(); } }
     
-    document.getElementById("upgradeWerftBtn").onclick=()=>upgradeTech("werftLevel",4);
-    document.getElementById("upgradeWaffenBtn").onclick=()=>upgradeTech("waffen",5);
-    document.getElementById("upgradeSchildBtn").onclick=()=>upgradeTech("schild",5);
-    document.getElementById("upgradePanzerBtn").onclick=()=>upgradeTech("panzer",5);
-    document.getElementById("upgradeBonusBtn").onclick=()=>upgradeTech("bonusFund",5);
-    document.getElementById("upgradeSpeedBtn").onclick=()=>upgradeTech("speed",5);
+    document.getElementById("upgradeWerftBtn").onclick=()=>upgradeTechDM("werftLevel",4);
+    document.getElementById("upgradeWaffenBtn").onclick=()=>upgradeTechDM("waffen",5);
+    document.getElementById("upgradeSchildBtn").onclick=()=>upgradeTechDM("schild",5);
+    document.getElementById("upgradePanzerBtn").onclick=()=>upgradeTechDM("panzer",5);
+    document.getElementById("upgradeBonusBtn").onclick=()=>upgradeTechDM("bonusFund",5);
+    document.getElementById("upgradeSpeedBtn").onclick=()=>upgradeTechDM("speed",5);
     document.getElementById("resetGameBtn").onclick=resetGame;
     
     document.querySelectorAll(".tab-btn").forEach(btn=>{ btn.onclick=()=>{ let tabId=btn.dataset.tab; document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active-pane")); document.getElementById(tabId+"Pane").classList.add("active-pane"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }; });
     
-    loadGame(); productionInterval(); expeditionTimerLoop();
-    setInterval(()=>{ let c=false; for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp<Date.now()){ delete gameState.activeBoosts[bid]; c=true; } if(c){ saveGame(); renderAll(); } else { updateSectorCooldownDisplays(); } },1000);
+    loadGame(); setInterval(()=>{ let c=false; for(let [bid,exp] of Object.entries(gameState.activeBoosts)) if(exp<Date.now()){ delete gameState.activeBoosts[bid]; c=true; } if(c){ saveGame(); renderAll(); } else updateSectorCooldownDisplays(); },1000);
+    setInterval(()=>{ let changed=false; let now=Date.now(); for(let i=0;i<gameState.productionQueue.length;i++) if(now>=gameState.productionQueue[i].finishTimestamp){ let it=gameState.productionQueue[i]; gameState.ships[it.shipType]+=it.amount; gameState.productionQueue.splice(i,1); changed=true; i--; } if(changed){ saveGame(); renderAll(); } },500);
+    setInterval(()=>{ let need=false; let now=Date.now(); for(let i=0;i<4;i++){ let e=gameState.expeditions[i]; if(e){ if(e.phase==="hinflug" && now>=e.hinEnde){ e.phase="halten"; need=true; } else if(e.phase==="halten" && now>=e.halteEnde){ e.phase="rückflug"; need=true; } else if(e.phase==="rückflug" && now>=e.rückEnde){ finishExpedition(i); need=true; } } } if(need) renderAll(); else{ updateQueueDisplay(); updateSectorCooldownDisplays(); } },500);
 </script>
 </body>
 </html>
