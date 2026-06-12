@@ -462,7 +462,7 @@
     // Sound & Vibration
     let soundEnabled = false;
     let audioCtx = null;
-    let isFirstLoad = true;
+    let isFirstLoad = true; // Verhindert Sound beim ersten Laden
     
     function initAudio() { if(audioCtx) return; try { const AudioContext = window.AudioContext || window.webkitAudioContext; audioCtx = new AudioContext(); } catch(e) {} }
     function playBeep() { if(!soundEnabled || !audioCtx) return; try { if(audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); osc.stop(audioCtx.currentTime + 0.15); } catch(e) {} }
@@ -497,10 +497,12 @@
         localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState)); 
     }
     
-    // Offline Catch-Up - basierend auf absoluten Zeiten (kein elapsed mehr nötig)
-    function processOfflineEvents() {
+    // Offline Events abarbeiten - OHNE Sound beim ersten Laden
+    function processOfflineEvents(suppressSound = false) {
         let now = Date.now();
         let changed = false;
+        let oldSoundState = soundEnabled;
+        if(suppressSound) soundEnabled = false;
         
         // 1. Produktions-Queue abarbeiten
         for(let i = 0; i < gameState.productionQueue.length; i++) {
@@ -532,12 +534,12 @@
             }
             
             if(exp.phase === "rückflug" && now >= exp.rückEnde) {
-                let res = processExpedition(i, exp.fleetObj, exp.zielId, exp.kommandeurId, false);
+                let res = processExpedition(i, exp.fleetObj, exp.zielId, exp.kommandeurId, suppressSound);
                 for(let [t,c] of Object.entries(res.newShips)) gameState.ships[t] = (gameState.ships[t] || 0) + c;
                 gameState.expeditions[i] = null;
                 changed = true;
                 addLog(`🪐 Expedition Slot ${i+1} wurde abgeschlossen!`);
-                playExpeditionFinishSound();
+                if(!suppressSound) playExpeditionFinishSound();
             }
         }
         
@@ -548,6 +550,8 @@
                 changed = true;
             }
         }
+        
+        if(suppressSound) soundEnabled = oldSoundState;
         
         if(changed) {
             saveGame();
@@ -849,15 +853,15 @@
     
     document.querySelectorAll(".tab-btn").forEach(btn=>{ btn.onclick=()=>{ let tabId=btn.dataset.tab; document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active-pane")); document.getElementById(tabId+"Pane").classList.add("active-pane"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); }; });
     
-    // Bei Fokus und Visibility-Change alle Events nachholen
+    // Bei Fokus und Visibility-Change alle Events nachholen (mit Sound)
     window.addEventListener("focus", () => {
-        processOfflineEvents();
+        processOfflineEvents(false);
         renderAll();
     });
     
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden) {
-            processOfflineEvents();
+            processOfflineEvents(false);
             renderAll();
         }
     });
@@ -875,9 +879,9 @@
             if(!gameState.activeBoosts) gameState.activeBoosts = {};
             if(gameState.resources.darkmatter === undefined) gameState.resources.darkmatter = 350;
         }
+        // Beim ersten Laden KEINEN Sound abspielen!
+        processOfflineEvents(true);
         isFirstLoad = false;
-        // Wichtig: Erst nach dem Laden alle Events abarbeiten
-        processOfflineEvents();
         renderAll();
     }
     
