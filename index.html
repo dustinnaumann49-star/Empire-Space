@@ -55,6 +55,8 @@
         .shop-item-compact .shop-effect { font-size: 0.7rem; color: #88aaff; flex: 1; }
         .shop-cost { font-family: monospace; color: #c084fc; background: #1e1a3e; padding: 2px 10px; border-radius: 20px; margin: 0 8px; }
         .risk-highlight { color: #ff8888; font-weight: bold; }
+        .special-badge { background: #4a2e6e; font-size: 0.7rem; padding: 2px 8px; border-radius: 30px; margin-left: 8px; }
+        .bonus-progress { font-size: 0.7rem; color: #88ffaa; margin-left: 8px; }
     </style>
 </head>
 <body>
@@ -100,20 +102,21 @@
             <h3>📦 Meine Flotte</h3>
             <div id="fleetStatus" class="fleet-stat-grid"></div>
             <hr>
-            <div><strong>💡 Tipp:</strong> Große Transporter erhöhen Laderaum – wichtig für Ressourcenfunde!</div>
+            <div><strong>💡 Tipp:</strong> Pathfinder: +1% Beute/Schiff (max 25% bei 25 Schiffen) | Recycler: +1% Schrott/Schiff (max 25% bei 25 Schiffen)</div>
         </div>
 
         <div id="schiffbauPane" class="tab-pane">
             <h3>🏭 Werft – Schiffestats & Bauaufträge</h3>
-            <table class="ship-detail-table"><thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th></tr></thead>
+            <table class="ship-detail-table"><thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th><th>Spezial (1% pro Schiff, max 25%)</th></tr></thead>
             <tbody>
-                <tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td><td>2</td><td>800k / 700k / 400k</td></tr>
-                <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td><td>2</td><td>200k / 150k / 50k</td></tr>
-                <tr><td>Schlachtschiff</td><td>800</td><td>1200</td><td>2000</td><td>0</td><td>4</td><td>600k / 500k / 250k</td></tr>
-                <tr><td>Schlachtkreuzer</td><td>1500</td><td>2500</td><td>4000</td><td>0</td><td>5</td><td>1.2M / 1.1M / 600k</td></tr>
-                <tr><td>Zerstörer</td><td>6000</td><td>12000</td><td>18000</td><td>0</td><td>7</td><td>3.5M / 2.8M / 1.5M</td></tr>
-            </tbody>
-            </table>
+                <tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td><td>2</td><td>800k / 700k / 400k</td><td>📦 Transport</td></tr>
+                <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td><td>2</td><td>200k / 150k / 50k</td><td>⚔️ Kampf</td></tr>
+                <tr><td>Schlachtschiff</td><td>800</td><td>1200</td><td>2000</td><td>0</td><td>4</td><td>600k / 500k / 250k</td><td>⚔️ Kampf</td></tr>
+                <tr><td>Schlachtkreuzer</td><td>1500</td><td>2500</td><td>4000</td><td>0</td><td>5</td><td>1.2M / 1.1M / 600k</td><td>⚔️ Kampf</td></tr>
+                <tr><td>Zerstörer</td><td>6000</td><td>12000</td><td>18000</td><td>0</td><td>7</td><td>3.5M / 2.8M / 1.5M</td><td>⚔️ Kampf</td></tr>
+                <tr><td>🧭 Pathfinder</td><td>200</td><td>400</td><td>600</td><td>500k</td><td>3</td><td>400k / 300k / 150k</td><td>💰 +1% Beute (max 25%)</td></tr>
+                <tr><td>🔄 Recycler</td><td>50</td><td>200</td><td>400</td><td>2M</td><td>3</td><td>500k / 400k / 200k</td><td>🔧 +1% Schrott (max 25%)</td></tr>
+            </tbody></table>
             <div id="shipyardContainer" style="margin: 20px 0;"></div>
             <div id="productionQueueDisplay"></div>
         </div>
@@ -140,13 +143,15 @@
 <script>
     // ======================= SCHIFFSDATEN =======================
     const shipsData = {
-        "Großer Transporter": { weapon: 50, shield: 800, armor: 1600, cargo: 15000000, buildTime: 2, cost: { metal: 800000, crystal: 700000, deuterium: 400000 } },
-        "Leichter Jäger":    { weapon: 150, shield: 300, armor: 500, cargo: 0, buildTime: 2, cost: { metal: 200000, crystal: 150000, deuterium: 50000 } },
-        "Schlachtschiff":    { weapon: 800, shield: 1200, armor: 2000, cargo: 0, buildTime: 4, cost: { metal: 600000, crystal: 500000, deuterium: 250000 } },
-        "Schlachtkreuzer":   { weapon: 1500, shield: 2500, armor: 4000, cargo: 0, buildTime: 5, cost: { metal: 1200000, crystal: 1100000, deuterium: 600000 } },
-        "Zerstörer":         { weapon: 6000, shield: 12000, armor: 18000, cargo: 0, buildTime: 7, cost: { metal: 3500000, crystal: 2800000, deuterium: 1500000 } }
+        "Großer Transporter": { weapon: 50, shield: 800, armor: 1600, cargo: 15000000, buildTime: 2, cost: { metal: 800000, crystal: 700000, deuterium: 400000 }, role: "transport" },
+        "Leichter Jäger":    { weapon: 150, shield: 300, armor: 500, cargo: 0, buildTime: 2, cost: { metal: 200000, crystal: 150000, deuterium: 50000 }, role: "fighter" },
+        "Schlachtschiff":    { weapon: 800, shield: 1200, armor: 2000, cargo: 0, buildTime: 4, cost: { metal: 600000, crystal: 500000, deuterium: 250000 }, role: "battleship" },
+        "Schlachtkreuzer":   { weapon: 1500, shield: 2500, armor: 4000, cargo: 0, buildTime: 5, cost: { metal: 1200000, crystal: 1100000, deuterium: 600000 }, role: "battlecruiser" },
+        "Zerstörer":         { weapon: 6000, shield: 12000, armor: 18000, cargo: 0, buildTime: 7, cost: { metal: 3500000, crystal: 2800000, deuterium: 1500000 }, role: "destroyer" },
+        "Pathfinder":        { weapon: 200, shield: 400, armor: 600, cargo: 500000, buildTime: 3, cost: { metal: 400000, crystal: 300000, deuterium: 150000 }, role: "pathfinder" },
+        "Recycler":          { weapon: 50, shield: 200, armor: 400, cargo: 2000000, buildTime: 3, cost: { metal: 500000, crystal: 400000, deuterium: 200000 }, role: "recycler" }
     };
-    const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer"];
+    const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer", "Pathfinder", "Recycler"];
 
     // ======================= EXPEDITIONS-SEKTOREN =======================
     const expeditionZiele = {
@@ -165,37 +170,23 @@
         "pionier": { name: "🚀 Pionier", attackBonus:0, defenseBonus:0, lootBonus:0, holdTimeBonus:0.2, costDM:30, tooltip: "-20% Expeditions-Haltezeit" }
     };
     
-    // ======================= SHOP BOOSTS (24h mit abgestuften Prozenten) =======================
+    // ======================= SHOP BOOSTS =======================
     const BOOST_DURATION_24H = 24 * 60 * 60 * 1000;
-    
     const shopBoosts = {
-        // Fund-Boosts
         "fund_25": { name:"📈 Fund-Boost +25%", costDM:15, effect:{ type:"lootMult", value:1.25, duration:BOOST_DURATION_24H }, desc:"+25% Ressourcen-Fund bei Expeditionen" },
         "fund_50": { name:"📈 Fund-Boost +50%", costDM:28, effect:{ type:"lootMult", value:1.50, duration:BOOST_DURATION_24H }, desc:"+50% Ressourcen-Fund bei Expeditionen" },
         "fund_100": { name:"📈 Fund-Boost +100%", costDM:50, effect:{ type:"lootMult", value:2.00, duration:BOOST_DURATION_24H }, desc:"+100% Ressourcen-Fund bei Expeditionen" },
-        
-        // Flottenstärke-Boosts
         "kampf_25": { name:"⚔️ Flottenstärke +25%", costDM:18, effect:{ type:"combatBuff", value:0.25, duration:BOOST_DURATION_24H }, desc:"+25% Angriffsstärke im Kampf" },
         "kampf_50": { name:"⚔️ Flottenstärke +50%", costDM:32, effect:{ type:"combatBuff", value:0.50, duration:BOOST_DURATION_24H }, desc:"+50% Angriffsstärke im Kampf" },
         "kampf_100": { name:"⚔️ Flottenstärke +100%", costDM:55, effect:{ type:"combatBuff", value:1.00, duration:BOOST_DURATION_24H }, desc:"+100% Angriffsstärke im Kampf" },
-        
-        // DM-Fund-Boosts
         "dm_25": { name:"🌌 DM-Fund +25%", costDM:20, effect:{ type:"dmBoost", value:1.25, duration:BOOST_DURATION_24H }, desc:"+25% Dunkle-Materie-Funde" },
         "dm_50": { name:"🌌 DM-Fund +50%", costDM:35, effect:{ type:"dmBoost", value:1.50, duration:BOOST_DURATION_24H }, desc:"+50% Dunkle-Materie-Funde" },
-        
-        // Verlustreduktion
         "verlust_25": { name:"🛡️ Verlustreduktion -25%", costDM:22, effect:{ type:"lossReduction", value:0.75, duration:BOOST_DURATION_24H }, desc:"-25% eigene Kampfverluste" },
         "verlust_50": { name:"🛡️ Verlustreduktion -50%", costDM:40, effect:{ type:"lossReduction", value:0.50, duration:BOOST_DURATION_24H }, desc:"-50% eigene Kampfverluste" },
-        
-        // Haltezeit-Boosts
         "halt_25": { name:"⏱️ Haltezeit -25%", costDM:20, effect:{ type:"holdTimeMult", value:0.75, duration:BOOST_DURATION_24H }, desc:"-25% Expeditions-Haltezeit" },
         "halt_50": { name:"⏱️ Haltezeit -50%", costDM:35, effect:{ type:"holdTimeMult", value:0.50, duration:BOOST_DURATION_24H }, desc:"-50% Expeditions-Haltezeit" },
-        
-        // Ereignisglück
         "glueck_25": { name:"🍀 Ereignisglück +25%", costDM:18, effect:{ type:"luck", value:0.25, duration:BOOST_DURATION_24H }, desc:"+25% Chance auf gute Ereignisse & weniger Kämpfe" },
         "glueck_50": { name:"🍀 Ereignisglück +50%", costDM:32, effect:{ type:"luck", value:0.50, duration:BOOST_DURATION_24H }, desc:"+50% Chance auf gute Ereignisse & weniger Kämpfe" },
-        
-        // Risiko-Liebhaber (Non-Plus-Ultra)
         "risiko_liebhaber": { name:"🎲 Risiko-Liebhaber", costDM:45, effect:{ type:"highRisk", loot:2.5, lossRisk:1.5, duration:BOOST_DURATION_24H }, desc:"+150% Fund, aber +50% Verlustrisiko & höhere Kampfchance" }
     };
 
@@ -218,7 +209,7 @@
     let gameState = {
         resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 },
         tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 },
-        ships: { "Großer Transporter":0, "Leichter Jäger":0, "Schlachtschiff":0, "Schlachtkreuzer":0, "Zerstörer":0 },
+        ships: { "Großer Transporter":0, "Leichter Jäger":0, "Schlachtschiff":0, "Schlachtkreuzer":0, "Zerstörer":0, "Pathfinder":0, "Recycler":0 },
         productionQueue: [], expeditions: [null,null,null], eventLogs: [],
         sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 },
         activeBoosts: {}
@@ -280,12 +271,9 @@
         return { loot: 1, lossRisk: 1, combatRisk: 1 };
     }
     
-    function getCommanderDiscount() { return 1; } // Kein extra Boost mehr
+    function getCommanderDiscount() { return 1; }
     function getBuildSpeedMult() { return 1; }
     function getExtraSlot() { return false; }
-    function getPirateShield() { return false; }
-    function getCrystalBless() { return 1; }
-    function getAlienDM() { return false; }
     function getTotalCargoMult() { return 1; }
 
     function calculateDeuteriumCost(fleet) {
@@ -353,7 +341,18 @@
     function processExpedition(slot, fleet, zielId, kommId){
         let ziel = expeditionZiele[zielId];
         let komm = kommandeurBonuses[kommId];
-        let lootMult = getLootMult() + (komm.lootBonus || 0);
+        
+        // ========== SPEZIALBONI: Pathfinder & Recycler (1% pro Schiff, max 25%) ==========
+        let pathfinderCount = fleet["Pathfinder"] || 0;
+        let recyclerCount = fleet["Recycler"] || 0;
+        
+        // Pathfinder: +1% Beute pro Schiff, maximal 25% (bei 25 Schiffen)
+        let pathfinderBonus = Math.min(0.25, pathfinderCount * 0.01);
+        // Recycler: +1% Schrott pro Schiff, maximal 25% (bei 25 Schiffen)
+        let recyclerBonus = Math.min(0.25, recyclerCount * 0.01);
+        
+        let lootMult = getLootMult() + (komm.lootBonus || 0) + pathfinderBonus;
+        
         let luck = getLuckBonus();
         let riskMod = getRiskModifier();
         
@@ -364,7 +363,6 @@
         let combatThreshold = ziel.combatChance - luck*0.2;
         let lossThreshold = ziel.lossChance - luck*0.4;
         
-        // Risiko-Liebhaber erhöht Kampf- und Verlustchance
         if(isBoostActive("risiko_liebhaber")) {
             combatThreshold = Math.min(0.95, combatThreshold * 1.5);
             lossThreshold = Math.min(0.8, lossThreshold * 1.5);
@@ -372,7 +370,7 @@
         
         let isCombat = (random < combatThreshold);
         
-        addExpeditionLog(`🎲 [DEBUG] Zufall: ${random.toFixed(3)} | Kampf-Schwelle: ${combatThreshold.toFixed(3)} (${ziel.name}) → ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"}`);
+        addExpeditionLog(`🎲 SLOT ${slot+1}: ${ziel.name} | ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"} | Pathfinder:${pathfinderCount} (+${(pathfinderBonus*100).toFixed(0)}% Beute) | Recycler:${recyclerCount} (+${(recyclerBonus*100).toFixed(0)}% Schrott)`);
         
         if (!isCombat && random < lossThreshold) { 
             addExpeditionLog(`💀 SLOT ${slot+1}: Totalverlust! Flotte vernichtet (${ziel.name})`); 
@@ -381,10 +379,18 @@
         
         if (isCombat) {
             let fight = fightSimulation(fleet, ziel.enemyPower, komm.attackBonus, komm.defenseBonus);
-            gameState.resources.metal += fight.scrapMetal;
-            gameState.resources.crystal += fight.scrapCrystal;
-            gameState.resources.deuterium += fight.scrapDeut;
-            addExpeditionLog(`⚔️ SLOT ${slot+1}: KAMPF in ${ziel.name}! Verluste: ${Math.floor(fight.ownLost).toLocaleString()} Wert → Schrott: +${fight.scrapMetal.toLocaleString()} M / ${fight.scrapCrystal.toLocaleString()} K / ${fight.scrapDeut.toLocaleString()} D`);
+            
+            // Recycler Bonus auf Schrott anwenden
+            let scrapMultiplier = 1 + recyclerBonus;
+            
+            let finalScrapMetal = Math.floor(fight.scrapMetal * scrapMultiplier);
+            let finalScrapCrystal = Math.floor(fight.scrapCrystal * scrapMultiplier);
+            let finalScrapDeut = Math.floor(fight.scrapDeut * scrapMultiplier);
+            
+            gameState.resources.metal += finalScrapMetal;
+            gameState.resources.crystal += finalScrapCrystal;
+            gameState.resources.deuterium += finalScrapDeut;
+            addExpeditionLog(`⚔️ SLOT ${slot+1}: KAMPF in ${ziel.name}! Verluste: ${Math.floor(fight.ownLost).toLocaleString()} Wert → Schrott: +${finalScrapMetal.toLocaleString()} M / ${finalScrapCrystal.toLocaleString()} K / ${finalScrapDeut.toLocaleString()} D (+${(recyclerBonus*100).toFixed(0)}% durch Recycler)`);
             return { newShips: fight.newShips, resourcesGained: fight.totalScrap };
         }
         
@@ -396,7 +402,7 @@
             gameState.resources.metal += metal;
             gameState.resources.crystal += crystal;
             gameState.resources.deuterium += deut;
-            addExpeditionLog(`💰 SLOT ${slot+1}: Fund: +${metal.toLocaleString()} M / ${crystal.toLocaleString()} K / ${deut.toLocaleString()} D (${ziel.name})`);
+            addExpeditionLog(`💰 SLOT ${slot+1}: Fund: +${metal.toLocaleString()} M / ${crystal.toLocaleString()} K / ${deut.toLocaleString()} D (${ziel.name}) | +${(pathfinderBonus*100).toFixed(0)}% durch Pathfinder`);
             if (Math.random() < ziel.darkMatterChance + luck*0.2) { 
                 let dm = getBaseDarkMatterAmount(zielId, luck); 
                 gameState.resources.darkmatter += dm; 
@@ -506,7 +512,7 @@
     function resetGame(){ 
         if(confirm("ALLE Daten zurücksetzen? Start: 50M/40M/25M Ressourcen, 0 DM, 0 Schiffe")){ 
             localStorage.removeItem("ExpeditionGameSaveDM"); 
-            gameState = { resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 }, tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, ships: { "Großer Transporter":0, "Leichter Jäger":0, "Schlachtschiff":0, "Schlachtkreuzer":0, "Zerstörer":0 }, productionQueue: [], expeditions: [null,null,null], eventLogs: [], sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, activeBoosts: {} }; 
+            gameState = { resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 }, tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, ships: { "Großer Transporter":0, "Leichter Jäger":0, "Schlachtschiff":0, "Schlachtkreuzer":0, "Zerstörer":0, "Pathfinder":0, "Recycler":0 }, productionQueue: [], expeditions: [null,null,null], eventLogs: [], sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, activeBoosts: {} }; 
             selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" }; 
             selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" }; 
             pendingCooldownReset = null; 
@@ -540,7 +546,13 @@
         document.getElementById("speedCost").innerHTML = displayCost("speed", gameState.tech.speed);
         document.getElementById("werftCostDisplay").innerHTML = displayCost("werftLevel", gameState.tech.werftLevel);
         
-        let fleetHtml=""; for(let t of shipKeys) fleetHtml+=`<div><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}</div>`;
+        let fleetHtml=""; 
+        for(let t of shipKeys) {
+            let specialHint = "";
+            if(t === "Pathfinder") specialHint = " <span class='bonus-progress'>(+1% Beute/Schiff, max 25%)</span>";
+            if(t === "Recycler") specialHint = " <span class='bonus-progress'>(+1% Schrott/Schiff, max 25%)</span>";
+            fleetHtml+=`<div><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}${specialHint}</div>`;
+        }
         document.getElementById("fleetStatus").innerHTML=fleetHtml;
         
         let shipyardHtml=""; 
@@ -767,6 +779,8 @@
             gameState=d; 
             if(!gameState.activeBoosts) gameState.activeBoosts={}; 
             if(!gameState.eventLogs) gameState.eventLogs=[]; 
+            if(!gameState.ships["Pathfinder"]) gameState.ships["Pathfinder"]=0;
+            if(!gameState.ships["Recycler"]) gameState.ships["Recycler"]=0;
         } 
         processOfflineEvents(); 
         renderAll(); 
