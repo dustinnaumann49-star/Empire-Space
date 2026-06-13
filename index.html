@@ -19,10 +19,12 @@
         .tab-btn:hover:not(.active) { background: #1f2f50; }
         .tab-content { background: rgba(8, 14, 26, 0.7); border-radius: 32px; padding: 24px; border: 1px solid #2a3f6e; min-height: 550px; }
         .tab-pane { display: none; } .tab-pane.active-pane { display: block; }
-        .upgrade-item, .shop-item, .ship-item, .expedition-fleet, .boost-active { background: #0f172a; margin: 12px 0; padding: 12px 18px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-left: 4px solid #3b82f6; }
+        .upgrade-item, .shop-item, .ship-item, .expedition-fleet, .boost-active, .mine-item { background: #0f172a; margin: 12px 0; padding: 12px 18px; border-radius: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-left: 4px solid #3b82f6; }
         button { background: #1f3a5f; border: none; color: white; font-weight: bold; padding: 6px 18px; border-radius: 40px; cursor: pointer; font-size: 0.8rem; }
         button:active { transform: scale(0.96); }
         button.shop { background: #6b21a5; }
+        button.mine-upgrade { background: #2a6e2a; }
+        button.mine-upgrade:hover { background: #3a8e3a; }
         .ship-detail-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; background: #0b1020; border-radius: 20px; overflow: hidden; }
         .ship-detail-table th, .ship-detail-table td { padding: 10px 6px; border-bottom: 1px solid #2a3a60; text-align: left; }
         .ziel-grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
@@ -87,7 +89,8 @@
         .save-fleet-btn:hover { background: #3a5aae; }
         .load-fleet-btn-small { background: #2a6e2a; padding: 2px 10px; font-size: 0.7rem; margin-top: 6px; border-radius: 20px; cursor: pointer; display: inline-block; }
         .load-fleet-btn-small:hover { background: #3a8e3a; }
-        .selected-sector-hint { background: #ffcc44; color: #0a0f1e; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; margin-left: 12px; }
+        .production-display { font-size: 0.7rem; color: #88ffaa; margin-top: 4px; }
+        .mine-prod { color: #ffcc44; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -101,6 +104,7 @@
     </div>
 
     <div class="tab-nav">
+        <button class="tab-btn" data-tab="minen">⛏️ MINEN</button>
         <button class="tab-btn" data-tab="forschung">🔬 FORSCHUNG (DM)</button>
         <button class="tab-btn" data-tab="shop">🛒 SHOP & BOOSTS</button>
         <button class="tab-btn" data-tab="flotte">📦 FLOTTE</button>
@@ -110,7 +114,14 @@
     </div>
 
     <div class="tab-content">
-        <div id="forschungPane" class="tab-pane active-pane">
+        <div id="minenPane" class="tab-pane active-pane">
+            <h3>⛏️ RESSOURCEN-MINEN</h3>
+            <div class="badge-info" style="margin-bottom: 16px;">🏭 Passive Einkommensquellen – produzieren jede Stunde Ressourcen, auch im Offline-Modus!</div>
+            <div id="minesContainer"></div>
+            <div class="badge-info" style="margin-top: 12px;">💡 Tipp: Je höher die Stufe, desto mehr Ressourcen pro Stunde! Max Stufe: Metall/Kristall/Deuterium = 10, DM-Extraktor = 5</div>
+        </div>
+
+        <div id="forschungPane" class="tab-pane">
             <h3>📡 Dunkle-Materie-Forschung (teuer, langfristig)</h3>
             <div class="upgrade-item"><div>🔫 Waffentechnik (+15% Angriff) Lv.<span id="waffenLvl">0</span>/5</div><div><span id="waffenCost"></span> <button id="upgradeWaffenBtn">🔬 DM Upgrade</button></div></div>
             <div class="upgrade-item"><div>🛡️ Schildtechnik (+15% Schild) Lv.<span id="schildLvl">0</span>/5</div><div><span id="schildCost"></span> <button id="upgradeSchildBtn">🔬 DM Upgrade</button></div></div>
@@ -185,6 +196,14 @@
 </div>
 
 <script>
+    // ======================= MINEN-DATEN =======================
+    const minesData = {
+        "metal": { name: "🪨 Metallmine", resource: "metal", baseProduction: 5000, maxLevel: 10, costType: "metal", baseCost: 100000 },
+        "crystal": { name: "💎 Kristallmine", resource: "crystal", baseProduction: 3000, maxLevel: 10, costType: "crystal", baseCost: 100000 },
+        "deuterium": { name: "⚡ Deuterium-Synthetisierer", resource: "deuterium", baseProduction: 2000, maxLevel: 10, costType: "deuterium", baseCost: 100000 },
+        "darkmatter": { name: "🌌 DM-Extraktor", resource: "darkmatter", baseProduction: 0.1, maxLevel: 5, costType: "darkmatter", baseCost: 5 }
+    };
+    
     // ======================= SCHIFFSDATEN =======================
     const shipNameMap = {
         "lightFighter": "Leichter Jäger",
@@ -224,7 +243,6 @@
         "anomalie": { name: "", ships: {} }
     };
     
-    // Der aktuell ausgewählte Sektor für Expeditionen
     let selectedExpeditionSector = "piraten";
     
     function loadSavedFleets() {
@@ -274,7 +292,6 @@
         return fleet;
     }
     
-    // Lädt die gespeicherte Flotte für den aktuell ausgewählten Sektor in DIESEN Sektor
     function loadFleetForSelectedSector() {
         let fleet = savedFleets[selectedExpeditionSector].ships;
         let fleetName = savedFleets[selectedExpeditionSector].name;
@@ -283,8 +300,6 @@
             return false;
         }
         
-        // Nur für den aktuellen Sektor die Flotte laden (nicht für alle 3 Slots!)
-        // Wir laden in die Input-Felder des ersten Slots (da alle 3 Slots denselben Sektor verwenden)
         for (let t of shipKeys) {
             let inputId = `exp_slot0_${t.replace(/ /g,'')}`;
             let input = document.getElementById(inputId);
@@ -294,7 +309,7 @@
         }
         
         addExpeditionLog(`📂 Flotte "${fleetName}" für ${getSektorName(selectedExpeditionSector)} geladen!`);
-        renderAll(); // Neu rendern um Input-Felder zu aktualisieren
+        renderAll();
         return true;
     }
     
@@ -310,7 +325,6 @@
             { id: "anomalie", icon: "🌀", name: "Raum-Anomalie" }
         ];
         
-        // Zuerst eine Zeile mit aktuellen Schiffs-Inputs zum Speichern
         html += `<div class="fleet-slot" style="background:#1a2540;">
                     <strong>📝 AKTUELLE SCHIFFZAHLEN (zum Speichern)</strong><br>
                     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">`;
@@ -320,7 +334,6 @@
         }
         html += `</div><div class="badge-info" style="margin-top:8px;">💡 Trage hier die gewünschten Schiffe ein, dann speichern!</div></div>`;
         
-        // Aktuelle Schiffsbestände in die Inputs laden
         setTimeout(() => {
             for (let t of shipKeys) {
                 let input = document.getElementById(`fleet_save_${t.replace(/ /g,'')}`);
@@ -371,6 +384,137 @@
                 if (confirm(`Flotte für ${getSektorName(sektor)} wirklich löschen?`)) {
                     deleteFleetFromStorage(sektor);
                 }
+            };
+        });
+    }
+    
+    // ======================= MINEN FUNKTIONEN =======================
+    function getMineProductionPerHour(mineId, level) {
+        let mine = minesData[mineId];
+        return mine.baseProduction * level;
+    }
+    
+    function getUpgradeCost(mineId, currentLevel) {
+        let mine = minesData[mineId];
+        let nextLevel = currentLevel + 1;
+        if (nextLevel > mine.maxLevel) return null;
+        // Kosten steigen mit jeder Stufe: Basis * 1.5^Stufe
+        let cost = Math.floor(mine.baseCost * Math.pow(1.5, currentLevel));
+        return { type: mine.costType, amount: cost };
+    }
+    
+    function upgradeMine(mineId) {
+        let mine = minesData[mineId];
+        let currentLevel = gameState.mines[mineId];
+        if (currentLevel >= mine.maxLevel) {
+            addExpeditionLog(`⚠️ ${mine.name} hat bereits Maximalstufe ${mine.maxLevel} erreicht!`);
+            return false;
+        }
+        
+        let cost = getUpgradeCost(mineId, currentLevel);
+        if (!cost) return false;
+        
+        let hasResources = false;
+        if (cost.type === "metal" && gameState.resources.metal >= cost.amount) {
+            gameState.resources.metal -= cost.amount;
+            hasResources = true;
+        } else if (cost.type === "crystal" && gameState.resources.crystal >= cost.amount) {
+            gameState.resources.crystal -= cost.amount;
+            hasResources = true;
+        } else if (cost.type === "deuterium" && gameState.resources.deuterium >= cost.amount) {
+            gameState.resources.deuterium -= cost.amount;
+            hasResources = true;
+        } else if (cost.type === "darkmatter" && gameState.resources.darkmatter >= cost.amount) {
+            gameState.resources.darkmatter -= cost.amount;
+            hasResources = true;
+        }
+        
+        if (!hasResources) {
+            addExpeditionLog(`❌ Nicht genug ${cost.type.toUpperCase()} für Upgrade von ${mine.name}! Benötigt: ${cost.amount.toLocaleString()}`);
+            return false;
+        }
+        
+        gameState.mines[mineId]++;
+        let newProduction = getMineProductionPerHour(mineId, gameState.mines[mineId]);
+        addExpeditionLog(`⬆️ ${mine.name} auf Stufe ${gameState.mines[mineId]} verbessert! Produktion: ${newProduction.toFixed(1)}/${mine.resource === "darkmatter" ? "h" : "h"} (${(newProduction/3600).toFixed(2)}/s)`);
+        saveGame();
+        renderAll();
+        return true;
+    }
+    
+    function processMineProduction(offlineSeconds = 0) {
+        let now = Date.now();
+        let lastProduction = gameState.lastMineProduction || now;
+        let secondsPassed = Math.min(3600 * 24, Math.floor((now - lastProduction) / 1000)); // Max 24h
+        if (secondsPassed <= 0 && offlineSeconds === 0) return;
+        
+        let totalSeconds = offlineSeconds > 0 ? offlineSeconds : secondsPassed;
+        let hoursPassed = totalSeconds / 3600;
+        
+        for (let [mineId, level] of Object.entries(gameState.mines)) {
+            if (level === 0) continue;
+            let mine = minesData[mineId];
+            let productionPerHour = getMineProductionPerHour(mineId, level);
+            let produced = productionPerHour * hoursPassed;
+            
+            if (produced > 0) {
+                if (mine.resource === "metal") gameState.resources.metal += produced;
+                else if (mine.resource === "crystal") gameState.resources.crystal += produced;
+                else if (mine.resource === "deuterium") gameState.resources.deuterium += produced;
+                else if (mine.resource === "darkmatter") gameState.resources.darkmatter += produced;
+            }
+        }
+        
+        gameState.lastMineProduction = now;
+        if (offlineSeconds === 0 && secondsPassed > 60) {
+            addExpeditionLog(`⛏️ Minen produzierten ${Math.floor(hoursPassed * 10) / 10} Stunden lang Ressourcen im Hintergrund!`);
+        }
+        saveGame();
+    }
+    
+    function renderMines() {
+        let container = document.getElementById("minesContainer");
+        if (!container) return;
+        
+        let html = "";
+        for (let [mineId, mine] of Object.entries(minesData)) {
+            let level = gameState.mines[mineId] || 0;
+            let productionPerHour = getMineProductionPerHour(mineId, level);
+            let productionPerSec = productionPerHour / 3600;
+            let cost = getUpgradeCost(mineId, level);
+            let maxReached = level >= mine.maxLevel;
+            
+            let costText = "";
+            let upgradeBtn = "";
+            if (!maxReached && cost) {
+                costText = `${cost.amount.toLocaleString()} ${cost.type.toUpperCase()}`;
+                upgradeBtn = `<button class="mine-upgrade" data-mine="${mineId}">⬆️ Upgrade (${costText})</button>`;
+            } else if (maxReached) {
+                upgradeBtn = `<button disabled style="background:#3a3a5a;">✅ MAX STUFE</button>`;
+            }
+            
+            let prodDisplay = mine.resource === "darkmatter" 
+                ? `${productionPerHour.toFixed(2)}/h (${productionPerSec.toFixed(3)}/s)` 
+                : `${Math.floor(productionPerHour).toLocaleString()}/h (${productionPerSec.toFixed(0)}/s)`;
+            
+            html += `<div class="mine-item">
+                        <div>
+                            <strong>${mine.name}</strong><br>
+                            <span class="production-display">📈 Stufe ${level} / ${mine.maxLevel}</span><br>
+                            <span class="mine-prod">⚙️ Produktion: ${prodDisplay}</span>
+                        </div>
+                        <div>
+                            ${upgradeBtn}
+                        </div>
+                    </div>`;
+        }
+        
+        container.innerHTML = html;
+        
+        document.querySelectorAll(".mine-upgrade").forEach(btn => {
+            btn.onclick = () => {
+                let mineId = btn.dataset.mine;
+                upgradeMine(mineId);
             };
         });
     }
@@ -553,7 +697,6 @@
         "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 6000000, baseDeut: 3000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: 75*60*1000, darkMatterChance: 0.15, enemyPower: 60 }
     };
     
-    // ======================= DYNAMISCHE PIRATEN-FLOTTE =======================
     function getPirateFleet(zoneId, playerFleetPower) {
         let zone = expeditionZiele[zoneId];
         let playerMultiplier = Math.min(2.5, Math.max(0.5, playerFleetPower / 25000000));
@@ -622,6 +765,8 @@
         resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 },
         tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 },
         ships: {},
+        mines: { metal:0, crystal:0, deuterium:0, darkmatter:0 },
+        lastMineProduction: Date.now(),
         productionQueue: [], expeditions: [null,null,null], eventLogs: [],
         sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 },
         activeBoosts: {}
@@ -922,7 +1067,18 @@
         if(confirm("ALLE Daten zurücksetzen?")){ 
             localStorage.removeItem("ExpeditionGameSaveDM"); 
             localStorage.removeItem("ExpeditionSavedFleets");
-            gameState = { resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 }, tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, ships: {}, productionQueue: [], expeditions: [null,null,null], eventLogs: [], sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, activeBoosts: {} }; 
+            gameState = { 
+                resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 }, 
+                tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, 
+                ships: {}, 
+                mines: { metal:0, crystal:0, deuterium:0, darkmatter:0 },
+                lastMineProduction: Date.now(),
+                productionQueue: [], 
+                expeditions: [null,null,null], 
+                eventLogs: [], 
+                sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, 
+                activeBoosts: {} 
+            }; 
             shipKeys.forEach(key => { gameState.ships[key] = 0; });
             savedFleets = { "asteroid": { name: "", ships: {} }, "piraten": { name: "", ships: {} }, "ruinen": { name: "", ships: {} }, "anomalie": { name: "", ships: {} } };
             selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" }; 
@@ -973,14 +1129,14 @@
         if (displayDiv) {
             displayDiv.innerHTML = `👉 Aktuell ausgewählt: <strong style="color:#ffcc44;">${getSektorName(sectorId)}</strong> → Lade die gespeicherte Flotte oder starte die Expedition!`;
         }
-        renderAll(); // Um die Sektor-Karten neu zu rendern (Highlight)
+        renderAll();
     }
     
     function renderAll(){
-        document.getElementById("metal").innerText=gameState.resources.metal.toLocaleString();
-        document.getElementById("crystal").innerText=gameState.resources.crystal.toLocaleString();
-        document.getElementById("deuterium").innerText=gameState.resources.deuterium.toLocaleString();
-        document.getElementById("darkmatter").innerText=gameState.resources.darkmatter.toLocaleString();
+        document.getElementById("metal").innerText=Math.floor(gameState.resources.metal).toLocaleString();
+        document.getElementById("crystal").innerText=Math.floor(gameState.resources.crystal).toLocaleString();
+        document.getElementById("deuterium").innerText=Math.floor(gameState.resources.deuterium).toLocaleString();
+        document.getElementById("darkmatter").innerText=Math.floor(gameState.resources.darkmatter).toLocaleString();
         
         document.getElementById("waffenLvl").innerText=gameState.tech.waffen;
         document.getElementById("schildLvl").innerText=gameState.tech.schild;
@@ -1075,27 +1231,22 @@
         }
         document.getElementById("sektorExplainer").innerHTML=sektorHtml;
         
-        // Sektor-Klick: Wählt den Sektor aus
         document.querySelectorAll("[data-sektor]").forEach(el=>{
             el.onclick=(e)=>{
                 if(e.target.classList && e.target.classList.contains("load-fleet-btn-small")) return;
                 let id=el.dataset.sektor;
                 setSelectedSector(id);
-                // Auch die selectedZiele für alle 3 Slots auf diesen Sektor setzen
                 for(let i=0;i<3;i++) selectedZiele[i]=id;
                 renderAll();
             };
         });
         
-        // Load-Fleet Buttons in Sektor-Karten
         document.querySelectorAll(".load-fleet-btn-small").forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 let sektor = btn.dataset.sektor;
-                // Setze zuerst den ausgewählten Sektor
                 setSelectedSector(sektor);
                 for(let i=0;i<3;i++) selectedZiele[i]=sektor;
-                // Dann lade die Flotte
                 loadFleetForSelectedSector();
                 renderAll();
             };
@@ -1169,6 +1320,7 @@
         
         renderShipTable();
         renderFleetSlots();
+        renderMines();
         renderReports();
     }
     
@@ -1258,6 +1410,10 @@
     
     function processOfflineEvents() { 
         let now = Date.now(), changed=false; 
+        
+        // Minen-Produktion (passives Einkommen)
+        processMineProduction();
+        
         for(let i=0;i<gameState.productionQueue.length;i++) { 
             if(now>=gameState.productionQueue[i].finishTimestamp){ 
                 let it=gameState.productionQueue[i]; 
@@ -1344,6 +1500,8 @@
             gameState=d; 
             if(!gameState.activeBoosts) gameState.activeBoosts={}; 
             if(!gameState.eventLogs) gameState.eventLogs=[]; 
+            if(!gameState.mines) gameState.mines = { metal:0, crystal:0, deuterium:0, darkmatter:0 };
+            if(!gameState.lastMineProduction) gameState.lastMineProduction = Date.now();
             for(let ship of shipKeys) if(gameState.ships[ship] === undefined) gameState.ships[ship]=0;
         } 
         loadSavedFleets();
@@ -1354,6 +1512,10 @@
     
     setInterval(()=>{ 
         let now = Date.now(), changed=false; 
+        
+        // Minen-Produktion regelmäßig abrufen
+        processMineProduction();
+        
         for(let i=0;i<gameState.productionQueue.length;i++) { 
             if(now>=gameState.productionQueue[i].finishTimestamp){ 
                 let it=gameState.productionQueue[i]; 
