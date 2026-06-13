@@ -296,6 +296,7 @@
     function loadFleetForSelectedSector() {
         let fleet = savedFleets[selectedExpeditionSector].ships;
         let fleetName = savedFleets[selectedExpeditionSector].name;
+        
         if (Object.keys(fleet).length === 0) {
             addExpeditionLog(`❌ Keine gespeicherte Flotte für ${getSektorName(selectedExpeditionSector)} gefunden!`);
             return false;
@@ -313,7 +314,6 @@
         }
         
         addExpeditionLog(`📂 Flotte "${fleetName}" für ${getSektorName(selectedExpeditionSector)} in alle 3 Slots geladen!`);
-        renderAll(); // Neu rendern um Input-Felder zu aktualisieren
         return true;
     }
     
