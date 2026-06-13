@@ -124,6 +124,7 @@
             <hr>
             <div><strong>💡 Tipp:</strong> Pathfinder: +1% Beute/Schiff (max 25%) | Recycler: +1% Schrott/Schiff (max 25%)</div>
             <div class="badge-info">⚔️ <strong>Schnellfeuer:</strong> Schlachtschiffe stark gegen Jäger & Kreuzer | Schlachtkreuzer stark gegen Jäger | Zerstörer stark gegen Schlachtschiffe</div>
+            <div class="badge-info">⚠️ <strong>Piraten-Skalierung:</strong> Je stärker deine Flotte, desto mehr Piraten! Faire, riskante Kämpfe garantiert.</div>
         </div>
 
         <div id="schiffbauPane" class="tab-pane">
@@ -376,28 +377,53 @@
         "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 6000000, baseDeut: 3000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: 75*60*1000, darkMatterChance: 0.15, enemyPower: 60 }
     };
     
+    // ======================= DYNAMISCHE PIRATEN-FLOTTE =======================
+    // Skaliert mit Spieler-Flottenstärke UND Sektor-Risiko
     function getPirateFleet(zoneId, playerFleetPower) {
         let zone = expeditionZiele[zoneId];
-        let powerMultiplier = zone.enemyPower / 100;
         
-        let baseFleet = {
-            "Leichter Jäger": Math.floor(5 + Math.random() * 10 * powerMultiplier),
-            "Schwerer Jäger": Math.floor(2 + Math.random() * 5 * powerMultiplier),
-            "Kreuzer": Math.floor(1 + Math.random() * 3 * powerMultiplier),
-            "Schlachtschiff": Math.floor(0 + Math.random() * 2 * powerMultiplier),
-            "Schlachtkreuzer": Math.floor(0 + Math.random() * 1 * powerMultiplier),
+        // BASIS: Je stärker der Spieler, desto mehr Piraten (Faktor 0.5 - 2.5)
+        // Eine Flotte mit 10 Mio Stärke = Faktor ~0.8
+        // Eine Flotte mit 100 Mio Stärke = Faktor ~2.0
+        let playerMultiplier = Math.min(2.5, Math.max(0.5, playerFleetPower / 25000000));
+        
+        // SEKTOR-Faktor (Asteroid 0.3, Anomalie 1.2)
+        let zoneMultiplier = zone.enemyPower / 100;
+        
+        // Gesamt-Multiplikator (Spieler-Stärke x Sektor-Risiko)
+        let totalMultiplier = playerMultiplier * zoneMultiplier;
+        
+        // Zufallsfaktor für Abwechslung (±20%)
+        let randomFactor = 0.8 + Math.random() * 0.8;
+        let finalMultiplier = totalMultiplier * randomFactor;
+        
+        // Piraten-Flotte zusammensetzen
+        let pirateFleet = {
+            "Leichter Jäger": Math.max(1, Math.floor(3 + Math.random() * 12 * finalMultiplier)),
+            "Schwerer Jäger": Math.max(0, Math.floor(1 + Math.random() * 6 * finalMultiplier)),
+            "Kreuzer": Math.max(0, Math.floor(0 + Math.random() * 4 * finalMultiplier)),
+            "Schlachtschiff": Math.max(0, Math.floor(0 + Math.random() * 2 * finalMultiplier)),
+            "Schlachtkreuzer": Math.max(0, Math.floor(0 + Math.random() * 1.5 * finalMultiplier)),
             "Zerstörer": 0
         };
         
+        // Zusätzliche Verstärkung für hoch-riskante Sektoren
         if (zone.risk === "hoch") {
-            baseFleet["Schlachtschiff"] += Math.floor(1 + Math.random() * 2);
+            pirateFleet["Schlachtschiff"] += Math.floor(1 + Math.random() * 2 * playerMultiplier);
+            pirateFleet["Schwerer Jäger"] += Math.floor(1 + Math.random() * 3 * playerMultiplier);
         }
         if (zone.risk === "extrem") {
-            baseFleet["Schlachtkreuzer"] += Math.floor(1 + Math.random() * 2);
-            baseFleet["Zerstörer"] = Math.floor(0 + Math.random() * 1);
+            pirateFleet["Schlachtkreuzer"] += Math.floor(1 + Math.random() * 2 * playerMultiplier);
+            pirateFleet["Zerstörer"] = Math.floor(0 + Math.random() * 1.5 * playerMultiplier);
+            pirateFleet["Schlachtschiff"] += Math.floor(1 + Math.random() * 3 * playerMultiplier);
         }
         
-        return baseFleet;
+        // Runden und sicherstellen, dass keine negativen Werte entstehen
+        for (let key in pirateFleet) {
+            pirateFleet[key] = Math.max(0, Math.floor(pirateFleet[key]));
+        }
+        
+        return pirateFleet;
     }
     
     // ======================= KOMMANDEURE =======================
@@ -581,7 +607,8 @@
             let playerPower = calculateFleetPower(fleet);
             let pirateFleet = getPirateFleet(zielId, playerPower);
             
-            addExpeditionLog(`⚔️ Piratenflotte: ${Object.entries(pirateFleet).map(([k,v])=>`${k}:${v}`).join(", ")}`);
+            let pirateCount = Object.values(pirateFleet).reduce((a,b)=>a+b,0);
+            addExpeditionLog(`⚔️ Piratenflotte (${pirateCount} Schiffe): ${Object.entries(pirateFleet).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}`);
             
             let fight = fightSimulationWithReport(fleet, pirateFleet, ziel.enemyPower, komm.attackBonus, komm.defenseBonus);
             
@@ -594,7 +621,9 @@
             gameState.resources.crystal += finalScrapCrystal;
             gameState.resources.deuterium += finalScrapDeut;
             
-            addExpeditionLog(`⚔️ SLOT ${slot+1}: KAMPF in ${ziel.name}! Schrott: +${finalScrapMetal.toLocaleString()} M / ${finalScrapCrystal.toLocaleString()} K / ${finalScrapDeut.toLocaleString()} D (+${(recyclerBonus*100).toFixed(0)}% durch Recycler)`, fight.battleReport);
+            let ownLosses = Object.values(fight.battleReport.myLosses).reduce((a,b)=>a+b,0);
+            let enemyLosses = Object.values(fight.battleReport.enemyLosses).reduce((a,b)=>a+b,0);
+            addExpeditionLog(`⚔️ SLOT ${slot+1}: KAMPF in ${ziel.name}! Eigene Verluste: ${ownLosses} Schiffe | Piraten vernichtet: ${enemyLosses} | Schrott: +${finalScrapMetal.toLocaleString()} M / ${finalScrapCrystal.toLocaleString()} K / ${finalScrapDeut.toLocaleString()} D (+${(recyclerBonus*100).toFixed(0)}% durch Recycler)`, fight.battleReport);
             return { newShips: fight.newShips, resourcesGained: fight.totalScrap };
         }
         
