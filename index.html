@@ -243,7 +243,7 @@
         "anomalie": { name: "", ships: {} }
     };
     
-    let selectedExpeditionSector = "piraten";
+    let selectedExpeditionSector = "asteroid";
     
     function loadSavedFleets() {
         let saved = localStorage.getItem("ExpeditionSavedFleets");
@@ -292,6 +292,7 @@
         return fleet;
     }
     
+    // ======================= KORRIGIERTE FLOTTEN-LADE FUNKTION =======================
     function loadFleetForSelectedSector() {
         let fleet = savedFleets[selectedExpeditionSector].ships;
         let fleetName = savedFleets[selectedExpeditionSector].name;
@@ -300,16 +301,19 @@
             return false;
         }
         
-        for (let t of shipKeys) {
-            let inputId = `exp_slot0_${t.replace(/ /g,'')}`;
-            let input = document.getElementById(inputId);
-            if (input) {
-                input.value = fleet[t] || 0;
+        // ALLE 3 Expeditions-Slots mit der Flotte befüllen
+        for (let slot = 0; slot < 3; slot++) {
+            for (let t of shipKeys) {
+                let inputId = `exp_slot${slot}_${t.replace(/ /g,'')}`;
+                let input = document.getElementById(inputId);
+                if (input) {
+                    input.value = fleet[t] || 0;
+                }
             }
         }
         
-        addExpeditionLog(`📂 Flotte "${fleetName}" für ${getSektorName(selectedExpeditionSector)} geladen!`);
-        renderAll();
+        addExpeditionLog(`📂 Flotte "${fleetName}" für ${getSektorName(selectedExpeditionSector)} in alle 3 Slots geladen!`);
+        renderAll(); // Neu rendern um Input-Felder zu aktualisieren
         return true;
     }
     
@@ -398,7 +402,6 @@
         let mine = minesData[mineId];
         let nextLevel = currentLevel + 1;
         if (nextLevel > mine.maxLevel) return null;
-        // Kosten steigen mit jeder Stufe: Basis * 1.5^Stufe
         let cost = Math.floor(mine.baseCost * Math.pow(1.5, currentLevel));
         return { type: mine.costType, amount: cost };
     }
@@ -445,7 +448,7 @@
     function processMineProduction(offlineSeconds = 0) {
         let now = Date.now();
         let lastProduction = gameState.lastMineProduction || now;
-        let secondsPassed = Math.min(3600 * 24, Math.floor((now - lastProduction) / 1000)); // Max 24h
+        let secondsPassed = Math.min(3600 * 24, Math.floor((now - lastProduction) / 1000));
         if (secondsPassed <= 0 && offlineSeconds === 0) return;
         
         let totalSeconds = offlineSeconds > 0 ? offlineSeconds : secondsPassed;
@@ -774,7 +777,7 @@
     
     shipKeys.forEach(key => { gameState.ships[key] = 0; });
     
-    let selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" };
+    let selectedZiele = { 0:"asteroid", 1:"asteroid", 2:"asteroid" };
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
     let pendingCooldownReset = null;
     
@@ -1081,7 +1084,7 @@
             }; 
             shipKeys.forEach(key => { gameState.ships[key] = 0; });
             savedFleets = { "asteroid": { name: "", ships: {} }, "piraten": { name: "", ships: {} }, "ruinen": { name: "", ships: {} }, "anomalie": { name: "", ships: {} } };
-            selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" }; 
+            selectedZiele = { 0:"asteroid", 1:"asteroid", 2:"asteroid" }; 
             selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" }; 
             pendingCooldownReset = null; 
             saveGame(); renderAll(); addExpeditionLog("⚠️ Spiel zurückgesetzt!"); 
@@ -1411,7 +1414,6 @@
     function processOfflineEvents() { 
         let now = Date.now(), changed=false; 
         
-        // Minen-Produktion (passives Einkommen)
         processMineProduction();
         
         for(let i=0;i<gameState.productionQueue.length;i++) { 
@@ -1513,7 +1515,6 @@
     setInterval(()=>{ 
         let now = Date.now(), changed=false; 
         
-        // Minen-Produktion regelmäßig abrufen
         processMineProduction();
         
         for(let i=0;i<gameState.productionQueue.length;i++) { 
