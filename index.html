@@ -89,7 +89,7 @@
         </div>
 
         <div id="shopPane" class="tab-pane">
-            <h3>🛒 Dunkle Materie Shop – 1h Boosts</h3>
+            <h3>🛒 Dunkle Materie Shop – 24h Boosts (jetzt einen ganzen Tag aktiv!)</h3>
             <div id="activeBoostsDisplay"></div>
             <div id="shopContainer"></div>
         </div>
@@ -164,19 +164,22 @@
     };
     
     // ======================= SHOP BOOSTS =======================
+    // ALLE Boosts haben jetzt DURATION = 24 STUNDEN (86.400.000 ms), Preise bleiben unverändert
+    const BOOST_DURATION_24H = 24 * 60 * 60 * 1000; // 24 Stunden
+    
     const shopBoosts = {
-        "ressourcen": { name:"📈 Ressourcen-Boost", costDM:25, effect:{ type:"lootMult", value:1.5, duration:3600000 }, desc:"+50% Beute bei Expeditionen" },
-        "temp": { name:"⚡ Temp-Boost", costDM:20, effect:{ type:"holdTimeMult", value:0.5, duration:3600000 }, desc:"-50% Haltezeit (nur Halten, nicht Flug)" },
-        "kampf": { name:"🛡️ Kampf-Boost", costDM:30, effect:{ type:"combatBuff", value:0.5, duration:3600000 }, desc:"+50% Kampfstärke" },
-        "glueck": { name:"🎲 Glücks-Boost", costDM:28, effect:{ type:"luck", value:0.3, duration:3600000 }, desc:"+30% bessere Ereignisse" },
-        "alien": { name:"🛸 Alien-Kontakt", costDM:35, effect:{ type:"alienDM", value:true, duration:3600000 }, desc:"Zusätzliche DM-Funde" },
+        "ressourcen": { name:"📈 Ressourcen-Boost", costDM:25, effect:{ type:"lootMult", value:1.5, duration:BOOST_DURATION_24H }, desc:"+50% Beute bei Expeditionen" },
+        "temp": { name:"⚡ Temp-Boost", costDM:20, effect:{ type:"holdTimeMult", value:0.5, duration:BOOST_DURATION_24H }, desc:"-50% Haltezeit (nur Halten, nicht Flug)" },
+        "kampf": { name:"🛡️ Kampf-Boost", costDM:30, effect:{ type:"combatBuff", value:0.5, duration:BOOST_DURATION_24H }, desc:"+50% Kampfstärke" },
+        "glueck": { name:"🎲 Glücks-Boost", costDM:28, effect:{ type:"luck", value:0.3, duration:BOOST_DURATION_24H }, desc:"+30% bessere Ereignisse" },
+        "alien": { name:"🛸 Alien-Kontakt", costDM:35, effect:{ type:"alienDM", value:true, duration:BOOST_DURATION_24H }, desc:"Zusätzliche DM-Funde" },
         "sofort": { name:"🔧 Sofort-Produktion", costDM:18, effect:{ type:"instantBuild", oneTime:true }, desc:"Fertigt alle Schiffe sofort" },
-        "piraten": { name:"🏴‍☠️ Piraten-Schild", costDM:22, effect:{ type:"pirateShield", value:true, duration:3600000 }, desc:"-70% Kampfverluste" },
-        "kristall": { name:"💎 Kristall-Segen", costDM:15, effect:{ type:"crystalBless", value:2.0, duration:3600000 }, desc:"Doppelter Kristall-Fund" },
-        "doppel": { name:"⭐ Doppel-Expedition", costDM:45, effect:{ type:"extraSlot", value:true, duration:3600000 }, desc:"+1 Expeditions-Slot (4 statt 3)" },
+        "piraten": { name:"🏴‍☠️ Piraten-Schild", costDM:22, effect:{ type:"pirateShield", value:true, duration:BOOST_DURATION_24H }, desc:"-70% Kampfverluste" },
+        "kristall": { name:"💎 Kristall-Segen", costDM:15, effect:{ type:"crystalBless", value:2.0, duration:BOOST_DURATION_24H }, desc:"Doppelter Kristall-Fund" },
+        "doppel": { name:"⭐ Doppel-Expedition", costDM:45, effect:{ type:"extraSlot", value:true, duration:BOOST_DURATION_24H }, desc:"+1 Expeditions-Slot (4 statt 3)" },
         "cooldown": { name:"🔄 Cooldown-Reset", costDM:10, effect:{ type:"cooldownReset", oneTime:true }, desc:"Setzt alle Sektor-Cooldowns zurück" },
-        "kommandeur": { name:"🧠 Kommandeur-Rabatt", costDM:12, effect:{ type:"commanderDiscount", value:0.5, duration:3600000 }, desc:"-50% DM-Kosten für Kommandeure" },
-        "werft": { name:"🏭 Werft-Wunder", costDM:28, effect:{ type:"buildSpeed", value:0.5, duration:3600000 }, desc:"-50% Bauzeit" },
+        "kommandeur": { name:"🧠 Kommandeur-Rabatt", costDM:12, effect:{ type:"commanderDiscount", value:0.5, duration:BOOST_DURATION_24H }, desc:"-50% DM-Kosten für Kommandeure" },
+        "werft": { name:"🏭 Werft-Wunder", costDM:28, effect:{ type:"buildSpeed", value:0.5, duration:BOOST_DURATION_24H }, desc:"-50% Bauzeit" },
         "mystery": { name:"🎁 Mystery-Box", costDM:12, effect:{ type:"mystery", value:true, oneTime:true }, desc:"Zufällige DM-Belohnung" }
     };
 
@@ -431,8 +434,9 @@
             saveGame(); renderAll(); return true; 
         } 
         gameState.resources.darkmatter -= b.costDM; 
-        gameState.activeBoosts[boostId]=Date.now()+3600000; 
-        addExpeditionLog(`🛒 ${b.name} aktiviert (1h)! ${b.desc}`); 
+        // HIER: duration wurde bereits auf 24h gesetzt, deshalb 24h aktiv
+        gameState.activeBoosts[boostId]=Date.now()+b.effect.duration; 
+        addExpeditionLog(`🛒 ${b.name} aktiviert (24h)! ${b.desc}`); 
         saveGame(); renderAll(); return true; 
     }
     
@@ -497,13 +501,16 @@
         });
         
         // Boosts Anzeige
-        let activeHtml="<strong>🔥 Aktive Boosts (1h):</strong><br>"; 
+        let activeHtml="<strong>🔥 Aktive Boosts (24h):</strong><br>"; 
         let has=false; 
         let nowTime=Date.now(); 
         for(let [bid,exp] of Object.entries(gameState.activeBoosts)) {
             if(exp>nowTime){ 
                 has=true; 
-                activeHtml+=`<div>✅ ${shopBoosts[bid].name} — noch ${Math.ceil((exp-nowTime)/60000)} min</div>`; 
+                let remainingMs = exp - nowTime;
+                let hoursLeft = Math.floor(remainingMs / 3600000);
+                let minutesLeft = Math.floor((remainingMs % 3600000) / 60000);
+                activeHtml+=`<div>✅ ${shopBoosts[bid].name} — noch ${hoursLeft}h ${minutesLeft} min</div>`; 
             } else delete gameState.activeBoosts[bid];
         }
         if(!has) activeHtml+="<div>❌ Keine aktiven Boosts</div>";
