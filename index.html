@@ -54,6 +54,7 @@
         .shop-item-compact .shop-name { font-weight: bold; min-width: 130px; }
         .shop-item-compact .shop-effect { font-size: 0.7rem; color: #88aaff; flex: 1; }
         .shop-cost { font-family: monospace; color: #c084fc; background: #1e1a3e; padding: 2px 10px; border-radius: 20px; margin: 0 8px; }
+        .risk-highlight { color: #ff8888; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -89,9 +90,10 @@
         </div>
 
         <div id="shopPane" class="tab-pane">
-            <h3>🛒 Dunkle Materie Shop – 24h Boosts (jetzt einen ganzen Tag aktiv!)</h3>
+            <h3>🛒 Dunkle Materie Shop – 24h Boosts</h3>
             <div id="activeBoostsDisplay"></div>
             <div id="shopContainer"></div>
+            <div class="badge-info" style="margin-top:12px;">🎲 <strong>Risiko-Liebhaber</strong>: +150% Fund, aber +50% Verlustrisiko & höhere Kampfchance – nur für echte Abenteurer!</div>
         </div>
 
         <div id="flottePane" class="tab-pane">
@@ -163,24 +165,38 @@
         "pionier": { name: "🚀 Pionier", attackBonus:0, defenseBonus:0, lootBonus:0, holdTimeBonus:0.2, costDM:30, tooltip: "-20% Expeditions-Haltezeit" }
     };
     
-    // ======================= SHOP BOOSTS =======================
-    // ALLE Boosts haben jetzt DURATION = 24 STUNDEN (86.400.000 ms), Preise bleiben unverändert
-    const BOOST_DURATION_24H = 24 * 60 * 60 * 1000; // 24 Stunden
+    // ======================= SHOP BOOSTS (24h mit abgestuften Prozenten) =======================
+    const BOOST_DURATION_24H = 24 * 60 * 60 * 1000;
     
     const shopBoosts = {
-        "ressourcen": { name:"📈 Ressourcen-Boost", costDM:25, effect:{ type:"lootMult", value:1.5, duration:BOOST_DURATION_24H }, desc:"+50% Beute bei Expeditionen" },
-        "temp": { name:"⚡ Temp-Boost", costDM:20, effect:{ type:"holdTimeMult", value:0.5, duration:BOOST_DURATION_24H }, desc:"-50% Haltezeit (nur Halten, nicht Flug)" },
-        "kampf": { name:"🛡️ Kampf-Boost", costDM:30, effect:{ type:"combatBuff", value:0.5, duration:BOOST_DURATION_24H }, desc:"+50% Kampfstärke" },
-        "glueck": { name:"🎲 Glücks-Boost", costDM:28, effect:{ type:"luck", value:0.3, duration:BOOST_DURATION_24H }, desc:"+30% bessere Ereignisse" },
-        "alien": { name:"🛸 Alien-Kontakt", costDM:35, effect:{ type:"alienDM", value:true, duration:BOOST_DURATION_24H }, desc:"Zusätzliche DM-Funde" },
-        "sofort": { name:"🔧 Sofort-Produktion", costDM:18, effect:{ type:"instantBuild", oneTime:true }, desc:"Fertigt alle Schiffe sofort" },
-        "piraten": { name:"🏴‍☠️ Piraten-Schild", costDM:22, effect:{ type:"pirateShield", value:true, duration:BOOST_DURATION_24H }, desc:"-70% Kampfverluste" },
-        "kristall": { name:"💎 Kristall-Segen", costDM:15, effect:{ type:"crystalBless", value:2.0, duration:BOOST_DURATION_24H }, desc:"Doppelter Kristall-Fund" },
-        "doppel": { name:"⭐ Doppel-Expedition", costDM:45, effect:{ type:"extraSlot", value:true, duration:BOOST_DURATION_24H }, desc:"+1 Expeditions-Slot (4 statt 3)" },
-        "cooldown": { name:"🔄 Cooldown-Reset", costDM:10, effect:{ type:"cooldownReset", oneTime:true }, desc:"Setzt alle Sektor-Cooldowns zurück" },
-        "kommandeur": { name:"🧠 Kommandeur-Rabatt", costDM:12, effect:{ type:"commanderDiscount", value:0.5, duration:BOOST_DURATION_24H }, desc:"-50% DM-Kosten für Kommandeure" },
-        "werft": { name:"🏭 Werft-Wunder", costDM:28, effect:{ type:"buildSpeed", value:0.5, duration:BOOST_DURATION_24H }, desc:"-50% Bauzeit" },
-        "mystery": { name:"🎁 Mystery-Box", costDM:12, effect:{ type:"mystery", value:true, oneTime:true }, desc:"Zufällige DM-Belohnung" }
+        // Fund-Boosts
+        "fund_25": { name:"📈 Fund-Boost +25%", costDM:15, effect:{ type:"lootMult", value:1.25, duration:BOOST_DURATION_24H }, desc:"+25% Ressourcen-Fund bei Expeditionen" },
+        "fund_50": { name:"📈 Fund-Boost +50%", costDM:28, effect:{ type:"lootMult", value:1.50, duration:BOOST_DURATION_24H }, desc:"+50% Ressourcen-Fund bei Expeditionen" },
+        "fund_100": { name:"📈 Fund-Boost +100%", costDM:50, effect:{ type:"lootMult", value:2.00, duration:BOOST_DURATION_24H }, desc:"+100% Ressourcen-Fund bei Expeditionen" },
+        
+        // Flottenstärke-Boosts
+        "kampf_25": { name:"⚔️ Flottenstärke +25%", costDM:18, effect:{ type:"combatBuff", value:0.25, duration:BOOST_DURATION_24H }, desc:"+25% Angriffsstärke im Kampf" },
+        "kampf_50": { name:"⚔️ Flottenstärke +50%", costDM:32, effect:{ type:"combatBuff", value:0.50, duration:BOOST_DURATION_24H }, desc:"+50% Angriffsstärke im Kampf" },
+        "kampf_100": { name:"⚔️ Flottenstärke +100%", costDM:55, effect:{ type:"combatBuff", value:1.00, duration:BOOST_DURATION_24H }, desc:"+100% Angriffsstärke im Kampf" },
+        
+        // DM-Fund-Boosts
+        "dm_25": { name:"🌌 DM-Fund +25%", costDM:20, effect:{ type:"dmBoost", value:1.25, duration:BOOST_DURATION_24H }, desc:"+25% Dunkle-Materie-Funde" },
+        "dm_50": { name:"🌌 DM-Fund +50%", costDM:35, effect:{ type:"dmBoost", value:1.50, duration:BOOST_DURATION_24H }, desc:"+50% Dunkle-Materie-Funde" },
+        
+        // Verlustreduktion
+        "verlust_25": { name:"🛡️ Verlustreduktion -25%", costDM:22, effect:{ type:"lossReduction", value:0.75, duration:BOOST_DURATION_24H }, desc:"-25% eigene Kampfverluste" },
+        "verlust_50": { name:"🛡️ Verlustreduktion -50%", costDM:40, effect:{ type:"lossReduction", value:0.50, duration:BOOST_DURATION_24H }, desc:"-50% eigene Kampfverluste" },
+        
+        // Haltezeit-Boosts
+        "halt_25": { name:"⏱️ Haltezeit -25%", costDM:20, effect:{ type:"holdTimeMult", value:0.75, duration:BOOST_DURATION_24H }, desc:"-25% Expeditions-Haltezeit" },
+        "halt_50": { name:"⏱️ Haltezeit -50%", costDM:35, effect:{ type:"holdTimeMult", value:0.50, duration:BOOST_DURATION_24H }, desc:"-50% Expeditions-Haltezeit" },
+        
+        // Ereignisglück
+        "glueck_25": { name:"🍀 Ereignisglück +25%", costDM:18, effect:{ type:"luck", value:0.25, duration:BOOST_DURATION_24H }, desc:"+25% Chance auf gute Ereignisse & weniger Kämpfe" },
+        "glueck_50": { name:"🍀 Ereignisglück +50%", costDM:32, effect:{ type:"luck", value:0.50, duration:BOOST_DURATION_24H }, desc:"+50% Chance auf gute Ereignisse & weniger Kämpfe" },
+        
+        // Risiko-Liebhaber (Non-Plus-Ultra)
+        "risiko_liebhaber": { name:"🎲 Risiko-Liebhaber", costDM:45, effect:{ type:"highRisk", loot:2.5, lossRisk:1.5, duration:BOOST_DURATION_24H }, desc:"+150% Fund, aber +50% Verlustrisiko & höhere Kampfchance" }
     };
 
     // ======================= DM-KOSTEN FÜR FORSCHUNG =======================
@@ -211,24 +227,66 @@
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
     let pendingCooldownReset = null;
 
-    // ======================= HELFER-FUNKTIONEN =======================
+    // ======================= BOOST-HELFER =======================
     function isBoostActive(id) { return gameState.activeBoosts[id] && gameState.activeBoosts[id] > Date.now(); }
-    function getTotalCargoMult() { return 1.0; }
-    function getLootMult() { let m=1+(gameState.tech.bonusFund*0.08); if(isBoostActive("ressourcen")) m*=1.5; return m; }
+    
+    function getLootMult() { 
+        let m = 1 + (gameState.tech.bonusFund * 0.08);
+        if(isBoostActive("fund_25")) m *= 1.25;
+        if(isBoostActive("fund_50")) m *= 1.50;
+        if(isBoostActive("fund_100")) m *= 2.00;
+        if(isBoostActive("risiko_liebhaber")) m *= 2.5;
+        return m;
+    }
+    
+    function getCombatBonus() {
+        let bonus = 0;
+        if(isBoostActive("kampf_25")) bonus = 0.25;
+        if(isBoostActive("kampf_50")) bonus = 0.50;
+        if(isBoostActive("kampf_100")) bonus = 1.00;
+        return bonus;
+    }
+    
+    function getDMBoost() {
+        let mult = 1;
+        if(isBoostActive("dm_25")) mult = 1.25;
+        if(isBoostActive("dm_50")) mult = 1.50;
+        return mult;
+    }
+    
+    function getLossReduction() {
+        let red = 1;
+        if(isBoostActive("verlust_25")) red = 0.75;
+        if(isBoostActive("verlust_50")) red = 0.50;
+        return red;
+    }
+    
     function getHoldTimeMult() { 
-        let m = 1 - (gameState.tech.speed * 0.08);  // Forschung: -8% pro Stufe
-        if(isBoostActive("temp")) m *= 0.5;          // Temp-Boost: -50%
+        let m = 1 - (gameState.tech.speed * 0.08);
+        if(isBoostActive("halt_25")) m *= 0.75;
+        if(isBoostActive("halt_50")) m *= 0.50;
         return Math.max(0.2, m);
     }
-    function getCombatBonus() { return isBoostActive("kampf")?0.5:0; }
-    function getCommanderDiscount() { return isBoostActive("kommandeur")?0.5:1; }
-    function getBuildSpeedMult() { return isBoostActive("werft")?0.5:1; }
-    function getExtraSlot() { return isBoostActive("doppel"); }
-    function getPirateShield() { return isBoostActive("piraten"); }
-    function getCrystalBless() { return isBoostActive("kristall")?2.0:1.0; }
-    function getLuckBonus() { return isBoostActive("glueck")?0.3:0; }
-    function getAlienDM() { return isBoostActive("alien"); }
-    function getMystery() { return isBoostActive("mystery"); }
+    
+    function getLuckBonus() { 
+        let luck = 0;
+        if(isBoostActive("glueck_25")) luck = 0.25;
+        if(isBoostActive("glueck_50")) luck = 0.50;
+        return luck;
+    }
+    
+    function getRiskModifier() {
+        if(isBoostActive("risiko_liebhaber")) return { loot: 2.5, lossRisk: 1.5, combatRisk: 1.5 };
+        return { loot: 1, lossRisk: 1, combatRisk: 1 };
+    }
+    
+    function getCommanderDiscount() { return 1; } // Kein extra Boost mehr
+    function getBuildSpeedMult() { return 1; }
+    function getExtraSlot() { return false; }
+    function getPirateShield() { return false; }
+    function getCrystalBless() { return 1; }
+    function getAlienDM() { return false; }
+    function getTotalCargoMult() { return 1; }
 
     function calculateDeuteriumCost(fleet) {
         let totalCost = 0;
@@ -258,7 +316,7 @@
         let myPower = calculateFleetPower(myShips, attackBonus, defenseBonus);
         let enemyPower = myPower * (enemyPowerPercent / 100);
         let lossFactor = Math.min(0.95, (enemyPower / myPower) * 0.8);
-        if (getPirateShield()) lossFactor *= 0.3;
+        lossFactor = lossFactor * getLossReduction();
         let myScrapTotal = 0;
         let newShips = {};
         for (let [type, count] of Object.entries(myShips)) {
@@ -288,25 +346,35 @@
         else if (zoneId === "piraten") { baseMin = 1; baseMax = 9; }
         let amount = Math.floor(Math.random() * (baseMax - baseMin + 1) + baseMin);
         if (luckBonus > 0) amount += Math.min(Math.floor(amount * (luckBonus * 0.6)), 5);
-        return Math.min(amount, 22);
+        amount = Math.floor(amount * getDMBoost());
+        return Math.min(amount, 35);
     }
 
     function processExpedition(slot, fleet, zielId, kommId){
         let ziel = expeditionZiele[zielId];
         let komm = kommandeurBonuses[kommId];
         let lootMult = getLootMult() + (komm.lootBonus || 0);
-        let crystalBless = getCrystalBless();
         let luck = getLuckBonus();
+        let riskMod = getRiskModifier();
+        
         let totalCargo = 0;
         for (let [t,c] of Object.entries(fleet)) totalCargo += c * shipsData[t].cargo * getTotalCargoMult();
         
         let random = Math.random();
         let combatThreshold = ziel.combatChance - luck*0.2;
+        let lossThreshold = ziel.lossChance - luck*0.4;
+        
+        // Risiko-Liebhaber erhöht Kampf- und Verlustchance
+        if(isBoostActive("risiko_liebhaber")) {
+            combatThreshold = Math.min(0.95, combatThreshold * 1.5);
+            lossThreshold = Math.min(0.8, lossThreshold * 1.5);
+        }
+        
         let isCombat = (random < combatThreshold);
         
         addExpeditionLog(`🎲 [DEBUG] Zufall: ${random.toFixed(3)} | Kampf-Schwelle: ${combatThreshold.toFixed(3)} (${ziel.name}) → ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"}`);
         
-        if (!isCombat && random < ziel.lossChance - luck*0.4) { 
+        if (!isCombat && random < lossThreshold) { 
             addExpeditionLog(`💀 SLOT ${slot+1}: Totalverlust! Flotte vernichtet (${ziel.name})`); 
             return { newShips:{}, resourcesGained:0 }; 
         }
@@ -320,16 +388,20 @@
             return { newShips: fight.newShips, resourcesGained: fight.totalScrap };
         }
         
-        let metal = Math.floor(ziel.baseMetal * lootMult);
-        let crystal = Math.floor(ziel.baseCrystal * lootMult * crystalBless);
-        let deut = Math.floor(ziel.baseDeut * lootMult);
+        let metal = Math.floor(ziel.baseMetal * lootMult * riskMod.loot);
+        let crystal = Math.floor(ziel.baseCrystal * lootMult * riskMod.loot);
+        let deut = Math.floor(ziel.baseDeut * lootMult * riskMod.loot);
+        
         if (totalCargo >= metal + crystal + deut) {
             gameState.resources.metal += metal;
             gameState.resources.crystal += crystal;
             gameState.resources.deuterium += deut;
             addExpeditionLog(`💰 SLOT ${slot+1}: Fund: +${metal.toLocaleString()} M / ${crystal.toLocaleString()} K / ${deut.toLocaleString()} D (${ziel.name})`);
-            if (Math.random() < ziel.darkMatterChance + luck*0.2) { let dm = getBaseDarkMatterAmount(zielId, luck); gameState.resources.darkmatter += dm; addExpeditionLog(`✨ +${dm} DM`); }
-            if (getAlienDM() && Math.random()<0.4) { let edm = Math.floor(Math.random() * 5) + 1; gameState.resources.darkmatter += edm; addExpeditionLog(`🛸 Alien-Kontakt +${edm} DM`); }
+            if (Math.random() < ziel.darkMatterChance + luck*0.2) { 
+                let dm = getBaseDarkMatterAmount(zielId, luck); 
+                gameState.resources.darkmatter += dm; 
+                addExpeditionLog(`✨ +${dm} DM`); 
+            }
             return { newShips: fleet, resourcesGained: metal+crystal+deut };
         } else { 
             addExpeditionLog(`⚠️ SLOT ${slot+1}: Laderaum zu klein! Keine Beute. (${ziel.name})`); 
@@ -338,8 +410,8 @@
     }
 
     // ======================= ZEIT-KONSTANTEN =======================
-    const FLIGHT_TIME_MS = 10 * 60 * 1000;    // 10 Minuten (FIX!)
-    const BASE_HOLD_TIME_MS = 60 * 60 * 1000;  // 1 Stunde Basis-Haltezeit
+    const FLIGHT_TIME_MS = 10 * 60 * 1000;
+    const BASE_HOLD_TIME_MS = 60 * 60 * 1000;
 
     function finishExpedition(slot){
         let exp = gameState.expeditions[slot];
@@ -374,11 +446,8 @@
         if(kommId !== "keiner") gameState.resources.darkmatter -= commanderDM;
         for(let t of shipKeys) gameState.ships[t] -= (fleet[t]||0);
         
-        // Haltezeit wird durch Forschung/Boost/Kommandeur modifiziert
         let holdTimeMultiplier = getHoldTimeMult() * (1 - (kommData.holdTimeBonus || 0));
         let holdDuration = Math.floor(BASE_HOLD_TIME_MS * Math.max(0.2, holdTimeMultiplier));
-        
-        // Flugzeiten sind FIX (10 Minuten)
         let flightDuration = FLIGHT_TIME_MS;
         
         gameState.expeditions[slot]={ 
@@ -426,18 +495,12 @@
     function activateBoost(boostId){ 
         let b=shopBoosts[boostId]; 
         if(gameState.resources.darkmatter < b.costDM){ addExpeditionLog(`❌ Nicht genug DM für ${b.name} (${b.costDM} DM)`); return false; } 
-        if(b.effect.oneTime){ 
-            gameState.resources.darkmatter -= b.costDM; 
-            if(boostId==="sofort"){ let sum=0; for(let it of gameState.productionQueue){ gameState.ships[it.shipType]+=it.amount; sum+=it.amount; } gameState.productionQueue=[]; addExpeditionLog(`🔧 Sofort-Produktion: ${sum} Schiffe gebaut!`); } 
-            if(boostId==="cooldownReset"){ pendingCooldownReset=true; addExpeditionLog(`🔄 Cooldown-Reset aktiv!`); }
-            if(boostId==="mystery"){ let rdm = Math.floor(Math.random() * 25) + 5; gameState.resources.darkmatter += rdm; addExpeditionLog(`🎁 Mystery-Box: +${rdm} DM!`); }
-            saveGame(); renderAll(); return true; 
-        } 
         gameState.resources.darkmatter -= b.costDM; 
-        // HIER: duration wurde bereits auf 24h gesetzt, deshalb 24h aktiv
         gameState.activeBoosts[boostId]=Date.now()+b.effect.duration; 
         addExpeditionLog(`🛒 ${b.name} aktiviert (24h)! ${b.desc}`); 
-        saveGame(); renderAll(); return true; 
+        saveGame(); 
+        renderAll(); 
+        return true; 
     }
     
     function resetGame(){ 
@@ -453,13 +516,11 @@
 
     // ======================= RENDER-FUNKTIONEN =======================
     function renderAll(){
-        // Ressourcen
         document.getElementById("metal").innerText=gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText=gameState.resources.crystal.toLocaleString();
         document.getElementById("deuterium").innerText=gameState.resources.deuterium.toLocaleString();
         document.getElementById("darkmatter").innerText=gameState.resources.darkmatter.toLocaleString();
         
-        // Forschung
         document.getElementById("waffenLvl").innerText=gameState.tech.waffen;
         document.getElementById("schildLvl").innerText=gameState.tech.schild;
         document.getElementById("panzerLvl").innerText=gameState.tech.panzer;
@@ -479,11 +540,9 @@
         document.getElementById("speedCost").innerHTML = displayCost("speed", gameState.tech.speed);
         document.getElementById("werftCostDisplay").innerHTML = displayCost("werftLevel", gameState.tech.werftLevel);
         
-        // Flotte
         let fleetHtml=""; for(let t of shipKeys) fleetHtml+=`<div><strong>${t}:</strong> ${gameState.ships[t].toLocaleString()}</div>`;
         document.getElementById("fleetStatus").innerHTML=fleetHtml;
         
-        // Schiffbau
         let shipyardHtml=""; 
         for(let t of shipKeys){ 
             let cost = shipsData[t].cost; 
@@ -500,7 +559,6 @@
             };
         });
         
-        // Boosts Anzeige
         let activeHtml="<strong>🔥 Aktive Boosts (24h):</strong><br>"; 
         let has=false; 
         let nowTime=Date.now(); 
@@ -510,17 +568,17 @@
                 let remainingMs = exp - nowTime;
                 let hoursLeft = Math.floor(remainingMs / 3600000);
                 let minutesLeft = Math.floor((remainingMs % 3600000) / 60000);
-                activeHtml+=`<div>✅ ${shopBoosts[bid].name} — noch ${hoursLeft}h ${minutesLeft} min</div>`; 
+                activeHtml+=`<div>✅ ${shopBoosts[bid]?.name || bid} — noch ${hoursLeft}h ${minutesLeft} min</div>`; 
             } else delete gameState.activeBoosts[bid];
         }
         if(!has) activeHtml+="<div>❌ Keine aktiven Boosts</div>";
         document.getElementById("activeBoostsDisplay").innerHTML=activeHtml;
         
-        // Shop
         let shopHtml=""; 
         for(let [id,b] of Object.entries(shopBoosts)){ 
+            let riskClass = (id === "risiko_liebhaber") ? 'risk-highlight' : '';
             shopHtml+=`<div class="shop-item-compact">
-                <span class="shop-name">${b.name}</span>
+                <span class="shop-name ${riskClass}">${b.name}</span>
                 <span class="shop-effect">📋 ${b.desc}</span>
                 <span class="shop-cost">🌌 ${b.costDM} DM</span>
                 <button class="shop" data-boost="${id}">Kaufen</button>
@@ -529,7 +587,6 @@
         document.getElementById("shopContainer").innerHTML=shopHtml;
         document.querySelectorAll("[data-boost]").forEach(btn=>btn.onclick=()=>activateBoost(btn.dataset.boost));
         
-        // Sektor Auswahl
         let sektorHtml=""; 
         for(let [id,z] of Object.entries(expeditionZiele)) { 
             let cdEnd = gameState.sectorCooldowns[id] || 0; 
@@ -546,9 +603,8 @@
             };
         });
         
-        // Expeditions-Slots
         let slotsDiv=""; 
-        let slotCount=getExtraSlot()?4:3;
+        let slotCount=3;
         for(let i=0;i<slotCount;i++){ 
             let e=gameState.expeditions[i];
             if(e){ 
@@ -578,7 +634,6 @@
         }
         document.getElementById("expeditionSlots").innerHTML=slotsDiv;
         
-        // Event-Handler neu binden
         document.querySelectorAll(".commander-chip").forEach(el=>{
             el.onclick=()=>{ 
                 let s=parseInt(el.dataset.slot); 
@@ -600,7 +655,6 @@
             };
         });
         
-        // Bau-Queue
         let qDiv=document.getElementById("productionQueueDisplay"); 
         if(qDiv){ 
             if(gameState.productionQueue.length===0) qDiv.innerHTML="<small>📦 Keine Schiffe in Produktion</small>"; 
@@ -649,7 +703,7 @@
     function updateTimers() {
         let now = Date.now();
         
-        for(let i=0;i<4;i++) {
+        for(let i=0;i<3;i++) {
             let e = gameState.expeditions[i];
             if(e) {
                 let remain = 0;
@@ -729,7 +783,7 @@
                 i--; changed=true; 
             } 
         } 
-        for(let i=0;i<4;i++){ 
+        for(let i=0;i<3;i++){ 
             let e=gameState.expeditions[i]; 
             if(e){ 
                 if(e.phase==="hinflug"&&now>=e.hinEnde){ e.phase="halten"; changed=true; } 
