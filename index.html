@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Expedition Commander - DM Forschung & Offline-Progression</title>
+    <title>Expedition Commander - DM Forschung & Offline-Progression (Balanced)</title>
     <style>
         * { box-sizing: border-box; user-select: none; }
         body { background: linear-gradient(145deg, #0a0f1e 0%, #0c1222 100%); font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif; color: #e0e5f0; margin: 0; padding: 16px; }
@@ -100,19 +100,21 @@
 
         <div id="schiffbauPane" class="tab-pane">
             <h3>🏭 Werft – Schiffestats & Bauaufträge</h3>
-            <table class="ship-detail-table"><thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th></tr></thead>
-            <tbody><tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td><td>2</td><td>800k / 500k / 300k</td></tr>
-            <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td><td>2</td><td>200k / 100k / 0</td></tr>
-            <tr><td>Schlachtschiff</td><td>800</td><td>1200</td><td>2000</td><td>0</td><td>4</td><td>600k / 350k / 120k</td></tr>
-            <tr><td>Schlachtkreuzer</td><td>1500</td><td>2500</td><td>4000</td><td>0</td><td>5</td><td>1.2M / 800k / 400k</td></tr>
-            <tr><td>Zerstörer</td><td>6000</td><td>12000</td><td>18000</td><td>0</td><td>7</td><td>3.5M / 2M / 900k</td></tr></tbody></table>
+            <table class="ship-detail-table"><thead><tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th><tr></thead>
+            <tbody>
+                <tr><td>Großer Transporter</td><td>50</td><td>800</td><td>1600</td><td>15M</td><td>2</td><td>800k / 700k / 400k</td></tr>
+                <tr><td>Leichter Jäger</td><td>150</td><td>300</td><td>500</td><td>0</td><td>2</td><td>200k / 150k / 50k</td></tr>
+                <tr><td>Schlachtschiff</td><td>800</td><td>1200</td><td>2000</td><td>0</td><td>4</td><td>600k / 500k / 250k</td></tr>
+                <tr><td>Schlachtkreuzer</td><td>1500</td><td>2500</td><td>4000</td><td>0</td><td>5</td><td>1.2M / 1.1M / 600k</td></tr>
+                <tr><td>Zerstörer</td><td>6000</td><td>12000</td><td>18000</td><td>0</td><td>7</td><td>3.5M / 2.8M / 1.5M</td></tr>
+            </tbody></table>
             <div id="shipyardContainer" style="margin: 20px 0;"></div>
             <div id="productionQueueDisplay"></div>
         </div>
 
         <div id="expeditionPane" class="tab-pane">
             <h3>🪐 Expeditionen – Sektoren & Risiken (Kommandeur kostet DM!)</h3>
-            <div class="debug-info" style="background:#3a2a3e">🔍 DEBUG: Kampfwahrscheinlichkeiten werden im Log angezeigt (🎲 Zufall: X.X / Schwellwert: Y.Y)</div>
+            <div class="debug-info" style="background:#3a2a3e">🔍 DEBUG: Kampfwahrscheinlichkeiten werden im Log angezeigt (🎲 Zufall: X.X / Schwellwert: Y.Y) | ⚡ Deuterium-Verbrauch pro Flug (5% der Baukosten)</div>
             <div class="ziel-grid" id="sektorExplainer"></div>
             <div id="expeditionSlots"></div>
             <div class="badge-info">🚀 Kommandeure kosten Dunkle Materie pro Einsatz (Rabatt-Boost möglich). Forschung ebenfalls DM. Timer laufen offline weiter!</div>
@@ -130,31 +132,23 @@
 </div>
 
 <script>
+    // ======================= NEUE BALANCE-WERTE =======================
+    // Schiffskosten (angepasst: mehr Kristall & Deuterium)
     const shipsData = {
-        "Großer Transporter": { weapon: 50, shield: 800, armor: 1600, cargo: 15000000, buildTime: 2, cost: { metal: 800000, crystal: 500000, deuterium: 300000 } },
-        "Leichter Jäger":    { weapon: 150, shield: 300, armor: 500, cargo: 0, buildTime: 2, cost: { metal: 200000, crystal: 100000, deuterium: 0 } },
-        "Schlachtschiff":    { weapon: 800, shield: 1200, armor: 2000, cargo: 0, buildTime: 4, cost: { metal: 600000, crystal: 350000, deuterium: 120000 } },
-        "Schlachtkreuzer":   { weapon: 1500, shield: 2500, armor: 4000, cargo: 0, buildTime: 5, cost: { metal: 1200000, crystal: 800000, deuterium: 400000 } },
-        "Zerstörer":         { weapon: 6000, shield: 12000, armor: 18000, cargo: 0, buildTime: 7, cost: { metal: 3500000, crystal: 2000000, deuterium: 900000 } }
+        "Großer Transporter": { weapon: 50, shield: 800, armor: 1600, cargo: 15000000, buildTime: 2, cost: { metal: 800000, crystal: 700000, deuterium: 400000 } },
+        "Leichter Jäger":    { weapon: 150, shield: 300, armor: 500, cargo: 0, buildTime: 2, cost: { metal: 200000, crystal: 150000, deuterium: 50000 } },
+        "Schlachtschiff":    { weapon: 800, shield: 1200, armor: 2000, cargo: 0, buildTime: 4, cost: { metal: 600000, crystal: 500000, deuterium: 250000 } },
+        "Schlachtkreuzer":   { weapon: 1500, shield: 2500, armor: 4000, cargo: 0, buildTime: 5, cost: { metal: 1200000, crystal: 1100000, deuterium: 600000 } },
+        "Zerstörer":         { weapon: 6000, shield: 12000, armor: 18000, cargo: 0, buildTime: 7, cost: { metal: 3500000, crystal: 2800000, deuterium: 1500000 } }
     };
     const shipKeys = ["Großer Transporter", "Leichter Jäger", "Schlachtschiff", "Schlachtkreuzer", "Zerstörer"];
 
-    function getBaseDarkMatterAmount(zoneId, luckBonus = 0) {
-        let baseMin = 1, baseMax = 12;
-        if (zoneId === "anomalie") { baseMin = 3; baseMax = 18; }
-        else if (zoneId === "ruinen") { baseMin = 2; baseMax = 14; }
-        else if (zoneId === "asteroid") { baseMin = 1; baseMax = 10; }
-        else if (zoneId === "piraten") { baseMin = 1; baseMax = 9; }
-        let amount = Math.floor(Math.random() * (baseMax - baseMin + 1) + baseMin);
-        if (luckBonus > 0) amount += Math.min(Math.floor(amount * (luckBonus * 0.6)), 5);
-        return Math.min(amount, 22);
-    }
-
+    // Sektor-Funde (reduziert bei Kristall & Deuterium für bessere Balance)
     const expeditionZiele = {
-        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 3500000, baseDeut: 2000000, combatChance: 0.15, lossChance: 0.03, cooldownMs: 20*60*1000, darkMatterChance: 0.12, enemyPower: 40 },
-        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 2000000, baseDeut: 1000000, combatChance: 0.70, lossChance: 0.15, cooldownMs: 10*60*1000, darkMatterChance: 0.08, enemyPower: 100 },
-        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 12000000, baseDeut: 10000000, combatChance: 0.40, lossChance: 0.25, cooldownMs: 25*60*1000, darkMatterChance: 0.18, enemyPower: 160 },
-        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 10000000, baseDeut: 5000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: 15*60*1000, darkMatterChance: 0.15, enemyPower: 70 }
+        "asteroid": { name: "🌍 Asteroidengürtel", risk: "niedrig", baseMetal: 5000000, baseCrystal: 2500000, baseDeut: 1500000, combatChance: 0.15, lossChance: 0.03, cooldownMs: 20*60*1000, darkMatterChance: 0.12, enemyPower: 40 },
+        "piraten": { name: "⚔️ Piratensektor", risk: "hoch", baseMetal: 3000000, baseCrystal: 1500000, baseDeut: 800000, combatChance: 0.70, lossChance: 0.15, cooldownMs: 10*60*1000, darkMatterChance: 0.08, enemyPower: 100 },
+        "anomalie": { name: "🌀 Raum-Anomalie", risk: "extrem", baseMetal: 15000000, baseCrystal: 8000000, baseDeut: 5000000, combatChance: 0.40, lossChance: 0.25, cooldownMs: 25*60*1000, darkMatterChance: 0.18, enemyPower: 160 },
+        "ruinen": { name: "🏛️ Alte Ruinen", risk: "mittel", baseMetal: 8000000, baseCrystal: 6000000, baseDeut: 3000000, combatChance: 0.25, lossChance: 0.08, cooldownMs: 15*60*1000, darkMatterChance: 0.15, enemyPower: 70 }
     };
 
     const kommandeurBonuses = {
@@ -208,6 +202,18 @@
     function getAlienDM() { return isBoostActive("alien"); }
     function getMystery() { return isBoostActive("mystery"); }
 
+    // Deuterium-Kosten für eine Expedition (5% der Baukosten des Schiffes)
+    function calculateDeuteriumCost(fleet) {
+        let totalCost = 0;
+        for (let [type, count] of Object.entries(fleet)) {
+            if (count > 0) {
+                let deuteriumCost = shipsData[type].cost.deuterium;
+                totalCost += Math.floor(deuteriumCost * 0.05) * count;
+            }
+        }
+        return Math.max(1, totalCost);
+    }
+
     function addExpeditionLog(text){ 
         gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text}); 
         if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); 
@@ -221,26 +227,43 @@
         return power;
     }
 
+    // NEU: NUR eigener Schrott (30%), KEIN Piraten-Schrott mehr
     function fightSimulation(myShips, enemyPowerPercent, attackBonus=0, defenseBonus=0) {
         let myPower = calculateFleetPower(myShips, attackBonus, defenseBonus);
         let enemyPower = myPower * (enemyPowerPercent / 100);
         let lossFactor = Math.min(0.95, (enemyPower / myPower) * 0.8);
         if (getPirateShield()) lossFactor *= 0.3;
-        let myLosses = {}, myScrapTotal = 0;
+        let myScrapTotal = 0;
+        let newShips = {};
         for (let [type, count] of Object.entries(myShips)) {
             let lost = Math.floor(count * lossFactor);
-            if (lost > 0) { myLosses[type] = lost; let cost = shipsData[type].cost; myScrapTotal += lost * (cost.metal + cost.crystal + cost.deuterium); }
+            if (lost > 0) {
+                let cost = shipsData[type].cost;
+                myScrapTotal += lost * (cost.metal + cost.crystal + cost.deuterium);
+            }
+            newShips[type] = count - lost;
         }
-        let powerRatio = myPower / Math.max(1, enemyPower);
-        let enemyLossFactor = Math.min(0.9, powerRatio * 0.7);
-        let enemyFleetValue = myScrapTotal * (enemyPowerPercent / 100) * 1.5;
-        let enemyScrapTotal = Math.floor(enemyFleetValue * enemyLossFactor);
-        let newShips = {};
-        for (let [type, count] of Object.entries(myShips)) newShips[type] = count - (myLosses[type] || 0);
-        let ownScrap = Math.floor(myScrapTotal * 0.5);
-        let pirateScrap = Math.floor(enemyScrapTotal * 0.35);
-        let totalScrap = ownScrap + pirateScrap;
-        return { newShips, scrapMetal: Math.floor(totalScrap * 0.5), scrapCrystal: Math.floor(totalScrap * 0.3), scrapDeut: Math.floor(totalScrap * 0.2), ownLost: myScrapTotal, pirateLost: enemyScrapTotal, totalScrap };
+        // NUR 30% des eigenen Schrotts zurück (KEIN Piraten-Schrott)
+        let ownScrap = Math.floor(myScrapTotal * 0.3);
+        return { 
+            newShips, 
+            scrapMetal: Math.floor(ownScrap * 0.5), 
+            scrapCrystal: Math.floor(ownScrap * 0.3), 
+            scrapDeut: Math.floor(ownScrap * 0.2), 
+            ownLost: myScrapTotal, 
+            totalScrap: ownScrap 
+        };
+    }
+
+    function getBaseDarkMatterAmount(zoneId, luckBonus = 0) {
+        let baseMin = 1, baseMax = 12;
+        if (zoneId === "anomalie") { baseMin = 3; baseMax = 18; }
+        else if (zoneId === "ruinen") { baseMin = 2; baseMax = 14; }
+        else if (zoneId === "asteroid") { baseMin = 1; baseMax = 10; }
+        else if (zoneId === "piraten") { baseMin = 1; baseMax = 9; }
+        let amount = Math.floor(Math.random() * (baseMax - baseMin + 1) + baseMin);
+        if (luckBonus > 0) amount += Math.min(Math.floor(amount * (luckBonus * 0.6)), 5);
+        return Math.min(amount, 22);
     }
 
     function processExpedition(slot, fleet, zielId, kommId){
@@ -256,7 +279,7 @@
         let combatThreshold = ziel.combatChance - luck*0.2;
         let isCombat = (random < combatThreshold);
         
-        // DEBUG: Zeige die Kampfentscheidung im Log        addExpeditionLog(`🎲 [DEBUG] Zufall: ${random.toFixed(3)} | Kampf-Schwelle: ${combatThreshold.toFixed(3)} (${ziel.name}, Basis:${ziel.combatChance}) → ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"}`);
+        addExpeditionLog(`🎲 [DEBUG] Zufall: ${random.toFixed(3)} | Kampf-Schwelle: ${combatThreshold.toFixed(3)} (${ziel.name}, Basis:${ziel.combatChance}) → ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"}`);
         
         // Totalverlust durch Umgebung (nur wenn kein Kampf)
         if (!isCombat && random < ziel.lossChance - luck*0.4) { 
@@ -270,7 +293,7 @@
             gameState.resources.metal += fight.scrapMetal;
             gameState.resources.crystal += fight.scrapCrystal;
             gameState.resources.deuterium += fight.scrapDeut;
-            addExpeditionLog(`⚔️ SLOT ${slot+1}: PIRATENKAMPF in ${ziel.name}! Verluste: eigen ${Math.floor(fight.ownLost).toLocaleString()} / Piraten ${Math.floor(fight.pirateLost).toLocaleString()} → Schrott: +${fight.scrapMetal.toLocaleString()} M / ${fight.scrapCrystal.toLocaleString()} K / ${fight.scrapDeut.toLocaleString()} D`);
+            addExpeditionLog(`⚔️ SLOT ${slot+1}: PIRATENKAMPF in ${ziel.name}! Eigene Verluste: ${Math.floor(fight.ownLost).toLocaleString()} Wert → Schrott (30%): +${fight.scrapMetal.toLocaleString()} M / ${fight.scrapCrystal.toLocaleString()} K / ${fight.scrapDeut.toLocaleString()} D`);
             return { newShips: fight.newShips, resourcesGained: fight.totalScrap };
         }
         
@@ -311,6 +334,16 @@
         let fleet={};
         for(let t of shipKeys){ let val=shipsSel[t]||0; if(val>gameState.ships[t]){ alert(`Nicht genug ${t}`); return false; } if(val>0) fleet[t]=val; }
         if(Object.keys(fleet).length===0){ alert("Wähle Schiffe!"); return false; }
+        
+        // Deuterium-Kosten für den Flug
+        let deuteriumCost = calculateDeuteriumCost(fleet);
+        if(gameState.resources.deuterium < deuteriumCost){
+            alert(`Nicht genug Deuterium für den Flug! Benötigt: ${deuteriumCost.toLocaleString()} D`);
+            return false;
+        }
+        gameState.resources.deuterium -= deuteriumCost;
+        addExpeditionLog(`⚡ ${deuteriumCost.toLocaleString()} Deuterium für Expedition verbraucht.`);
+        
         let kommData = kommandeurBonuses[kommId];
         let commanderDM = Math.floor(kommData.costDM * getCommanderDiscount());
         if(kommId !== "keiner" && gameState.resources.darkmatter < commanderDM){ alert(`Nicht genug DM für ${kommData.name} (${commanderDM} DM!)`); return false; }
@@ -330,6 +363,7 @@
     function activateBoost(boostId){ let b=shopBoosts[boostId]; if(gameState.resources.darkmatter<b.costDM){ addExpeditionLog(`❌ Nicht genug DM für ${b.name}`); return false; } if(b.effect.oneTime){ gameState.resources.darkmatter-=b.costDM; if(boostId==="sofort"){ let sum=0; for(let it of gameState.productionQueue){ gameState.ships[it.shipType]+=it.amount; sum+=it.amount; } gameState.productionQueue=[]; } if(boostId==="cooldownReset"){ pendingCooldownReset=true; } saveGame(); renderAll(); return true; } gameState.resources.darkmatter-=b.costDM; gameState.activeBoosts[boostId]=Date.now()+3600000; addExpeditionLog(`🛒 ${b.name} aktiviert (1h)!`); saveGame(); renderAll(); return true; }
     function resetGame(){ if(confirm("ALLE Daten zurücksetzen?")){ localStorage.removeItem("ExpeditionGameSaveDM"); gameState = { resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:350 }, tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, ships: { "Großer Transporter":2, "Leichter Jäger":5, "Schlachtschiff":1, "Schlachtkreuzer":0, "Zerstörer":0 }, productionQueue: [], expeditions: [null,null,null], eventLogs: [], sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, activeBoosts: {} }; selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" }; selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" }; pendingCooldownReset = null; saveGame(); renderAll(); addExpeditionLog("⚠️ Spiel wurde komplett zurückgesetzt!"); } }
 
+    // Render-Funktionen (aus Platzgründen stark komprimiert, aber voll funktionsfähig)
     function renderAll(){
         document.getElementById("metal").innerText=gameState.resources.metal.toLocaleString();
         document.getElementById("crystal").innerText=gameState.resources.crystal.toLocaleString();
