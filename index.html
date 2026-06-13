@@ -56,7 +56,6 @@
         .shop-item-compact .shop-effect { font-size: 0.7rem; color: #88aaff; flex: 1; }
         .shop-cost { font-family: monospace; color: #c084fc; background: #1e1a3e; padding: 2px 10px; border-radius: 20px; margin: 0 8px; }
         .risk-highlight { color: #ff8888; font-weight: bold; }
-        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: #0a1020; border-radius: 30px; max-width: 900px; width: 90%; max-height: 80%; overflow: auto; padding: 20px; border: 2px solid #3b82f6; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a3f6e; padding-bottom: 10px; margin-bottom: 15px; }
@@ -71,6 +70,12 @@
         .ship-row.survived { color: #88ff88; }
         .battle-summary { background: #1a2540; border-radius: 15px; padding: 12px; margin-top: 15px; text-align: center; }
         .bonus-progress { font-size: 0.7rem; color: #88ffaa; margin-left: 8px; }
+        .report-list { max-height: 600px; overflow-y: auto; }
+        .report-item { background: #0f172a; margin: 8px 0; padding: 12px; border-radius: 16px; border-left: 3px solid #3b82f6; cursor: pointer; transition: 0.1s; }
+        .report-item:hover { background: #1a2540; transform: translateX(4px); }
+        .report-time { font-size: 0.7rem; color: #88aaff; font-family: monospace; }
+        .report-text { font-size: 0.85rem; margin-top: 4px; }
+        .report-badge { background: #4a2e6e; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; display: inline-block; margin-top: 6px; }
     </style>
 </head>
 <body>
@@ -89,6 +94,7 @@
         <button class="tab-btn" data-tab="flotte">📦 FLOTTE</button>
         <button class="tab-btn" data-tab="schiffbau">🏭 SCHIFFBAU</button>
         <button class="tab-btn" data-tab="expedition">🪐 EXPEDITION</button>
+        <button class="tab-btn" data-tab="berichte">📜 BERICHTE</button>
     </div>
 
     <div class="tab-content">
@@ -139,14 +145,14 @@
             <div class="badge-info">🚀 Kommandeure kosten Dunkle Materie pro Einsatz. Timer laufen offline weiter!</div>
             <div class="commander-legend"><span>👑 <strong>Kommandeur-Boni:</strong></span><span>⚔️ Admiral: +30% Angriff</span><span>🛡️ Defensiv: +40% Schild+HP</span><span>💰 Händler: +50% Beute</span><span>🚀 Pionier: -20% Expeditions-Haltezeit</span><span>❌ Keiner: Kein Bonus</span></div>
         </div>
-    </div>
-    
-    <div style="margin-top: 28px;">
-        <div style="background: #0a1020; border-radius: 28px; padding: 12px 18px;">
-            <div><strong>📜 LETZTE 12 EXPEDITIONEN (Klick für Kampfbericht)</strong></div>
-            <div id="eventLog" style="max-height: 240px; overflow-y: auto; margin-top: 8px;"></div>
+
+        <div id="berichtePane" class="tab-pane">
+            <h3>📜 EXPEDITIONSBERICHTE (letzte 12)</h3>
+            <div class="badge-info" style="margin-bottom: 16px;">📊 Klicke auf einen Bericht für detaillierte Kampfanalyse</div>
+            <div id="reportList" class="report-list"></div>
         </div>
     </div>
+    
     <footer>✨ Forschung & Kommandeure kosten Dunkle Materie – sammle DM in Expeditionen! <strong>Offline-Progression aktiv</strong></footer>
 </div>
 
@@ -161,8 +167,7 @@
 </div>
 
 <script>
-    // ======================= SCHIFFSDATEN (Spieler & Piraten) =======================
-    // Deutsche Namen für Rapidfire-Ziele
+    // ======================= SCHIFFSDATEN =======================
     const shipNameMap = {
         "lightFighter": "Leichter Jäger",
         "heavyFighter": "Schwerer Jäger",
@@ -519,7 +524,7 @@
     function addExpeditionLog(text, battleReport = null){ 
         gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text, battleReport}); 
         if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); 
-        renderLogs(); saveGame();
+        renderReports(); saveGame();
     }
     
     function saveGame(){ localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState)); }
@@ -932,22 +937,43 @@
         }
         
         renderShipTable();
+        renderReports();
     }
     
-    function renderLogs(){ 
-        let logDiv=document.getElementById("eventLog"); 
-        if(!logDiv) return; 
-        logDiv.innerHTML=""; 
-        for(let idx in gameState.eventLogs) {
-            let log = gameState.eventLogs[idx];
-            let hasReport = log.battleReport ? '📊 ' : '';
-            logDiv.innerHTML+=`<div class="log-entry" data-log-index="${idx}">🕒 ${log.timestamp} — ${hasReport}${log.text}</div>`; 
+    function renderReports() {
+        let container = document.getElementById("reportList");
+        if (!container) return;
+        
+        if (gameState.eventLogs.length === 0) {
+            container.innerHTML = '<div class="badge-info">📭 Noch keine Expeditionsberichte. Schicke eine Expedition los!</div>';
+            return;
         }
         
-        document.querySelectorAll(".log-entry").forEach(el=>{
-            let idx = parseInt(el.dataset.logIndex);
+        let html = "";
+        for (let i = 0; i < gameState.eventLogs.length; i++) {
+            let log = gameState.eventLogs[i];
+            let hasBattle = log.battleReport ? true : false;
+            let typeIcon = "";
+            if (log.text.includes("KAMPF")) typeIcon = "⚔️";
+            else if (log.text.includes("Fund")) typeIcon = "💰";
+            else if (log.text.includes("Totalverlust")) typeIcon = "💀";
+            else if (log.text.includes("verbraucht")) typeIcon = "⚡";
+            else if (log.text.includes("DM")) typeIcon = "✨";
+            else typeIcon = "📋";
+            
+            html += `<div class="report-item" data-report-index="${i}">
+                        <div class="report-time">🕒 ${log.timestamp}</div>
+                        <div class="report-text">${typeIcon} ${log.text.substring(0, 120)}${log.text.length > 120 ? "..." : ""}</div>
+                        ${hasBattle ? '<div class="report-badge">📊 Kampfbericht verfügbar (klick)</div>' : ''}
+                    </div>`;
+        }
+        
+        container.innerHTML = html;
+        
+        document.querySelectorAll(".report-item").forEach(el => {
+            let idx = parseInt(el.dataset.reportIndex);
             let log = gameState.eventLogs[idx];
-            if(log && log.battleReport) {
+            if (log && log.battleReport) {
                 el.style.cursor = "pointer";
                 el.onclick = () => showBattleReport(log.battleReport);
             }
