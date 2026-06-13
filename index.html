@@ -76,6 +76,18 @@
         .report-time { font-size: 0.7rem; color: #88aaff; font-family: monospace; }
         .report-text { font-size: 0.85rem; margin-top: 4px; }
         .report-badge { background: #4a2e6e; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; display: inline-block; margin-top: 6px; }
+        .fleet-slot { background: #0f172a; margin: 8px 0; padding: 12px; border-radius: 16px; border-left: 3px solid #ffcc44; }
+        .fleet-slot-input { background: #1e2a44; border: none; color: white; padding: 6px 12px; border-radius: 20px; width: 150px; }
+        .fleet-slot-info { font-size: 0.7rem; color: #88ffaa; margin-top: 6px; }
+        .load-fleet-btn { background: #2a6e2a; margin-left: 8px; }
+        .load-fleet-btn:hover { background: #3a8e3a; }
+        .delete-fleet-btn { background: #8e3a3a; }
+        .delete-fleet-btn:hover { background: #ae4a4a; }
+        .save-fleet-btn { background: #2a4a8e; }
+        .save-fleet-btn:hover { background: #3a5aae; }
+        .load-fleet-btn-small { background: #2a6e2a; padding: 2px 10px; font-size: 0.7rem; margin-top: 6px; border-radius: 20px; cursor: pointer; display: inline-block; }
+        .load-fleet-btn-small:hover { background: #3a8e3a; }
+        .selected-sector-hint { background: #ffcc44; color: #0a0f1e; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; margin-left: 12px; }
     </style>
 </head>
 <body>
@@ -125,6 +137,10 @@
             <div><strong>💡 Tipp:</strong> Pathfinder: +1% Beute/Schiff (max 25%) | Recycler: +1% Schrott/Schiff (max 25%)</div>
             <div class="badge-info">⚔️ <strong>Schnellfeuer:</strong> Schlachtschiffe stark gegen Jäger & Kreuzer | Schlachtkreuzer stark gegen Jäger | Zerstörer stark gegen Schlachtschiffe</div>
             <div class="badge-info">⚠️ <strong>Piraten-Skalierung:</strong> Je stärker deine Flotte, desto mehr Piraten! Faire, riskante Kämpfe garantiert.</div>
+            
+            <hr>
+            <h4>📦 FLOTTENSPEICHER (1 pro Sektor)</h4>
+            <div id="fleetSlotsContainer"></div>
         </div>
 
         <div id="schiffbauPane" class="tab-pane">
@@ -142,6 +158,7 @@
             <h3>🪐 Expeditionen – Sektoren & Risiken (Kommandeur kostet DM!)</h3>
             <div class="debug-info" style="background:#3a2a3e">🔍 Kampfsimulation mit Schnellfeuer & individuellen Schiffen | ⚡ Deuterium-Verbrauch pro Flug (5% der Baukosten) | ⏱️ Flugzeit: 10min Hin + 10min Rück | Haltezeit: 1h Basis</div>
             <div class="ziel-grid" id="sektorExplainer"></div>
+            <div id="selectedSectorDisplay" class="badge-info" style="margin-bottom: 12px;">👉 Klicke auf einen Sektor, um ihn auszuwählen. Dann lade die gespeicherte Flotte oder starte die Expedition!</div>
             <div id="expeditionSlots"></div>
             <div class="badge-info">🚀 Kommandeure kosten Dunkle Materie pro Einsatz. Timer laufen offline weiter!</div>
             <div class="commander-legend"><span>👑 <strong>Kommandeur-Boni:</strong></span><span>⚔️ Admiral: +30% Angriff</span><span>🛡️ Defensiv: +40% Schild+HP</span><span>💰 Händler: +50% Beute</span><span>🚀 Pionier: -20% Expeditions-Haltezeit</span><span>❌ Keiner: Kein Bonus</span></div>
@@ -198,6 +215,165 @@
     
     const shipsData = {};
     allShips.forEach(s => { shipsData[s.name] = s; });
+    
+    // ======================= FLOTTENSPEICHER =======================
+    let savedFleets = {
+        "asteroid": { name: "", ships: {} },
+        "piraten": { name: "", ships: {} },
+        "ruinen": { name: "", ships: {} },
+        "anomalie": { name: "", ships: {} }
+    };
+    
+    // Der aktuell ausgewählte Sektor für Expeditionen
+    let selectedExpeditionSector = "piraten";
+    
+    function loadSavedFleets() {
+        let saved = localStorage.getItem("ExpeditionSavedFleets");
+        if (saved) {
+            try {
+                let parsed = JSON.parse(saved);
+                if (parsed.asteroid) savedFleets = parsed;
+            } catch(e) {}
+        }
+    }
+    
+    function saveFleetToStorage(sektorId, fleetName, ships) {
+        savedFleets[sektorId] = { name: fleetName, ships: { ...ships } };
+        localStorage.setItem("ExpeditionSavedFleets", JSON.stringify(savedFleets));
+        renderFleetSlots();
+        addExpeditionLog(`💾 Flotte "${fleetName}" für ${getSektorName(sektorId)} gespeichert!`);
+    }
+    
+    function deleteFleetFromStorage(sektorId) {
+        savedFleets[sektorId] = { name: "", ships: {} };
+        localStorage.setItem("ExpeditionSavedFleets", JSON.stringify(savedFleets));
+        renderFleetSlots();
+        addExpeditionLog(`🗑️ Flotte für ${getSektorName(sektorId)} gelöscht!`);
+    }
+    
+    function getSektorName(sektorId) {
+        const names = {
+            "asteroid": "🌍 Asteroidengürtel",
+            "piraten": "⚔️ Piratensektor",
+            "ruinen": "🏛️ Alte Ruinen",
+            "anomalie": "🌀 Raum-Anomalie"
+        };
+        return names[sektorId] || sektorId;
+    }
+    
+    function getCurrentFleetFromInputs() {
+        let fleet = {};
+        for (let t of shipKeys) {
+            let inputId = `fleet_save_${t.replace(/ /g,'')}`;
+            let input = document.getElementById(inputId);
+            if (input) {
+                let val = parseInt(input.value) || 0;
+                if (val > 0) fleet[t] = val;
+            }
+        }
+        return fleet;
+    }
+    
+    // Lädt die gespeicherte Flotte für den aktuell ausgewählten Sektor in DIESEN Sektor
+    function loadFleetForSelectedSector() {
+        let fleet = savedFleets[selectedExpeditionSector].ships;
+        let fleetName = savedFleets[selectedExpeditionSector].name;
+        if (Object.keys(fleet).length === 0) {
+            addExpeditionLog(`❌ Keine gespeicherte Flotte für ${getSektorName(selectedExpeditionSector)} gefunden!`);
+            return false;
+        }
+        
+        // Nur für den aktuellen Sektor die Flotte laden (nicht für alle 3 Slots!)
+        // Wir laden in die Input-Felder des ersten Slots (da alle 3 Slots denselben Sektor verwenden)
+        for (let t of shipKeys) {
+            let inputId = `exp_slot0_${t.replace(/ /g,'')}`;
+            let input = document.getElementById(inputId);
+            if (input) {
+                input.value = fleet[t] || 0;
+            }
+        }
+        
+        addExpeditionLog(`📂 Flotte "${fleetName}" für ${getSektorName(selectedExpeditionSector)} geladen!`);
+        renderAll(); // Neu rendern um Input-Felder zu aktualisieren
+        return true;
+    }
+    
+    function renderFleetSlots() {
+        let container = document.getElementById("fleetSlotsContainer");
+        if (!container) return;
+        
+        let html = "";
+        const sektoren = [
+            { id: "asteroid", icon: "🌍", name: "Asteroidengürtel" },
+            { id: "piraten", icon: "⚔️", name: "Piratensektor" },
+            { id: "ruinen", icon: "🏛️", name: "Alte Ruinen" },
+            { id: "anomalie", icon: "🌀", name: "Raum-Anomalie" }
+        ];
+        
+        // Zuerst eine Zeile mit aktuellen Schiffs-Inputs zum Speichern
+        html += `<div class="fleet-slot" style="background:#1a2540;">
+                    <strong>📝 AKTUELLE SCHIFFZAHLEN (zum Speichern)</strong><br>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">`;
+        for (let t of shipKeys) {
+            html += `<div style="min-width: 100px;"><label style="font-size:0.7rem;">${t}:</label><br>
+                     <input type="number" id="fleet_save_${t.replace(/ /g,'')}" value="0" min="0" style="width:80px; background:#1e2a44; border:none; color:white; padding:4px; border-radius:12px;"></div>`;
+        }
+        html += `</div><div class="badge-info" style="margin-top:8px;">💡 Trage hier die gewünschten Schiffe ein, dann speichern!</div></div>`;
+        
+        // Aktuelle Schiffsbestände in die Inputs laden
+        setTimeout(() => {
+            for (let t of shipKeys) {
+                let input = document.getElementById(`fleet_save_${t.replace(/ /g,'')}`);
+                if (input) input.value = gameState.ships[t] || 0;
+            }
+        }, 10);
+        
+        for (let s of sektoren) {
+            let fleet = savedFleets[s.id];
+            let hasFleet = fleet.name && Object.keys(fleet.ships).length > 0;
+            let fleetSummary = "";
+            if (hasFleet) {
+                let shipList = Object.entries(fleet.ships).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ");
+                fleetSummary = shipList.length > 60 ? shipList.substring(0,60)+"..." : shipList;
+            }
+            
+            html += `<div class="fleet-slot">
+                        <strong>${s.icon} ${s.name}</strong>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; align-items: center;">
+                            <input type="text" id="fleet_name_${s.id}" placeholder="Flottenname" class="fleet-slot-input" value="${fleet.name.replace(/"/g, '&quot;')}" style="width:140px;">
+                            <button class="save-fleet-btn" data-sektor="${s.id}">💾 SPEICHERN</button>
+                            ${hasFleet ? `<button class="delete-fleet-btn" data-sektor="${s.id}">🗑️ LÖSCHEN</button>` : ''}
+                        </div>
+                        ${hasFleet ? `<div class="fleet-slot-info">📦 ${fleetSummary}</div>` : '<div class="fleet-slot-info">📭 Keine Flotte gespeichert</div>'}
+                    </div>`;
+        }
+        
+        container.innerHTML = html;
+        
+        document.querySelectorAll(".save-fleet-btn").forEach(btn => {
+            btn.onclick = () => {
+                let sektor = btn.dataset.sektor;
+                let nameInput = document.getElementById(`fleet_name_${sektor}`);
+                let fleetName = nameInput ? nameInput.value.trim() : "Meine Flotte";
+                if (fleetName === "") fleetName = `${getSektorName(sektor)} Flotte`;
+                let fleet = getCurrentFleetFromInputs();
+                if (Object.keys(fleet).length === 0) {
+                    addExpeditionLog(`⚠️ Keine Schiffe ausgewählt! Bitte oben Schiffe eintragen.`);
+                    return;
+                }
+                saveFleetToStorage(sektor, fleetName, fleet);
+            };
+        });
+        
+        document.querySelectorAll(".delete-fleet-btn").forEach(btn => {
+            btn.onclick = () => {
+                let sektor = btn.dataset.sektor;
+                if (confirm(`Flotte für ${getSektorName(sektor)} wirklich löschen?`)) {
+                    deleteFleetFromStorage(sektor);
+                }
+            };
+        });
+    }
     
     // ======================= SCHNELLFEUER LOGIK =======================
     function calculateRapidfireBonus(attackerShip, defenderShipId) {
@@ -378,26 +554,14 @@
     };
     
     // ======================= DYNAMISCHE PIRATEN-FLOTTE =======================
-    // Skaliert mit Spieler-Flottenstärke UND Sektor-Risiko
     function getPirateFleet(zoneId, playerFleetPower) {
         let zone = expeditionZiele[zoneId];
-        
-        // BASIS: Je stärker der Spieler, desto mehr Piraten (Faktor 0.5 - 2.5)
-        // Eine Flotte mit 10 Mio Stärke = Faktor ~0.8
-        // Eine Flotte mit 100 Mio Stärke = Faktor ~2.0
         let playerMultiplier = Math.min(2.5, Math.max(0.5, playerFleetPower / 25000000));
-        
-        // SEKTOR-Faktor (Asteroid 0.3, Anomalie 1.2)
         let zoneMultiplier = zone.enemyPower / 100;
-        
-        // Gesamt-Multiplikator (Spieler-Stärke x Sektor-Risiko)
         let totalMultiplier = playerMultiplier * zoneMultiplier;
-        
-        // Zufallsfaktor für Abwechslung (±20%)
         let randomFactor = 0.8 + Math.random() * 0.8;
         let finalMultiplier = totalMultiplier * randomFactor;
         
-        // Piraten-Flotte zusammensetzen
         let pirateFleet = {
             "Leichter Jäger": Math.max(1, Math.floor(3 + Math.random() * 12 * finalMultiplier)),
             "Schwerer Jäger": Math.max(0, Math.floor(1 + Math.random() * 6 * finalMultiplier)),
@@ -407,7 +571,6 @@
             "Zerstörer": 0
         };
         
-        // Zusätzliche Verstärkung für hoch-riskante Sektoren
         if (zone.risk === "hoch") {
             pirateFleet["Schlachtschiff"] += Math.floor(1 + Math.random() * 2 * playerMultiplier);
             pirateFleet["Schwerer Jäger"] += Math.floor(1 + Math.random() * 3 * playerMultiplier);
@@ -418,7 +581,6 @@
             pirateFleet["Schlachtschiff"] += Math.floor(1 + Math.random() * 3 * playerMultiplier);
         }
         
-        // Runden und sicherstellen, dass keine negativen Werte entstehen
         for (let key in pirateFleet) {
             pirateFleet[key] = Math.max(0, Math.floor(pirateFleet[key]));
         }
@@ -759,8 +921,10 @@
     function resetGame(){ 
         if(confirm("ALLE Daten zurücksetzen?")){ 
             localStorage.removeItem("ExpeditionGameSaveDM"); 
+            localStorage.removeItem("ExpeditionSavedFleets");
             gameState = { resources: { metal:50000000, crystal:40000000, deuterium:25000000, darkmatter:0 }, tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, ships: {}, productionQueue: [], expeditions: [null,null,null], eventLogs: [], sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, activeBoosts: {} }; 
             shipKeys.forEach(key => { gameState.ships[key] = 0; });
+            savedFleets = { "asteroid": { name: "", ships: {} }, "piraten": { name: "", ships: {} }, "ruinen": { name: "", ships: {} }, "anomalie": { name: "", ships: {} } };
             selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" }; 
             selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" }; 
             pendingCooldownReset = null; 
@@ -801,6 +965,15 @@
             </tr>`;
         }
         tbody.innerHTML = html;
+    }
+    
+    function setSelectedSector(sectorId) {
+        selectedExpeditionSector = sectorId;
+        let displayDiv = document.getElementById("selectedSectorDisplay");
+        if (displayDiv) {
+            displayDiv.innerHTML = `👉 Aktuell ausgewählt: <strong style="color:#ffcc44;">${getSektorName(sectorId)}</strong> → Lade die gespeicherte Flotte oder starte die Expedition!`;
+        }
+        renderAll(); // Um die Sektor-Karten neu zu rendern (Highlight)
     }
     
     function renderAll(){
@@ -887,15 +1060,44 @@
         for(let [id,z] of Object.entries(expeditionZiele)) { 
             let cdEnd = gameState.sectorCooldowns[id] || 0; 
             let remaining = Math.max(0, cdEnd - Date.now()); 
-            let timerText = (remaining <= 0) ? "✅ Bereit" : `⏳ ${Math.floor(remaining/60000)} min`; 
-            sektorHtml+=`<div class="ziel-card ${selectedZiele[0]===id?'selected':''}" data-sektor="${id}"><b>${z.name}</b><br><span class="risk-${z.risk}">⚠️ Risiko: ${z.risk}</span><br><div class="cooldown-timer" id="cd_${id}">${timerText}</div></div>`; 
+            let timerText = (remaining <= 0) ? "✅ Bereit" : `⏳ ${Math.floor(remaining/60000)} min`;
+            let isSelected = (selectedExpeditionSector === id);
+            let hasFleet = savedFleets[id].name && Object.keys(savedFleets[id].ships).length > 0;
+            let loadBtn = hasFleet ? `<div class="load-fleet-btn-small" data-sektor="${id}">📂 Flotte laden (${savedFleets[id].name})</div>` : '';
+            let selectedClass = isSelected ? 'selected' : '';
+            sektorHtml+=`<div class="ziel-card ${selectedClass}" data-sektor="${id}">
+                <b>${z.name}</b><br>
+                <span class="risk-${z.risk}">⚠️ Risiko: ${z.risk}</span><br>
+                <div class="cooldown-timer" id="cd_${id}">${timerText}</div>
+                ${loadBtn}
+                ${isSelected ? '<div style="font-size:0.7rem; color:#ffcc44; margin-top:6px;">▼ AUSGEWÄHLT ▼</div>' : ''}
+            </div>`; 
         }
         document.getElementById("sektorExplainer").innerHTML=sektorHtml;
+        
+        // Sektor-Klick: Wählt den Sektor aus
         document.querySelectorAll("[data-sektor]").forEach(el=>{
-            el.onclick=()=>{ 
-                let id=el.dataset.sektor; 
-                for(let i=0;i<3;i++) selectedZiele[i]=id; 
-                renderAll(); 
+            el.onclick=(e)=>{
+                if(e.target.classList && e.target.classList.contains("load-fleet-btn-small")) return;
+                let id=el.dataset.sektor;
+                setSelectedSector(id);
+                // Auch die selectedZiele für alle 3 Slots auf diesen Sektor setzen
+                for(let i=0;i<3;i++) selectedZiele[i]=id;
+                renderAll();
+            };
+        });
+        
+        // Load-Fleet Buttons in Sektor-Karten
+        document.querySelectorAll(".load-fleet-btn-small").forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                let sektor = btn.dataset.sektor;
+                // Setze zuerst den ausgewählten Sektor
+                setSelectedSector(sektor);
+                for(let i=0;i<3;i++) selectedZiele[i]=sektor;
+                // Dann lade die Flotte
+                loadFleetForSelectedSector();
+                renderAll();
             };
         });
         
@@ -966,6 +1168,7 @@
         }
         
         renderShipTable();
+        renderFleetSlots();
         renderReports();
     }
     
@@ -1143,6 +1346,7 @@
             if(!gameState.eventLogs) gameState.eventLogs=[]; 
             for(let ship of shipKeys) if(gameState.ships[ship] === undefined) gameState.ships[ship]=0;
         } 
+        loadSavedFleets();
         processOfflineEvents(); 
         renderAll(); 
     }
