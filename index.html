@@ -148,7 +148,7 @@
         <div id="schiffbauPane" class="tab-pane">
             <h3>🏭 Werft – Schiffstats & Bauaufträge</h3>
             <table class="ship-detail-table"><thead>
-                <tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th><th>Schnellfeuer</th></tr>
+                <tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th><th>Schnellfeuer</th><tr>
             </thead>
             <tbody id="shipStatsBody"></tbody>
             </table>
@@ -195,7 +195,6 @@
     
     // Spieler-Login mit dauerhafter Speicherung
     function showPlayerLogin() {
-        // Prüfe ob bereits ein gespeicherter Name existiert
         let savedName = localStorage.getItem("ExpeditionPlayerName");
         
         if (savedName) {
@@ -209,14 +208,12 @@
         currentPlayer = name.trim();
         if (currentPlayer === "") currentPlayer = "Spieler";
         
-        // Namen dauerhaft speichern
         localStorage.setItem("ExpeditionPlayerName", currentPlayer);
         
         addExpeditionLog(`☁️ Cloud-Modus aktiviert für "${currentPlayer}"`);
         loadFromCloud();
     }
     
-    // Spieler zurücksetzen / wechseln
     function resetPlayerName() {
         if (confirm("Möchtest du den Spieler wechseln? Dein aktueller Spielstand bleibt erhalten.")) {
             localStorage.removeItem("ExpeditionPlayerName");
@@ -224,7 +221,6 @@
         }
     }
     
-    // Spielstand vom Cloud laden
     async function loadFromCloud() {
         if (!currentPlayer) return;
         try {
@@ -253,7 +249,6 @@
         renderAll();
     }
     
-    // Spielstand in die Cloud speichern
     async function saveToCloud() {
         if (!cloudSaveEnabled || !currentPlayer) return;
         
@@ -284,8 +279,46 @@
         }
     }
     
-    // Alle 30 Sekunden automatisch speichern
     setInterval(() => saveToCloud(), 30000);
+    
+    // ======================= KORRIGIERTE RESET-FUNKTION =======================
+    async function resetGame() {
+        if (confirm("⚠️ ALLE Daten zurücksetzen? Dein Spielstand in der Cloud wird unwiderruflich gelöscht! Du musst dich danach neu anmelden.")) {
+            // 1. Cloud-Spielstand löschen (Überschreiben mit leerem Stand)
+            if (currentPlayer) {
+                let emptyState = { 
+                    resources: { metal:200000000, crystal:150000000, deuterium:100000000, darkmatter:0 }, 
+                    tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, 
+                    ships: {}, 
+                    mines: { metal:0, crystal:0, deuterium:0, darkmatter:0 },
+                    productionQueue: [], 
+                    expeditions: [null,null,null], 
+                    eventLogs: [], 
+                    sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, 
+                    activeBoosts: {} 
+                };
+                try {
+                    await fetch(`${BACKEND_URL}/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ player_name: currentPlayer, game_state: emptyState })
+                    });
+                    console.log("☁️ Cloud-Spielstand gelöscht");
+                } catch(e) {
+                    console.log("Cloud-Löschen fehlgeschlagen:", e);
+                }
+            }
+            
+            // 2. Lokalen Spielstand löschen
+            localStorage.removeItem("ExpeditionGameSaveDM");
+            
+            // 3. Gespeicherten Spielernamen löschen (damit Neuanmeldung erzwungen wird)
+            localStorage.removeItem("ExpeditionPlayerName");
+            
+            // 4. Seite neuladen
+            location.reload();
+        }
+    }
     
     // ======================= HALTEZEIT-OPTIONEN =======================
     const holdTimeOptions = [
@@ -959,32 +992,6 @@
         renderAll(); 
         saveToCloud();
         return true; 
-    }
-    
-    function resetGame(){ 
-        if(confirm("ALLE Daten zurücksetzen? Dein Spielstand in der Cloud wird gelöscht!")){ 
-            localStorage.removeItem("ExpeditionGameSaveDM"); 
-            gameState = { 
-                resources: { metal:200000000, crystal:150000000, deuterium:100000000, darkmatter:0 }, 
-                tech: { waffen:0, schild:0, panzer:0, bonusFund:0, speed:0, werftLevel:0 }, 
-                ships: {}, 
-                mines: { metal:0, crystal:0, deuterium:0, darkmatter:0 },
-                lastMineProduction: Date.now(),
-                productionQueue: [], 
-                expeditions: [null,null,null], 
-                eventLogs: [], 
-                sectorCooldowns: { asteroid:0, piraten:0, anomalie:0, ruinen:0 }, 
-                activeBoosts: {} 
-            }; 
-            shipKeys.forEach(key => { gameState.ships[key] = 0; });
-            selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" }; 
-            selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
-            selectedHoldTime = { 0: 0, 1: 0, 2: 0 };
-            selectedExpeditionSector = "piraten";
-            pendingCooldownReset = null; 
-            saveGame(); renderAll(); addExpeditionLog("⚠️ Spiel zurückgesetzt!"); 
-            saveToCloud();
-        } 
     }
     
     function renderShipTable() {
