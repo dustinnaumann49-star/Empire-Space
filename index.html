@@ -138,6 +138,7 @@
             <div><strong>💡 Tipp:</strong> Pathfinder: +1% Beute/Schiff (max 25%) | Recycler: +1% Schrott/Schiff (max 25%)</div>
             <div class="badge-info">⚔️ <strong>Schnellfeuer:</strong> Schlachtschiffe stark gegen Jäger & Kreuzer | Schlachtkreuzer stark gegen Jäger | Zerstörer stark gegen Schlachtschiffe</div>
             <div class="badge-info">⚠️ <strong>Piraten-Skalierung:</strong> Je stärker deine Flotte, desto mehr Piraten! Faire, riskante Kämpfe garantiert.</div>
+            <div class="badge-info">📈 <strong>Beute-Skalierung:</strong> Je stärker deine Flotte, desto mehr Ressourcen du findest! (bis zu +150%)</div>
         </div>
 
         <div id="schiffbauPane" class="tab-pane">
@@ -153,7 +154,7 @@
 
         <div id="expeditionPane" class="tab-pane">
             <h3>🪐 Expeditionen – Sektoren & Risiken (Kommandeur kostet DM!)</h3>
-            <div class="debug-info" style="background:#3a2a3e">🔍 Kampfsimulation mit Schnellfeuer & individuellen Schiffen | ⚡ Deuterium-Verbrauch pro Flug (5% der Baukosten) | ⏱️ Flugzeit: 10min Hin + 10min Rück | ⏱️ Haltezeit: 1-8 Stunden wählbar</div>
+            <div class="debug-info" style="background:#3a2a3e">🔍 Kampfsimulation mit Schnellfeuer & individuellen Schiffen | ⚡ Deuterium-Verbrauch pro Flug (5% der Baukosten) | ⏱️ Flugzeit: 10min Hin + 10min Rück | ⏱️ Haltezeit: 1-8 Stunden wählbar | 📈 Beute skaliert mit Flottenstärke!</div>
             <div class="ziel-grid" id="sektorExplainer"></div>
             <div id="selectedSectorDisplay" class="badge-info" style="margin-bottom: 12px;">👉 Klicke auf einen Sektor, um ihn auszuwählen. Dann wähle deine Schiffe und starte die Expedition!</div>
             <div id="expeditionSlots"></div>
@@ -182,7 +183,7 @@
 </div>
 
 <script>
-    // ======================= HALTEZEIT-OPTIONEN (EINFACH & STABIL) =======================
+    // ======================= HALTEZEIT-OPTIONEN =======================
     const holdTimeOptions = [
         { hours: 1, lootBonus: 0, riskBonus: 0, desc: "1 Stunde" },
         { hours: 2, lootBonus: 0.10, riskBonus: 0.05, desc: "2 Stunden (+10% Beute, +5% Risiko)" },
@@ -272,7 +273,7 @@
     
     let selectedZiele = { 0:"piraten", 1:"piraten", 2:"piraten" };
     let selectedKommandeur = { 0:"keiner", 1:"keiner", 2:"keiner" };
-    let selectedHoldTime = { 0: 0, 1: 0, 2: 0 }; // Pro Slot die gewählte Haltezeit
+    let selectedHoldTime = { 0: 0, 1: 0, 2: 0 };
     let pendingCooldownReset = null;
     let selectedExpeditionSector = "piraten";
     
@@ -350,6 +351,14 @@
             power += count * (d.weapon + d.shield + d.armor); 
         }
         return power;
+    }
+    
+    // ======================= BEUTE-SKALIERUNG =======================
+    function getBeuteMultiplikator(fleetPower) {
+        // 25 Mio Stärke = Faktor 1.0
+        // 10 Mio Stärke = Faktor 0.8 (Minimum)
+        // 62.5 Mio+ Stärke = Faktor 2.5 (Maximum)
+        return Math.min(2.5, Math.max(0.8, fleetPower / 25000000));
     }
     
     function addExpeditionLog(text, battleReport = null){ 
@@ -592,6 +601,10 @@
         let holdTimeLootBonus = holdOption.lootBonus;
         let holdTimeRiskBonus = holdOption.riskBonus;
         
+        // ======================= DYNAMISCHE BEUTE-SKALIERUNG =======================
+        let playerFleetPower = calculateFleetPower(fleet);
+        let beuteMultiplikator = getBeuteMultiplikator(playerFleetPower);
+        
         let lootMult = getLootMult() + (komm.lootBonus || 0) + pathfinderBonus + holdTimeLootBonus;
         let luck = getLuckBonus();
         let riskMod = getRiskModifier();
@@ -610,7 +623,7 @@
         
         let isCombat = (random < combatThreshold);
         
-        addExpeditionLog(`🎲 SLOT ${slot+1}: ${ziel.name} (${holdOption.hours}h) | ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"} | Pathfinder:${pathfinderCount} (+${(pathfinderBonus*100).toFixed(0)}% Beute) | +${(holdTimeLootBonus*100).toFixed(0)}% durch längere Haltezeit`);
+        addExpeditionLog(`🎲 SLOT ${slot+1}: ${ziel.name} (${holdOption.hours}h) | ${isCombat ? "⚔️ KAMPF!" : "❌ KEIN Kampf"} | Pathfinder:${pathfinderCount} (+${(pathfinderBonus*100).toFixed(0)}% Beute) | +${(holdTimeLootBonus*100).toFixed(0)}% durch Haltezeit | 📈 Beute-Multi: ${beuteMultiplikator.toFixed(2)}x`);
         
         if (!isCombat && random < lossThreshold) { 
             addExpeditionLog(`💀 SLOT ${slot+1}: Totalverlust! Flotte vernichtet (${ziel.name})`); 
@@ -618,8 +631,7 @@
         }
         
         if (isCombat) {
-            let playerPower = calculateFleetPower(fleet);
-            let pirateFleet = getPirateFleet(zielId, playerPower, holdTimeRiskBonus);
+            let pirateFleet = getPirateFleet(zielId, playerFleetPower, holdTimeRiskBonus);
             
             let pirateCount = Object.values(pirateFleet).reduce((a,b)=>a+b,0);
             addExpeditionLog(`⚔️ Piratenflotte (${pirateCount} Schiffe): ${Object.entries(pirateFleet).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}`);
@@ -641,15 +653,16 @@
             return { newShips: fight.newShips, resourcesGained: fight.totalScrap };
         }
         
-        let metal = Math.floor(ziel.baseMetal * lootMult * riskMod.loot);
-        let crystal = Math.floor(ziel.baseCrystal * lootMult * riskMod.loot);
-        let deut = Math.floor(ziel.baseDeut * lootMult * riskMod.loot);
+        // Normale Beute (kein Kampf) mit dynamischem Multiplikator
+        let metal = Math.floor(ziel.baseMetal * lootMult * beuteMultiplikator * riskMod.loot);
+        let crystal = Math.floor(ziel.baseCrystal * lootMult * beuteMultiplikator * riskMod.loot);
+        let deut = Math.floor(ziel.baseDeut * lootMult * beuteMultiplikator * riskMod.loot);
         
         if (totalCargo >= metal + crystal + deut) {
             gameState.resources.metal += metal;
             gameState.resources.crystal += crystal;
             gameState.resources.deuterium += deut;
-            addExpeditionLog(`💰 SLOT ${slot+1}: Fund: +${metal.toLocaleString()} M / ${crystal.toLocaleString()} K / ${deut.toLocaleString()} D (${ziel.name}) | +${(pathfinderBonus*100).toFixed(0)}% durch Pathfinder | +${(holdTimeLootBonus*100).toFixed(0)}% durch Haltezeit`);
+            addExpeditionLog(`💰 SLOT ${slot+1}: Fund: +${metal.toLocaleString()} M / ${crystal.toLocaleString()} K / ${deut.toLocaleString()} D (${ziel.name}) | +${(pathfinderBonus*100).toFixed(0)}% durch Pathfinder | +${(holdTimeLootBonus*100).toFixed(0)}% durch Haltezeit | 📈 ${(beuteMultiplikator*100).toFixed(0)}% durch Flottenstärke`);
             if (Math.random() < ziel.darkMatterChance + luck*0.2) { 
                 let dm = getBaseDarkMatterAmount(zielId, luck); 
                 gameState.resources.darkmatter += dm; 
@@ -657,7 +670,7 @@
             }
             return { newShips: fleet, resourcesGained: metal+crystal+deut };
         } else { 
-            addExpeditionLog(`⚠️ SLOT ${slot+1}: Laderaum zu klein! Keine Beute. (${ziel.name})`); 
+            addExpeditionLog(`⚠️ SLOT ${slot+1}: Laderaum zu klein! Benötigt: ${(metal+crystal+deut).toLocaleString()} | Laderaum: ${totalCargo.toLocaleString()}`);
             return { newShips: fleet, resourcesGained: 0 }; 
         }
     }
