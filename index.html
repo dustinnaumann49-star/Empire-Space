@@ -148,7 +148,7 @@
         <div id="schiffbauPane" class="tab-pane">
             <h3>🏭 Werft – Schiffstats & Bauaufträge</h3>
             <table class="ship-detail-table"><thead>
-                <tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th><th>Schnellfeuer</th><tr>
+                <tr><th>Schiff</th><th>⚔️</th><th>🛡️</th><th>🧱</th><th>Laderaum</th><th>Bauzeit(s)</th><th>Kosten (M/K/D)</th><th>Schnellfeuer</th></tr>
             </thead>
             <tbody id="shipStatsBody"></tbody>
             </table>
@@ -193,14 +193,50 @@
     let currentPlayer = null;
     let cloudSaveEnabled = true;
     
-    // Spieler-Login mit dauerhafter Speicherung
+    // ======================= ERZWUNGENER CLOUD-LADEN =======================
+    async function forceLoadFromCloud() {
+        if (!currentPlayer) return;
+        try {
+            let response = await fetch(`${BACKEND_URL}/load/${encodeURIComponent(currentPlayer)}`);
+            if (response.ok) {
+                let cloudData = await response.json();
+                if (cloudData && !cloudData.error) {
+                    // KOMPLETTEN Spielstand aus Cloud überschreiben
+                    for (let key in cloudData) {
+                        if (gameState[key] !== undefined) {
+                            gameState[key] = cloudData[key];
+                        }
+                    }
+                    gameState.lastMineProduction = Date.now();
+                    
+                    // Lokalen Spielstand aktualisieren
+                    saveGame();
+                    
+                    addExpeditionLog(`☁️ Spielstand von "${currentPlayer}" aus der Cloud geladen!`);
+                    return true;
+                }
+            }
+            addExpeditionLog(`✨ Neuer Spieler "${currentPlayer}"! Viel Erfolg!`);
+            return false;
+        } catch(e) {
+            console.log("Cloud-Fehler:", e);
+            addExpeditionLog(`⚠️ Keine Verbindung zur Cloud - spiele lokal!`);
+            cloudSaveEnabled = false;
+            return false;
+        }
+    }
+    
+    // Spieler-Login mit dauerhafter Speicherung (ERZWINGT Cloud-Laden)
     function showPlayerLogin() {
         let savedName = localStorage.getItem("ExpeditionPlayerName");
         
         if (savedName) {
             currentPlayer = savedName;
             addExpeditionLog(`☁️ Willkommen zurück "${currentPlayer}"!`);
-            loadFromCloud();
+            // WICHTIG: Lokalen Spielstand ignorieren und aus Cloud laden
+            forceLoadFromCloud().then(() => {
+                renderAll();
+            });
             return;
         }
         
@@ -211,7 +247,9 @@
         localStorage.setItem("ExpeditionPlayerName", currentPlayer);
         
         addExpeditionLog(`☁️ Cloud-Modus aktiviert für "${currentPlayer}"`);
-        loadFromCloud();
+        forceLoadFromCloud().then(() => {
+            renderAll();
+        });
     }
     
     function resetPlayerName() {
@@ -221,32 +259,9 @@
         }
     }
     
+    // Cloud laden mit Fallback (wird nur noch für manuelle Läufe verwendet)
     async function loadFromCloud() {
-        if (!currentPlayer) return;
-        try {
-            let response = await fetch(`${BACKEND_URL}/load/${encodeURIComponent(currentPlayer)}`);
-            if (response.ok) {
-                let cloudData = await response.json();
-                if (cloudData && !cloudData.error) {
-                    for (let key in cloudData) {
-                        if (gameState[key] !== undefined) {
-                            gameState[key] = cloudData[key];
-                        }
-                    }
-                    gameState.lastMineProduction = Date.now();
-                    addExpeditionLog(`☁️ Spielstand von "${currentPlayer}" aus der Cloud geladen!`);
-                } else {
-                    addExpeditionLog(`✨ Neuer Spieler "${currentPlayer}"! Viel Erfolg!`);
-                }
-            } else {
-                addExpeditionLog(`✨ Neuer Spieler "${currentPlayer}"! Viel Erfolg!`);
-            }
-        } catch(e) {
-            console.log("Cloud-Fehler:", e);
-            addExpeditionLog(`⚠️ Keine Verbindung zur Cloud - spiele lokal!`);
-            cloudSaveEnabled = false;
-        }
-        renderAll();
+        return forceLoadFromCloud();
     }
     
     async function saveToCloud() {
@@ -1000,7 +1015,7 @@
         let html = "";
         for (let ship of shipClasses) {
             let cargoDisplay = ship.cargo === 0 ? "0" : ship.cargo.toLocaleString();
-            html += `<tr>
+            html += `<table>
                 <td>${ship.name}</td>
                 <td>${ship.weapon}</td>
                 <td>${ship.shield}</td>
@@ -1445,7 +1460,7 @@
         renderAll(); 
     }
     
-    // Spiel starten mit Login
+    // Spiel starten mit Login (erzwingt Cloud-Laden)
     showPlayerLogin();
     
     setInterval(()=>{ 
