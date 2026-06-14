@@ -81,6 +81,8 @@
         .production-display { font-size: 0.7rem; color: #88ffaa; margin-top: 4px; }
         .mine-prod { color: #ffcc44; font-weight: bold; }
         .holdtime-select { background: #1e2a44; border: none; color: white; padding: 6px 12px; border-radius: 20px; margin-left: 8px; cursor: pointer; }
+        .name-reset-btn { background: #5e2e3e; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; margin-left: 12px; cursor: pointer; }
+        .name-reset-btn:hover { background: #7e3e4e; }
     </style>
 </head>
 <body>
@@ -91,6 +93,7 @@
         <div class="resource"><span>⚡ DEUTERIUM:</span> <span id="deuterium" class="deuterium">0</span></div>
         <div class="resource"><span>🌌 DUNKLE MATERIE:</span> <span id="darkmatter" class="darkmatter">0</span></div>
         <div class="reset-btn" id="resetGameBtn">⚠️ RESETT</div>
+        <div class="name-reset-btn" id="resetNameBtn">🔄 NAME WECHSELN</div>
     </div>
 
     <div class="tab-nav">
@@ -139,7 +142,7 @@
             <div class="badge-info">⚔️ <strong>Schnellfeuer:</strong> Schlachtschiffe stark gegen Jäger & Kreuzer | Schlachtkreuzer stark gegen Jäger | Zerstörer stark gegen Schlachtschiffe</div>
             <div class="badge-info">⚠️ <strong>Piraten-Skalierung:</strong> Je stärker deine Flotte, desto mehr Piraten! Faire, riskante Kämpfe garantiert.</div>
             <div class="badge-info">📈 <strong>Beute-Skalierung:</strong> Je stärker deine Flotte, desto mehr Ressourcen du findest! (bis zu +150%)</div>
-            <div class="badge-info">☁️ <strong>Cloud-Speicher:</strong> Dein Spielstand wird online gespeichert! Gib deinen Namen ein.</div>
+            <div class="badge-info">☁️ <strong>Cloud-Speicher:</strong> Dein Spielstand wird online gespeichert! Klicke auf "NAME WECHSELN" um den Spieler zu ändern.</div>
         </div>
 
         <div id="schiffbauPane" class="tab-pane">
@@ -185,19 +188,40 @@
 
 <script>
     // ======================= CLOUD-BACKEND (RENDER) =======================
-    // ⚠️ WICHTIG: Ersetze diese URL mit deiner Render-URL!
-    const BACKEND_URL = "https://empire-space.onrender.com"; // <-- DEINE URL HIER!
+    const BACKEND_URL = "https://empire-space.onrender.com";  // DEINE BACKEND-URL
     
     let currentPlayer = null;
     let cloudSaveEnabled = true;
     
-    // Spieler-Login
+    // Spieler-Login mit dauerhafter Speicherung
     function showPlayerLogin() {
+        // Prüfe ob bereits ein gespeicherter Name existiert
+        let savedName = localStorage.getItem("ExpeditionPlayerName");
+        
+        if (savedName) {
+            currentPlayer = savedName;
+            addExpeditionLog(`☁️ Willkommen zurück "${currentPlayer}"!`);
+            loadFromCloud();
+            return;
+        }
+        
         let name = prompt("👤 Bitte gib deinen Spielernamen ein:\n(deine Frau z.B. 'Felix' oder 'Julia')\n\nJeder Spieler hat seinen eigenen Spielstand!") || "Spieler";
         currentPlayer = name.trim();
         if (currentPlayer === "") currentPlayer = "Spieler";
+        
+        // Namen dauerhaft speichern
+        localStorage.setItem("ExpeditionPlayerName", currentPlayer);
+        
         addExpeditionLog(`☁️ Cloud-Modus aktiviert für "${currentPlayer}"`);
         loadFromCloud();
+    }
+    
+    // Spieler zurücksetzen / wechseln
+    function resetPlayerName() {
+        if (confirm("Möchtest du den Spieler wechseln? Dein aktueller Spielstand bleibt erhalten.")) {
+            localStorage.removeItem("ExpeditionPlayerName");
+            location.reload();
+        }
     }
     
     // Spielstand vom Cloud laden
@@ -208,13 +232,11 @@
             if (response.ok) {
                 let cloudData = await response.json();
                 if (cloudData && !cloudData.error) {
-                    // Cloud-Daten laden
                     for (let key in cloudData) {
                         if (gameState[key] !== undefined) {
                             gameState[key] = cloudData[key];
                         }
                     }
-                    // Minen-Produktion zurücksetzen
                     gameState.lastMineProduction = Date.now();
                     addExpeditionLog(`☁️ Spielstand von "${currentPlayer}" aus der Cloud geladen!`);
                 } else {
@@ -235,7 +257,6 @@
     async function saveToCloud() {
         if (!cloudSaveEnabled || !currentPlayer) return;
         
-        // Nur speichern wenn Änderungen passiert sind (alle 30 Sekunden reicht)
         let saveData = {
             player_name: currentPlayer,
             game_state: {
@@ -436,7 +457,6 @@
         return power;
     }
     
-    // ======================= BEUTE-SKALIERUNG =======================
     function getBeuteMultiplikator(fleetPower) {
         return Math.min(2.5, Math.max(0.8, fleetPower / 25000000));
     }
@@ -445,7 +465,7 @@
         gameState.eventLogs.unshift({timestamp:new Date().toLocaleTimeString(), text, battleReport}); 
         if(gameState.eventLogs.length>12) gameState.eventLogs.pop(); 
         renderReports(); saveGame();
-        saveToCloud(); // Auch in die Cloud speichern bei wichtigen Ereignissen
+        saveToCloud();
     }
     
     function saveGame(){ localStorage.setItem("ExpeditionGameSaveDM", JSON.stringify(gameState)); }
@@ -462,7 +482,6 @@
         return Math.min(amount, 35);
     }
     
-    // ======================= PIRATEN-FLOTTE =======================
     function getPirateFleet(zoneId, playerFleetPower, riskBonus = 0) {
         let zone = expeditionZiele[zoneId];
         let playerMultiplier = Math.min(2.5, Math.max(0.5, playerFleetPower / 25000000));
@@ -497,7 +516,6 @@
         return pirateFleet;
     }
     
-    // ======================= SCHNELLFEUER LOGIK =======================
     function calculateRapidfireBonus(attackerShip, defenderShipId) {
         if (!attackerShip.rapidfire) return 1;
         let rfValue = attackerShip.rapidfire[defenderShipId];
@@ -511,7 +529,6 @@
         return shots;
     }
     
-    // ======================= KAMPFSIMULATION =======================
     let lastBattleReport = null;
     
     function fightSimulationWithReport(myShips, enemyFleet, enemyPowerPercent, attackBonus=0, defenseBonus=0) {
@@ -667,7 +684,6 @@
         };
     }
     
-    // ======================= EXPEDITION MIT KAMPF =======================
     function processExpedition(slot, fleet, zielId, kommId, holdTimeIndex){
         let ziel = expeditionZiele[zielId];
         let komm = kommandeurBonuses[kommId];
@@ -712,12 +728,10 @@
         
         if (isCombat) {
             let pirateFleet = getPirateFleet(zielId, playerFleetPower, holdTimeRiskBonus);
-            
             let pirateCount = Object.values(pirateFleet).reduce((a,b)=>a+b,0);
             addExpeditionLog(`⚔️ Piratenflotte (${pirateCount} Schiffe): ${Object.entries(pirateFleet).filter(([_,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(", ")}`);
             
             let fight = fightSimulationWithReport(fleet, pirateFleet, ziel.enemyPower, komm.attackBonus, komm.defenseBonus);
-            
             let scrapMultiplier = 1 + recyclerBonus;
             let finalScrapMetal = Math.floor(fight.scrapMetal * scrapMultiplier);
             let finalScrapCrystal = Math.floor(fight.scrapCrystal * scrapMultiplier);
@@ -754,7 +768,6 @@
         }
     }
     
-    // ======================= ZEIT-KONSTANTEN =======================
     const FLIGHT_TIME_MS = 10 * 60 * 1000;
     const BASE_HOLD_TIME_MS = 60 * 60 * 1000;
     
@@ -812,7 +825,6 @@
         saveGame(); renderAll(); return true;
     }
     
-    // ======================= MINEN FUNKTIONEN =======================
     function getMineProductionPerHour(mineId, level) {
         let mine = minesData[mineId];
         return mine.baseProduction * level;
@@ -895,7 +907,6 @@
         saveGame();
     }
     
-    // ======================= SPIEL-MECHANIKEN =======================
     function upgradeTechDM(type, maxLvl){ 
         let cur = gameState.tech[type]; 
         if(cur >= maxLvl) return; 
@@ -951,7 +962,7 @@
     }
     
     function resetGame(){ 
-        if(confirm("ALLE Daten zurücksetzen?")){ 
+        if(confirm("ALLE Daten zurücksetzen? Dein Spielstand in der Cloud wird gelöscht!")){ 
             localStorage.removeItem("ExpeditionGameSaveDM"); 
             gameState = { 
                 resources: { metal:200000000, crystal:150000000, deuterium:100000000, darkmatter:0 }, 
@@ -976,7 +987,6 @@
         } 
     }
     
-    // ======================= RENDER-FUNKTIONEN =======================
     function renderShipTable() {
         let tbody = document.getElementById("shipStatsBody");
         if (!tbody) return;
@@ -1014,7 +1024,6 @@
     function renderMines() {
         let container = document.getElementById("minesContainer");
         if (!container) return;
-        
         let html = "";
         for (let [mineId, mine] of Object.entries(minesData)) {
             let level = gameState.mines[mineId] || 0;
@@ -1022,7 +1031,6 @@
             let productionPerSec = productionPerHour / 3600;
             let cost = getUpgradeCost(mineId, level);
             let maxReached = level >= mine.maxLevel;
-            
             let costText = "";
             let upgradeBtn = "";
             if (!maxReached && cost) {
@@ -1031,11 +1039,9 @@
             } else if (maxReached) {
                 upgradeBtn = `<button disabled style="background:#3a3a5a;">✅ MAX STUFE</button>`;
             }
-            
             let prodDisplay = mine.resource === "darkmatter" 
                 ? `${productionPerHour.toFixed(2)}/h (${productionPerSec.toFixed(3)}/s)` 
                 : `${Math.floor(productionPerHour).toLocaleString()}/h (${productionPerSec.toFixed(0)}/s)`;
-            
             html += `<div class="mine-item">
                         <div>
                             <strong>${mine.name}</strong><br>
@@ -1047,9 +1053,7 @@
                         </div>
                     </div>`;
         }
-        
         container.innerHTML = html;
-        
         document.querySelectorAll(".mine-upgrade").forEach(btn => {
             btn.onclick = () => {
                 let mineId = btn.dataset.mine;
@@ -1138,7 +1142,6 @@
         document.getElementById("shopContainer").innerHTML=shopHtml;
         document.querySelectorAll("[data-boost]").forEach(btn=>btn.onclick=()=>activateBoost(btn.dataset.boost));
         
-        // SEKTOREN ANZEIGEN
         let sektorHtml=""; 
         for(let [id,z] of Object.entries(expeditionZiele)) { 
             let cdEnd = gameState.sectorCooldowns[id] || 0; 
@@ -1155,7 +1158,6 @@
         }
         document.getElementById("sektorExplainer").innerHTML=sektorHtml;
         
-        // SEKTOR KLICK
         document.querySelectorAll("[data-sektor]").forEach(el=>{
             el.onclick=(e)=>{
                 let id=el.dataset.sektor;
@@ -1175,7 +1177,6 @@
             };
         });
         
-        // EXPEDITIONS SLOTS
         let slotsDiv=""; 
         let slotCount=3;
         for(let i=0;i<slotCount;i++){ 
@@ -1203,8 +1204,6 @@
                     let dmAfterDiscount = Math.floor(k.costDM * getCommanderDiscount()); 
                     kommHtml+=`<span class="commander-chip ${selectedKommandeur[i]===kid?'selected':''}" data-komm="${kid}" data-slot="${i}" data-tooltip="${k.tooltip}">${k.name} ${k.costDM>0?`(${dmAfterDiscount} DM)`:""}</span>`; 
                 }
-                
-                // Haltezeit Dropdown
                 let holdSelectHtml = `<select class="holdtime-select" data-slot="${i}" style="background:#1e2a44; border:none; color:white; padding:6px 12px; border-radius:20px; margin-left:8px;">`;
                 for (let idx = 0; idx < holdTimeOptions.length; idx++) {
                     let opt = holdTimeOptions[idx];
@@ -1212,7 +1211,6 @@
                     holdSelectHtml += `<option value="${idx}" ${selected}>${opt.desc}</option>`;
                 }
                 holdSelectHtml += `</select>`;
-                
                 slotsDiv+=`<div class="expedition-fleet"><b>🆓 Flotte ${i+1}</b> — Bereit (Flug: 10min Hin + 10min Rück)<br>
                 ⏱️ Haltezeit wählen: ${holdSelectHtml}<br>
                 <div class="commander-group">${kommHtml}</div>
@@ -1222,7 +1220,6 @@
         }
         document.getElementById("expeditionSlots").innerHTML=slotsDiv;
         
-        // Event-Listener für Haltezeit-Auswahl
         document.querySelectorAll(".holdtime-select").forEach(select => {
             select.onchange = (e) => {
                 let slot = parseInt(select.dataset.slot);
@@ -1274,12 +1271,10 @@
     function renderReports() {
         let container = document.getElementById("reportList");
         if (!container) return;
-        
         if (gameState.eventLogs.length === 0) {
             container.innerHTML = '<div class="badge-info">📭 Noch keine Expeditionsberichte. Schicke eine Expedition los!</div>';
             return;
         }
-        
         let html = "";
         for (let i = 0; i < gameState.eventLogs.length; i++) {
             let log = gameState.eventLogs[i];
@@ -1291,16 +1286,13 @@
             else if (log.text.includes("verbraucht")) typeIcon = "⚡";
             else if (log.text.includes("DM")) typeIcon = "✨";
             else typeIcon = "📋";
-            
             html += `<div class="report-item" data-report-index="${i}">
                         <div class="report-time">🕒 ${log.timestamp}</div>
                         <div class="report-text">${typeIcon} ${log.text.substring(0, 120)}${log.text.length > 120 ? "..." : ""}</div>
                         ${hasBattle ? '<div class="report-badge">📊 Kampfbericht verfügbar (klick)</div>' : ''}
                     </div>`;
         }
-        
         container.innerHTML = html;
-        
         document.querySelectorAll(".report-item").forEach(el => {
             let idx = parseInt(el.dataset.reportIndex);
             let log = gameState.eventLogs[idx];
@@ -1313,12 +1305,10 @@
     
     function showBattleReport(report) {
         if (!report) return;
-        
         let html = `<div class="battle-report-grid">
             <div class="battle-side player">
                 <h4>🟢 EIGENE FLOTTE</h4>
                 <div><strong>Initial:</strong></div>`;
-        
         for (let [ship, count] of Object.entries(report.myInitial)) {
             if (count > 0) {
                 let lost = report.myLosses[ship] || 0;
@@ -1327,13 +1317,11 @@
                 html += `<div class="ship-row ${lostClass}">${ship}: ${count} → ${survived} überlebt <span style="color:#ff8888">(-${lost})</span></div>`;
             }
         }
-        
         html += `<div><strong>Verluste:</strong> ${Object.values(report.myLosses).reduce((a,b)=>a+b,0)} Schiffe</div>
             </div>
             <div class="battle-side pirate">
                 <h4>🔴 PIRATENFLOTTE</h4>
                 <div><strong>Initial:</strong></div>`;
-        
         for (let [ship, count] of Object.entries(report.enemyInitial)) {
             if (count > 0) {
                 let lost = report.enemyLosses[ship] || 0;
@@ -1342,7 +1330,6 @@
                 html += `<div class="ship-row ${lostClass}">Pirat-${ship}: ${count} → ${survived} überlebt <span style="color:#88ff88">(-${lost})</span></div>`;
             }
         }
-        
         html += `<div><strong>Vernichtet:</strong> ${Object.values(report.enemyLosses).reduce((a,b)=>a+b,0)} Schiffe</div>
             </div>
         </div>
@@ -1350,16 +1337,13 @@
             <strong>📦 SCHROTT EINGESAMMELT:</strong><br>
             🪨 Metall: ${report.scrap.metal.toLocaleString()} | 💎 Kristall: ${report.scrap.crystal.toLocaleString()} | ⚡ Deuterium: ${report.scrap.deut.toLocaleString()}
         </div>`;
-        
         document.getElementById("battleReportContent").innerHTML = html;
         document.getElementById("battleModal").style.display = "flex";
     }
     
     function processOfflineEvents() { 
         let now = Date.now(), changed=false; 
-        
         processMineProduction();
-        
         for(let i=0;i<gameState.productionQueue.length;i++) { 
             if(now>=gameState.productionQueue[i].finishTimestamp){ 
                 let it=gameState.productionQueue[i]; 
@@ -1414,7 +1398,6 @@
         }
     }
     
-    // ======================= INIT =======================
     document.getElementById("upgradeWerftBtn").onclick=()=>upgradeTechDM("werftLevel",4);
     document.getElementById("upgradeWaffenBtn").onclick=()=>upgradeTechDM("waffen",5);
     document.getElementById("upgradeSchildBtn").onclick=()=>upgradeTechDM("schild",5);
@@ -1422,6 +1405,7 @@
     document.getElementById("upgradeBonusBtn").onclick=()=>upgradeTechDM("bonusFund",5);
     document.getElementById("upgradeSpeedBtn").onclick=()=>upgradeTechDM("speed",5);
     document.getElementById("resetGameBtn").onclick=resetGame;
+    document.getElementById("resetNameBtn").onclick=resetPlayerName;
     document.getElementById("closeModalBtn").onclick=()=> document.getElementById("battleModal").style.display = "none";
     window.onclick = (e) => { if (e.target === document.getElementById("battleModal")) document.getElementById("battleModal").style.display = "none"; };
     
@@ -1459,9 +1443,7 @@
     
     setInterval(()=>{ 
         let now = Date.now(), changed=false; 
-        
         processMineProduction();
-        
         for(let i=0;i<gameState.productionQueue.length;i++) { 
             if(now>=gameState.productionQueue[i].finishTimestamp){ 
                 let it=gameState.productionQueue[i]; 
